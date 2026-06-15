@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -270,8 +270,8 @@ få skriver som muligt.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>advarsler</translation>
+        <source>Invalid control warnings</source>
+        <translation>Ugyldige kontroladvarsler</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1690,13 +1690,13 @@ og gendan {1} til applikationsstandarder</translation>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>Vinduer</translation>
+        <source>User Interface</source>
+        <translation>Brugergrænseflade</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>Funktioner</translation>
+        <source>Optional Features</source>
+        <translation>Valgfri funktioner</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1705,7 +1705,7 @@ og gendan {1} til applikationsstandarder</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
+        <source>DDC Options</source>
         <translation>DDC muligheder</translation>
     </message>
     <message>

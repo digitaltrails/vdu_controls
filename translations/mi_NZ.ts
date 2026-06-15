@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -270,8 +270,8 @@ he iti noa nga tuhi ka taea.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>whakatūpato</translation>
+        <source>Invalid control warnings</source>
+        <translation>Whakatupato mana muhu</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1689,13 +1689,13 @@ ka whakahokia {1} ki nga taunoa tono</translation>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>Matapihi Matapihi</translation>
+        <source>User Interface</source>
+        <translation>Atanga Kaiwhakamahi</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>Ngā āhuatanga</translation>
+        <source>Optional Features</source>
+        <translation>Āhuatanga Kōwhiringa</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1704,7 +1704,7 @@ ka whakahokia {1} ki nga taunoa tono</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
+        <source>DDC Options</source>
         <translation>Kōwhiringa DDC</translation>
     </message>
     <message>

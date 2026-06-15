@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -270,8 +270,8 @@ pocas escrituras como sea posible.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>advertencias</translation>
+        <source>Invalid control warnings</source>
+        <translation>Advertencias de control no válidas</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1689,13 +1689,13 @@ y restaurar {1} a los valores predeterminados de la aplicación</translation>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>ventanas</translation>
+        <source>User Interface</source>
+        <translation>Interfaz de usuario</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>Características</translation>
+        <source>Optional Features</source>
+        <translation>Características opcionales</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1704,7 +1704,7 @@ y restaurar {1} a los valores predeterminados de la aplicación</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
+        <source>DDC Options</source>
         <translation>Opciones de DDC</translation>
     </message>
     <message>

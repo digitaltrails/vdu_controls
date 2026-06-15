@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
@@ -270,8 +270,8 @@ Wenige Schreibvorgänge wie möglich.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>Warnungen</translation>
+        <source>Invalid control warnings</source>
+        <translation>Warnungen wegen ungültiger Kontrolle</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1687,13 +1687,13 @@ und stellen Sie {1} auf die Standardeinstellungen der Anwendung zurück</transla
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>Fensterbau</translation>
+        <source>User Interface</source>
+        <translation>Benutzeroberfläche</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>Merkmale</translation>
+        <source>Optional Features</source>
+        <translation>Optionale Funktionen</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1702,7 +1702,7 @@ und stellen Sie {1} auf die Standardeinstellungen der Anwendung zurück</transla
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
+        <source>DDC Options</source>
         <translation>DDC-Optionen</translation>
     </message>
     <message>

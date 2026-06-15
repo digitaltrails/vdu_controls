@@ -49,10 +49,10 @@ class ConfSec(TitledStrEnum):
 
 
 class SubGroup(Enum):
-    WINDOWING =   (1, QT_TR_NOOP('Windowing'))
-    FEATURES =    (3, QT_TR_NOOP('Features'))
+    USER_INTERFACE =   (1, QT_TR_NOOP('User Interface'))
+    FEATURES =    (3, QT_TR_NOOP('Optional Features'))
     SYSTEM_TRAY = (2, QT_TR_NOOP('System Tray'))
-    DDC =         (4, QT_TR_NOOP('DDC options'))
+    DDC =         (4, QT_TR_NOOP('DDC Options'))
     LOGGING =     (5, QT_TR_NOOP('Logging'))
     NONE =        (6, '')
 
@@ -119,13 +119,13 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     SPLASH_SCREEN_ENABLED = ConfOptDef(
         conf_name='splash-screen-enabled', default_value='yes', cmdline_arg='splash',
         ui_label=QT_TR_NOOP('splash screen'),
-        sub_group=SubGroup.FEATURES,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Enable the startup splash screen.'))
 
     HIDE_ON_FOCUS_OUT = ConfOptDef(
         conf_name='hide-on-focus-out', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('hide on focus out'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Minimize the main window automatically on focus out.'))
 
     SYSTEM_TRAY_ENABLED = ConfOptDef(
@@ -137,20 +137,20 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     SMART_WINDOW = ConfOptDef(
         conf_name='smart-window', default_value="yes",
         ui_label=QT_TR_NOOP('smart window'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Smart main window placement and geometry (x11 and xwayland).'), restart_required=True)
 
     SMART_USES_XWAYLAND = ConfOptDef(
         conf_name='smart-uses-xwayland', default_value="yes", restart_required=True,
         ui_label=QT_TR_NOOP('smart uses xwayland'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         requires=[SMART_WINDOW],
         help=QT_TR_NOOP('If smart-window is enabled, use xwayland in wayland.'))
 
     PREFER_QT6 = ConfOptDef(
         conf_name='prefer-qt6', default_value="true", cmdline_arg='DISALLOWED',
         ui_label=QT_TR_NOOP('prefer-qt6'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart_required=True)
 
     MONOCHROME_TRAY_ENABLED = ConfOptDef(
@@ -177,13 +177,13 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     TOOLBAR_AT_TOP = ConfOptDef(
         conf_name='toolbar-at-top', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('toolbar at top'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Toolbar resides at top of main window.'))
 
     SEPARATE_STATUS_BAR = ConfOptDef(
         conf_name='separate-status-bar', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('separate status bar'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Separate the status-bar from the toolbar.'))
 
     PROTECT_NVRAM_ENABLED = ConfOptDef(
@@ -200,7 +200,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     ORDER_BY_NAME = ConfOptDef(
         conf_name='order-by-name', default_value="no",
         ui_label=QT_TR_NOOP('order by name'),
-        sub_group=SubGroup.WINDOWING,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Order lists and tabs by vdu-name.'))
 
     LUX_OPTIONS_ENABLED = ConfOptDef(
@@ -230,7 +230,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     TICK_MARKS = ConfOptDef(
         conf_name='tick-marks', default_value="yes",
         ui_label=QT_TR_NOOP('tick marks'),
-        sub_group=SubGroup.FEATURES,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Show tick marks on control-sliders.'))
 
     DBUS_CLIENT_ENABLED = ConfOptDef(
@@ -248,7 +248,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     LAPTOP_PANEL_ENABLED = ConfOptDef(
         conf_name='laptop-panel-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('laptop panel'),
-        sub_group=SubGroup.DDC,
+        sub_group=SubGroup.FEATURES,
         help=QT_TR_NOOP('Use brightnessctl utility for laptop panel control.'))
 
     SYSLOG_ENABLED = ConfOptDef(
@@ -266,20 +266,20 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     SINGLE_INSTANCE = ConfOptDef(
         conf_name='single-instance', default_value="yes",
         ui_label=QT_TR_NOOP('single instance'),
-        sub_group=SubGroup.FEATURES,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Only allow one running vdu_controls, running another raises the existing instance.')
     )
 
     WARNINGS_ENABLED = ConfOptDef(
         conf_name='warnings-enabled', default_value="no",
-        ui_label=QT_TR_NOOP('warnings'),
+        ui_label=QT_TR_NOOP('Invalid control warnings'),
         sub_group=SubGroup.DDC,
         help=QT_TR_NOOP('Popup warnings if a VDU lacks an enabled control.'))
 
     TRANSLATIONS_ENABLED = ConfOptDef(
         conf_name='translations-enabled', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('translations'),
-        sub_group=SubGroup.FEATURES,
+        sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Enable language translations, currently not updated (no known users).'),
         warning=('{}\n\n{}\n\n{}'.format(
             QT_TR_NOOP('Your locale {} will be translated.').format(app_locale.get_locale_name())

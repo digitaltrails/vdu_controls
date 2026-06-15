@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -270,8 +270,8 @@ few writes as possible.</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>警告</translation>
+        <source>Invalid control warnings</source>
+        <translation>无效控制警告</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1687,13 +1687,13 @@ and restore {1} to application defaults</source>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>窗口化</translation>
+        <source>User Interface</source>
+        <translation>用户界面</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>特征</translation>
+        <source>Optional Features</source>
+        <translation>可选功能</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1702,7 +1702,7 @@ and restore {1} to application defaults</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
+        <source>DDC Options</source>
         <translation>DDC 选项</translation>
     </message>
     <message>

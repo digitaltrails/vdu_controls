@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="sa_IN">
 <context>
@@ -266,8 +266,8 @@ few writes as possible.</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>تحذيرات</translation>
+        <source>Invalid control warnings</source>
+        <translation>تحذيرات التحكم غير صالحة</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1675,13 +1675,13 @@ and restore {1} to application defaults</source>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>النوافذ</translation>
+        <source>User Interface</source>
+        <translation>واجهة المستخدم</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>سمات</translation>
+        <source>Optional Features</source>
+        <translation>الميزات الاختيارية</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1690,8 +1690,8 @@ and restore {1} to application defaults</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
-        <translation>خيارات دي دي سي</translation>
+        <source>DDC Options</source>
+        <translation>خيارات DDC</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="56" />

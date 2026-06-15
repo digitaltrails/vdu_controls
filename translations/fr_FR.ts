@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="fr_FR">
 <context>
@@ -266,12 +266,12 @@ peu d'écrits possible.</translation>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="270" />
         <source>Only allow one running vdu_controls, running another raises the existing instance.</source>
-        <translation>N'autoriser qu'un seul exécutant vdu_controls, en exécuter un autre déclenche l'instance existante.</translation>
+        <translation>N'autoriser qu'un seul exécutant vdu_controls, en exécuter un autre déclenche linstance existante.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
-        <source>warnings</source>
-        <translation>avertissements</translation>
+        <source>Invalid control warnings</source>
+        <translation>Avertissements de contrôle invalides</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="277" />
@@ -1689,13 +1689,13 @@ et restaurez {1} aux paramètres par défaut de l'application</translation>
     <name>SubGroup</name>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="52" />
-        <source>Windowing</source>
-        <translation>Fenêtrage</translation>
+        <source>User Interface</source>
+        <translation>Interface utilisateur</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="53" />
-        <source>Features</source>
-        <translation>Caractéristiques</translation>
+        <source>Optional Features</source>
+        <translation>Fonctionnalités facultatives</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="54" />
@@ -1704,8 +1704,8 @@ et restaurez {1} aux paramètres par défaut de l'application</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="55" />
-        <source>DDC options</source>
-        <translation>Options CDD</translation>
+        <source>DDC Options</source>
+        <translation>Options DDC</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="56" />
