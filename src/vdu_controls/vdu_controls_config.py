@@ -77,8 +77,8 @@ class ConfOptDef:
     ui_label: str | None = None   # If None, then it won't appear in the Settings Editor.
     help: str = ''
     sub_group: SubGroup = SubGroup.NONE   # UI grouping of items.
-    related: List[ConfOptDef] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
-    requires: List[ConfOptDef] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
+    related: List[ConfOptDef|str] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
+    requires: List[ConfOptDef|str] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
     warning: str = ''      # If set, this message will pop up when the setting is set.
     off_warning: str = ''  # If set, this message will pop up when the item is unset.
 
@@ -114,6 +114,12 @@ class ConfOptDef:
         # Bypass the frozen restriction to assign it
         object.__setattr__(self, "cmdline_arg", proper_arg)
 
+    def __eq__(self, other):
+        return self.conf_id == self.conf_id
+
+    def __hash__(self):
+        return hash(self.conf_id)
+
 
 class ConfOpt(Enum):  # An Enum with frozen data items for values is used for convenience for scope/iteration
 
@@ -133,13 +139,14 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='system-tray-enabled', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('system tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
-        help=QT_TR_NOOP('Start up in the system tray.'), related=[HIDE_ON_FOCUS_OUT])
+        help=QT_TR_NOOP('Start up in the system tray.'))
 
     SMART_WINDOW = ConfOptDef(
         conf_name='smart-window', default_value="yes",
         ui_label=QT_TR_NOOP('smart window'),
         sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Smart main window placement, restore\nplacement and geometry at start up.'),
+        related=['SMART_USES_XWAYLAND'],
         restart_required=True)
 
     SMART_USES_XWAYLAND = ConfOptDef(
@@ -147,8 +154,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('smart uses xwayland'),
         sub_group=SubGroup.USER_INTERFACE,
         requires=[SMART_WINDOW],
-        help=QT_TR_NOOP('When smart-window is enabled, use xwayland because most\n'
-                        'wayland implementations cannot preserve window positions\n'
+        help=QT_TR_NOOP('When smart-window is enabled, use xwayland because most '
+                        'wayland implementations cannot preserve window positions '
                         'across sessions.'))
 
     PREFER_QT6 = ConfOptDef(
@@ -159,14 +166,14 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
 
     MONOCHROME_TRAY_ENABLED = ConfOptDef(
         conf_name='monochrome-tray-enabled', default_value="no", restart_required=False,
-        ui_label=QT_TR_NOOP('monochrome tray'),
+        ui_label=QT_TR_NOOP('monochrome dark tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Set the tray-icon to match a monochrome dark-themed system tray.'))
 
     MONO_LIGHT_TRAY_ENABLED = ConfOptDef(
         conf_name='mono-light-tray-enabled', default_value="no", restart_required=False,
-        ui_label=QT_TR_NOOP('mono light tray'),
+        ui_label=QT_TR_NOOP('monochrome light tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Set the tray-icon to match a monochrome light-themed system tray.'))
@@ -176,7 +183,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('tray follows theme'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('When the desktop-theme switches between dark and light,\n'
+        help=QT_TR_NOOP('When the desktop-theme switches between dark and light, '
                         'also invert the tray-theme.'))
 
     TOOLBAR_AT_TOP = ConfOptDef(
@@ -196,10 +203,9 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('protect NVRAM'),
         sub_group=SubGroup.DDC,
         off_warning=QT_TR_NOOP("NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes."),
-        help=QT_TR_NOOP('Alter options and defaults to minimize VDU NVRAM writes.\n\n'
-                        "This setting mainly effects whether transitions are\n"
-                        "gradual, using several writes, or instant, with as\n"
-                        "few writes as possible."
+        help=QT_TR_NOOP('Alter options and defaults to minimize VDU NVRAM writes. This setting mainly '
+                        'affects whether transitions are gradual, using several writes, or instant, with as '
+                        'few writes as possible.'
                         ))
 
     ORDER_BY_NAME = ConfOptDef(
@@ -218,19 +224,23 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='lux-tray-icon', default_value="yes", restart_required=False,
         ui_label=QT_TR_NOOP('lux tray icon'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Show the current light-level icon in the system-tray icon.'))
 
     SCHEDULE_ENABLED = ConfOptDef(
         conf_name='schedule-enabled', default_value='yes',
         ui_label=QT_TR_NOOP('schedule'),
         sub_group=SubGroup.FEATURES,
+        related=['WEATHER_ENABLED'],
         help=QT_TR_NOOP('Enable the solar-elevation and time based scheduling of presets.'))
 
     WEATHER_ENABLED = ConfOptDef(
         conf_name='weather-enabled', default_value='no',
         ui_label=QT_TR_NOOP('weather'),
         sub_group=SubGroup.FEATURES,
-        help=QT_TR_NOOP('Enable weather lookups for vetoing preset scheduling.'))
+        requires=[SCHEDULE_ENABLED],
+        help=QT_TR_NOOP('Enable weather lookups for vetoing preset scheduling. '
+                        'In practice, weather lookups have not proven to be very useful or timely.'))
 
     TICK_MARKS = ConfOptDef(
         conf_name='tick-marks', default_value="yes",
@@ -242,13 +252,16 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='dbus-client-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('dbus client'),
         sub_group=SubGroup.DDC,
-        help=QT_TR_NOOP('Use the d-bus ddcutil-server if available.'))
+        help=QT_TR_NOOP('Use the d-bus ddcutil-server if available.'),
+        related=['DBUS_EVENTS_ENABLED'])   # Forward ref
 
     DBUS_EVENTS_ENABLED = ConfOptDef(
         conf_name='dbus-events-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('dbus events'),
         sub_group=SubGroup.DDC,
-        help=QT_TR_NOOP('Enable D-bus ddcutil-server events.'), requires=[DBUS_CLIENT_ENABLED])
+        help=QT_TR_NOOP('Enable D-bus ddcutil-server events for detecting display hotplug and power events.'),
+        off_warning=QT_TR_NOOP('Display hotplug and power events will no longer be detected.'),
+        requires=[DBUS_CLIENT_ENABLED])
 
     LAPTOP_PANEL_ENABLED = ConfOptDef(
         conf_name='laptop-panel-enabled', default_value="yes",
@@ -285,13 +298,13 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='translations-enabled', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('translations'),
         sub_group=SubGroup.USER_INTERFACE,
-        help=QT_TR_NOOP('Enable language translations, currently not updated (no known users).'),
+        help=QT_TR_NOOP('Enable language translations. Translations have been AI-generated without any human oversight.'),
         warning=('{}\n\n{}\n\n{}'.format(
             QT_TR_NOOP('Your locale {} will be translated.').format(app_locale.get_locale_name())
             if  app_locale.get_locale_name() in app_locale.available_translations() else
             QT_TR_NOOP('Your locale {} lacks a translation.').format(app_locale.get_locale_name()),
             QT_TR_NOOP('Installed translations: {}.').format(', '.join(app_locale.available_translations())),
-            QT_TR_NOOP('These translations have not been validated by any native speakers.'))))
+            QT_TR_NOOP('These translations are AI-generated without any human oversight.'))))
 
     LOCATION = ConfOptDef(
         conf_name='location', conf_type=ConfType.LOCATION,
@@ -301,9 +314,9 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
     DDCUTIL_EMULATOR = ConfOptDef(
         conf_name='ddcutil-emulator', conf_type=ConfType.PATH,
         ui_label=QT_TR_NOOP('ddcutil emulator'),
-        help=QT_TR_NOOP('User supplied command-line ddcutil-emulator for handling special cases.\n\n'
-                        'This emulator is consulted in addition to the normal DDC. It provides a\n'
-                        'way for non-DDC devices to be incorporated into vdu_controls.  For example,\n'
+        help=QT_TR_NOOP('User supplied command-line ddcutil-emulator for handling special cases. '
+                        'This emulator is consulted in addition to the normal DDC. It provides a '
+                        'way for non-DDC devices to be incorporated into vdu_controls.  For example, '
                         'you might add the ability to control keyboard-backlight brightness.'))
 
     SLEEP_MULTIPLIER = ConfOptDef(
@@ -329,7 +342,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('enable vcp codes'),
         conf_type=ConfType.CSV,
         cmdline_arg='DISALLOWED',
-        help=QT_TR_NOOP('CSV list of VCP-code Features to enable (in hex).\n'
+        help=QT_TR_NOOP('CSV list of VCP-code Features to enable (in hex). '
                         'See capabilities-override for VCP Features.'),
         warning=QT_TR_NOOP('While enabling well understood VCP Features should be fine, experimenting '
                            'with undocumented or poorly understood vendor features may have '
@@ -339,8 +352,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='capabilities-override', conf_section=ConfSec.DDCUTIL_CAPABILITIES,
         ui_label=QT_TR_NOOP('capabilities override'),
         conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED',
-        help=QT_TR_NOOP('Cached capabilities text. Edit this text to correct any\n'
-                        'inaccuracies in the vendor metadata extracted from the device.\n'),
+        help=QT_TR_NOOP('Cached capabilities text. Edit this text to correct any '
+                        'inaccuracies in the vendor metadata extracted from the device. '),
         warning=QT_TR_NOOP('While correcting well understood metadata should be fine, experimenting '
                            'with undocumented or poorly understood vendor features may have '
                            'irreversible consequences - including damaging or bricking hardware.'))

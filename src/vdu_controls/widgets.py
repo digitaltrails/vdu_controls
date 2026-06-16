@@ -173,6 +173,7 @@ class MBox(QMessageBox):
             self.setMouseTracking(True)
             self.setSizeGripEnabled(True)
         self.setDefaultButton(default) if default is not None else None
+        msg += '<br/>' + '&nbsp;' * min(max(len(msg) + 10, 80), 120)  # force a reasonable width - bit yucky
         self.setText(msg) if msg is not None else None
         self.setInformativeText(info) if info is not None else None
         self.setDetailedText(details) if details is not None else None

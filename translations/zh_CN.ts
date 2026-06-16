@@ -16,402 +16,380 @@
 </context><context>
     <name>ConfOpt</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="122" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="128" />
         <source>splash screen</source>
         <translation>启动画面</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="124" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="130" />
         <source>Enable the startup splash screen.</source>
         <translation>启用启动闪屏。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="128" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="134" />
         <source>hide on focus out</source>
         <translation>隐藏焦点</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="136" />
         <source>Minimize the main window automatically on focus out.</source>
         <translation>焦点移出时自动最小化主窗口。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="134" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="140" />
         <source>system tray</source>
         <translation>系统托盘</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="136" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="142" />
         <source>Start up in the system tray.</source>
         <translation>在系统托盘中启动。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="140" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="146" />
         <source>smart window</source>
         <translation>智能窗</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="142" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="148" />
         <source>Smart main window placement, restore
 placement and geometry at start up.</source>
         <translation>智能主窗口放置、恢复
 启动时的放置和几何形状。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="147" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="154" />
         <source>smart uses xwayland</source>
         <translation>smart使用xwayland</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="150" />
-        <source>When smart-window is enabled, use xwayland because most
-wayland implementations cannot preserve window positions
-across sessions.</source>
-        <translation>当启用 smart-window 时，请使用 xwayland，因为大多数
-Wayland 实现无法保留窗口位置
-跨会话。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="157" />
+        <source>When smart-window is enabled, use xwayland because most wayland implementations cannot preserve window positions across sessions.</source>
+        <translation>启用智能窗口后，请使用 xwayland，因为大多数 wayland 实现无法跨会话保留窗口位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="156" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="163" />
         <source>prefer-qt6</source>
         <translation>优先使用 Qt6</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="158" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="165" />
         <source>Prefer Qt6 over Qt5 (if both are installed)</source>
         <translation>偏好 Qt6 而非 Qt5（如果两者都安装了）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="162" />
-        <source>monochrome tray</source>
-        <translation>单色托盘</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="169" />
+        <source>monochrome dark tray</source>
+        <translation>单色深色托盘</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="165" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="172" />
         <source>Set the tray-icon to match a monochrome dark-themed system tray.</source>
         <translation>设置托盘图标以匹配单色深色主题系统托盘。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="169" />
-        <source>mono light tray</source>
-        <translation>单光托盘</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="176" />
+        <source>monochrome light tray</source>
+        <translation>单色灯盘</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="172" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="179" />
         <source>Set the tray-icon to match a monochrome light-themed system tray.</source>
         <translation>设置托盘图标以匹配单色浅色主题系统托盘。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="176" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="183" />
         <source>tray follows theme</source>
         <translation>托盘跟随主题</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="179" />
-        <source>When the desktop-theme switches between dark and light,
-also invert the tray-theme.</source>
-        <translation>当桌面主题在深色和浅色之间切换时，
-还反转托盘主题。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="186" />
+        <source>When the desktop-theme switches between dark and light, also invert the tray-theme.</source>
+        <translation>当桌面主题在深色和浅色之间切换时，还要反转托盘主题。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="184" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="191" />
         <source>toolbar at top</source>
         <translation>顶部的工具栏</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="186" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="193" />
         <source>Located the toolbar at the top of main window.</source>
         <translation>工具栏位于主窗口顶部。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="190" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="197" />
         <source>separate status bar</source>
         <translation>单独的状态栏</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="192" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="199" />
         <source>Separate the status-bar from the toolbar.</source>
         <translation>将状态栏与工具栏分开。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="196" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="203" />
         <source>protect NVRAM</source>
         <translation>保护NVRAM</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="198" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="205" />
         <source>NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes.</source>
         <translation>NVRAM 保护通过最大限度地减少写入来减少显示器 NVRAM 的磨损。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="199" />
-        <source>Alter options and defaults to minimize VDU NVRAM writes.
-
-This setting mainly effects whether transitions are
-gradual, using several writes, or instant, with as
-few writes as possible.</source>
-        <translation>更改选项和默认值以最大程度地减少 VDU NVRAM 写入。
-
-该设置主要影响是否过渡
-渐进式，使用多次写入，或即时式，使用 as
-尽可能少写。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="206" />
+        <source>Alter options and defaults to minimize VDU NVRAM writes. This setting mainly affects whether transitions are gradual, using several writes, or instant, with as few writes as possible.</source>
+        <translation>更改选项和默认值以最大程度地减少 VDU NVRAM 写入。此设置主要影响过渡是渐进的（使用多次写入）还是即时的（使用尽可能少的写入）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="207" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="213" />
         <source>order by name</source>
         <translation>按名称排序</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="209" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
         <source>Order lists and tabs by vdu-name.</source>
         <translation>按 vdu 名称对列表和选项卡进行排序。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="213" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="219" />
         <source>lux options</source>
         <translation>勒克斯选项</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="221" />
         <source>Enable light metering options.</source>
         <translation>启用测光选项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="219" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
         <source>lux tray icon</source>
         <translation>勒克斯托盘图标</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="221" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="228" />
         <source>Show the current light-level icon in the system-tray icon.</source>
         <translation>在系统托盘图标中显示当前的亮度图标。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="232" />
         <source>schedule</source>
         <translation>日程</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="227" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="235" />
         <source>Enable the solar-elevation and time based scheduling of presets.</source>
         <translation>启用基于太阳高度角和时间的预设调度。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="231" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
         <source>weather</source>
         <translation>天气</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="233" />
-        <source>Enable weather lookups for vetoing preset scheduling.</source>
-        <translation>启用天气查找以否决预设调度。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="242" />
+        <source>Enable weather lookups for vetoing preset scheduling. In practice, weather lookups have not proven to be very useful or timely.</source>
+        <translation>启用天气查找以否决预设调度。在实践中，天气查询尚未被证明非常有用或及时。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="237" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="247" />
         <source>tick marks</source>
         <translation>刻度线</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="249" />
         <source>Show tick marks on control-sliders.</source>
         <translation>在控制滑块上显示刻度线。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="243" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="253" />
         <source>dbus client</source>
         <translation>数据库总线客户端</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="245" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="255" />
         <source>Use the d-bus ddcutil-server if available.</source>
         <translation>如果可用，请使用 d-bus ddcutil-server。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="249" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
         <source>dbus events</source>
         <translation>dbus事件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="251" />
-        <source>Enable D-bus ddcutil-server events.</source>
-        <translation>启用 D-bus ddcutil-server 事件。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="262" />
+        <source>Enable D-bus ddcutil-server events for detecting display hotplug and power events.</source>
+        <translation>启用 D-bus ddcutil-server 事件以检测显示器热插拔和电源事件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="255" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="263" />
+        <source>Display hotplug and power events will no longer be detected.</source>
+        <translation>将不再检测显示器热插拔和电源事件。</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="268" />
         <source>laptop panel</source>
         <translation>笔记本电脑面板</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="257" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="270" />
         <source>Use brightnessctl utility for laptop panel control.</source>
         <translation>使用亮度控制实用程序进行笔记本电脑面板控制。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="261" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
         <source>syslog</source>
         <translation>系统日志</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="263" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="276" />
         <source>Divert diagnostic output from stdout to the syslog.</source>
         <translation>将诊断输出从标准输出转移到系统日志。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="267" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="280" />
         <source>debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="269" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="282" />
         <source>Output extra debug information.</source>
         <translation>输出额外的调试信息。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="286" />
         <source>single instance</source>
         <translation>单实例</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="288" />
         <source>Only allow one running vdu_controls. Running another raises the existing instance.</source>
         <translation>只允许一个运行 vdu_controls。运行另一个实例会引发现有实例。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="280" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
         <source>Invalid control warnings</source>
         <translation>无效控制警告</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="282" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="295" />
         <source>Popup warnings if a VDU lacks an enabled control.</source>
         <translation>如果 VDU 缺少启用的控件，则会弹出警告。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="286" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
         <source>translations</source>
         <translation>翻译</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="288" />
-        <source>Enable language translations, currently not updated (no known users).</source>
-        <translation>启用语言翻译，当前未更新（无已知用户）。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="301" />
+        <source>Enable language translations. Translations have been AI-generated without any human oversight.</source>
+        <translation>启用语言翻译。翻译是人工智能生成的，没有任何人工监督。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="290" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="303" />
         <source>Your locale {} will be translated.</source>
         <translation>您的区域设置 {} 将被翻译。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="292" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="305" />
         <source>Your locale {} lacks a translation.</source>
         <translation>您的区域设置 {} 缺少翻译。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
         <source>Installed translations: {}.</source>
         <translation>已安装的翻译：{}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="294" />
-        <source>These translations have not been validated by any native speakers.</source>
-        <translation>这些翻译尚未得到任何母语人士的验证。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="307" />
+        <source>These translations are AI-generated without any human oversight.</source>
+        <translation>这些翻译是人工智能生成的，没有任何人工监督。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="298" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="311" />
         <source>location</source>
         <translation>位置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
         <source>Latitude, Longitude for solar elevation calculations.</source>
         <translation>用于太阳高度角计算的纬度、经度。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="303" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
         <source>ddcutil emulator</source>
         <translation>ddcutil 模拟器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="304" />
-        <source>User supplied command-line ddcutil-emulator for handling special cases.
-
-This emulator is consulted in addition to the normal DDC. It provides a
-way for non-DDC devices to be incorporated into vdu_controls.  For example,
-you might add the ability to control keyboard-backlight brightness.</source>
-        <translation>用户提供的命令行 ddcutil-emulator 用于处理特殊情况。
-
-除了正常的 DDC 之外，还参考该仿真器。它提供了一个
-将非 DDC 设备合并到 vdu_controls 的方式。  例如，
-您可以添加控制键盘背光亮度的功能。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <source>User supplied command-line ddcutil-emulator for handling special cases. This emulator is consulted in addition to the normal DDC. It provides a way for non-DDC devices to be incorporated into vdu_controls.  For example, you might add the ability to control keyboard-backlight brightness.</source>
+        <translation>用户提供的命令行 ddcutil-emulator 用于处理特殊情况。除了正常的 DDC 之外，还参考该仿真器。它提供了一种将非 DDC 设备合并到 vdu_controls 中的方法。  例如，您可以添加控制键盘背光亮度的功能。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="311" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="324" />
         <source>sleep multiplier</source>
         <translation>睡眠乘数</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="313" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="326" />
         <source>Ddcutil --sleep-multiplier (0.1 .. 2.0, default none).</source>
         <translation>Ddcutil --sleep-multiplier（0.1 .. 2.0，默认无）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="330" />
         <source>ddcutil extra args</source>
         <translation>ddcutil 额外参数</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="319" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="332" />
         <source>Ddcutil extra arguments (default none).</source>
         <translation>Ddcutil 额外参数（默认无）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="336" />
         <source>vdu name</source>
         <translation>虚拟数据单元名称</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="325" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="338" />
         <source>Name to display for this VDU</source>
         <translation>为此 VDU 显示的名称</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="329" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="342" />
         <source>enable vcp codes</source>
         <translation>启用 vcp 代码</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="332" />
-        <source>CSV list of VCP-code Features to enable (in hex).
-See capabilities-override for VCP Features.</source>
-        <translation>要启用的 VCP 代码功能的 CSV 列表（十六进制）。
-请参阅 VCP 功能的功能覆盖。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="345" />
+        <source>CSV list of VCP-code Features to enable (in hex). See capabilities-override for VCP Features.</source>
+        <translation>要启用的 VCP 代码功能的 CSV 列表（十六进制）。请参阅 VCP 功能的功能覆盖。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="334" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="347" />
         <source>While enabling well understood VCP Features should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>虽然启用众所周知的 VCP 功能应该没问题，但尝试未记录或不太了解的供应商功能可能会产生不可逆转的后果 - 包括损坏或变砖硬件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="340" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="353" />
         <source>capabilities override</source>
         <translation>能力覆盖</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="342" />
-        <source>Cached capabilities text. Edit this text to correct any
-inaccuracies in the vendor metadata extracted from the device.
-</source>
-        <translation>缓存的功能文本。编辑此文本以更正任何内容
-从设备提取的供应商元数据不准确。</translation>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="355" />
+        <source>Cached capabilities text. Edit this text to correct any inaccuracies in the vendor metadata extracted from the device. </source>
+        <translation>缓存的功能文本。编辑此文本以更正从设备提取的供应商元数据中的任何不准确之处。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="344" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="357" />
         <source>While correcting well understood metadata should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>虽然纠正众所周知的元数据应该没问题，但尝试未记录或不太了解的供应商功能可能会产生不可逆转的后果 - 包括损坏或变砖硬件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="373" />
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="371" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="386" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="384" />
         <source>(default)</source>
         <translation>(默认)</translation>
     </message>
@@ -544,17 +522,17 @@ This chart is resizable. </source>
 </context><context>
     <name>LatitudeLongitudeValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="499" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="538" />
         <source>The supplied longitude is {0} from the center of your {1} timezone.</source>
         <translation>提供的经度是距您的 {1} 时区中心的 {0}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="502" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="541" />
         <source>Charts showing solar elevation will render solar-noon off-center.</source>
         <translation>显示太阳高度角的图表将使太阳正午偏离中心。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="503" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="542" />
         <source>This isn't a serious issue, but you may wish to check you longitude or timezone.</source>
         <translation>这不是一个严重的问题，但您可能希望检查您的经度或时区。</translation>
     </message>
@@ -1605,109 +1583,120 @@ and restore {1} to application defaults</source>
 </context><context>
     <name>SettingsEditorBooleanWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="382" />
-        <source>You may optionally also set
-{}</source>
-        <translation>您还可以选择设置
-{}</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="400" />
+        <source>Also set related option: {}?</source>
+        <translation>还设置相关选项：{}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="389" />
-        <source>You will also need to set
-{}</source>
-        <translation>您还需要设置
-{}</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="406" />
+        <source>Consider also setting: {}</source>
+        <translation>还可以考虑设置：{}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/settings_editor.py" line="414" />
+        <source>Unsetting related option: {}</source>
+        <translation>取消设置相关选项：{}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/settings_editor.py" line="418" />
+        <source>Consider also unsetting: {}</source>
+        <translation>另请考虑取消设置：{}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/settings_editor.py" line="425" />
+        <source>Also setting required option: {}</source>
+        <translation>还设置必需的选项：{}</translation>
     </message>
 </context><context>
     <name>SettingsEditorLocationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="526" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="565" />
         <source>Detect</source>
         <translation>检测</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="527" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="566" />
         <source>Detect location by querying this desktop's external IP address.</source>
         <translation>通过查询此桌面的外部 IP 地址来检测位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="539" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="578" />
         <source>Query {} to obtain information based on your IP-address?</source>
         <translation>查询 {} 以获取基于您 IP 地址的信息？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="543" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="582" />
         <source>Use the following info?</source>
         <translation>使用以下信息？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="555" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="594" />
         <source>Failed to obtain info from {0}: {1}</source>
         <translation>无法从 {0} 获取信息：{1}</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="617" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="656" />
         <source>The selected file does not exist or is not an ordinary file.</source>
         <translation>所选文件不存在或不是普通文件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="620" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="659" />
         <source>The selected file lacks execute permission.</source>
         <translation>所选文件缺少执行权限。</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="634" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="673" />
         <source>Select: {}</source>
         <translation>选择：{}</translation>
     </message>
 </context><context>
     <name>SettingsEditorTab</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="300" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
         <source>Update existing {}?</source>
         <translation>更新现有的 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="300" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
         <source>Create new {}?</source>
         <translation>创建新的 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="304" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="315" />
         <source>Saving {} ...</source>
         <translation>正在保存 {} ...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="315" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="326" />
         <source>Saved {}</source>
         <translation>已保存 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="323" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="334" />
         <source>No unsaved changes for {}.</source>
         <translation>{} 没有未保存的更改。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="332" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="343" />
         <source>Discarded changes to {}</source>
         <translation>已丢弃对 {} 的更改</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="335" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="346" />
         <source>Nothing to discard</source>
         <translation>没有可丢弃的内容</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="340" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="351" />
         <source>Are you sure you want to restore {} to application defaults?</source>
         <translation>您确定要将 {} 恢复到应用程序默认值吗？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="341" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="352" />
         <source>The file {0} will be renamed to {1}.old</source>
         <translation>文件 {0} 将重命名为 {1}.old</translation>
     </message>

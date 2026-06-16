@@ -219,12 +219,12 @@ class SettingsEditorTab(QWidget):
         self.config_path = ConfIni.get_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
-        self.field_list: List[SettingsEditorFieldBase] = []
+        self.field_map: Dict[ConfOptDef, SettingsEditorFieldBase] = {}
         self.editor_dialog = editor_dialog
         self.preferred_name = vdu_config.get_vdu_preferred_name()
 
-        def _field(widget: SettingsEditorFieldBase) -> QWidget:
-            self.field_list.append(widget)
+        def _field(widget: SettingsEditorFieldBase, conf_opt_def: ConfOptDef) -> QWidget:
+            self.field_map[conf_opt_def] = widget
             return widget
 
         # Use the INI data section names as the value to pass to ConfSec(value) which is a StrEnum.
@@ -256,15 +256,26 @@ class SettingsEditorTab(QWidget):
                             col_index = 0
                             previous_sub_group = option_definition.sub_group
                         booleans_grid.addWidget(   # type: ignore - will have a value by now
-                            _field(SettingsEditorBooleanWidget(self, option_definition)), row_index, col_index)
+                            _field(SettingsEditorBooleanWidget(self, option_definition), option_definition), row_index, col_index)
                         col_index += 1
                         if col_index == grid_columns:
                             col_index = 0
                             row_index += 1
                     else:
-                        content_layout.addWidget(_field(widget_map[option_definition.conf_type](self, option_definition)))
+                        content_layout.addWidget(_field(widget_map[option_definition.conf_type](self, option_definition), option_definition))
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
+        for opt_def, field_widget in self.field_map.items():   # Assign cross-references
+            for requires in opt_def.related:
+                related_opt_def = ConfOpt[requires].value if isinstance(requires, str) else requires
+                related_field = self.field_map[related_opt_def]
+                field_widget.related.append(related_field)
+        for opt_def, field_widget in self.field_map.items():   # Assign cross-references
+            for requires in opt_def.requires:
+                related_opt_def = ConfOpt[requires].value if isinstance(requires, str) else requires
+                related_field = self.field_map[related_opt_def]
+                field_widget.requires.append(related_field)
+
 
     def _opt_defs_ordered_by_sub_group(self, section_def: ConfSec, vdu_config: VduControlsConfig) -> List[Tuple[str, ConfOptDef]]:
         ordered_by_sub_group: Dict[Tuple[int, int], Tuple[str, ConfOptDef]] = {}
@@ -324,7 +335,7 @@ class SettingsEditorTab(QWidget):
         return MBtn.Cancel
 
     def reset(self) -> None:
-        for field in self.field_list:
+        for field in self.field_map.values():
             field.reset()
 
     def revert_changes(self) -> None:
@@ -363,9 +374,11 @@ class SettingsEditorFieldBase(QWidget):
         self.ui_label_text = option_def.localized_name
         self.warning = option_def.localized_warning if option_def.warning else ''
         self.off_warning = option_def.off_warning if option_def.off_warning else ''
-        self.related = option_def.related
+        # Get related and resolve any forward refs (str values)
+        self.related: List[SettingsEditorFieldBase] = []
+        self.requires: List[SettingsEditorFieldBase] = []
         if option_def.help:
-            self.setToolTip(option_def.localized_help)
+            self.setToolTip(f"<p>{option_def.localized_help}</p>")
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
@@ -379,21 +392,47 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[self.conf_section][self.conf_name] = 'yes' if is_checked else 'no'
             if self.related:
-                MBox(MIcon.Information, msg=tr("You may optionally also set\n{}").format(
-                    "\n + ".join([other.localized_name for other in self.related])), buttons=MBtn.Ok).exec()
-                self.related = None   # Only advise them once per session.
+                if is_checked:
+                    for related_field in self.related:
+                        if not related_field.checkbox.isChecked():
+                            if isinstance(related_field, SettingsEditorBooleanWidget):
+                                if MBox(MIcon.Information,
+                                        msg=tr("Also set related option: {}?").format(related_field.ui_label_text),
+                                        info=related_field.toolTip(),
+                                        buttons=MBtn.Yes|MBtn.No).exec() == MBtn.Yes:
+                                    related_field.checkbox.setChecked(True)
+                            else:
+                                MBox(MIcon.Information,
+                                     msg=tr("Consider also setting: {}").format(related_field.ui_label_text),
+                                     info=related_field.toolTip(),
+                                     buttons=MBtn.Ok).exec()
+                else:
+                    for related_field in self.related:
+                        if related_field.checkbox.isChecked():
+                            if isinstance(related_field, SettingsEditorBooleanWidget):
+                                MBox(MIcon.Information,
+                                     msg=tr("Unsetting related option: {}").format(related_field.ui_label_text),
+                                     info = related_field.toolTip()).exec()
+                                related_field.checkbox.setChecked(False)
+                            else:
+                                MBox(MIcon.Information, msg=tr("Consider also unsetting: {}").format(related_field.ui_label_text),
+                                     info=related_field.toolTip(),
+                                     buttons=MBtn.Ok).exec()
             if is_checked and option_def.requires:
-                if any(section_editor.ini_editable.get(self.conf_section, other.conf_name, fallback='no') == 'no' for
-                       other in option_def.requires):
-                    # TODO - it would be nice to actually set them for the user.
-                    MBox(MIcon.Warning, msg=tr("You will also need to set\n{}").format(
-                        "\n + ".join([other.localized_name for other in option_def.requires])), buttons=MBtn.Ok).exec()
+                for required_field in self.requires:
+                    if isinstance(required_field, SettingsEditorBooleanWidget) and not required_field.checkbox.isChecked():
+                        MBox(MIcon.Information,
+                             msg=tr("Also setting required option: {}").format(required_field.ui_label_text),
+                             info=required_field.toolTip()).exec()
+                        required_field.checkbox.setChecked(True)
+                    else:
+                        assert "Requires non-boolean field not yet supported"
             if is_checked and self.warning:
                 MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
-                self.warning = None  # Only warn once
+                #self.warning = None  # Only warn once
             if not is_checked and self.off_warning:
                 MBox(MIcon.Warning, msg=self.ui_label_text, info=option_def.off_warning, buttons=MBtn.Ok).exec()
-                self.off_warning = None   # Only warn once
+                #self.off_warning = None   # Only warn once
 
         checkbox.toggled.connect(_toggled)
         widget_layout.addWidget(checkbox)
