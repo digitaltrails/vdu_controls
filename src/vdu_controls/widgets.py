@@ -11,8 +11,8 @@ from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, crea
 from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
-                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
-                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen)
+                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING, QPlainTextEdit, pyqtSignal,
+                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen, QFocusEvent)
 from vdu_controls.scaling import desktop_font_height, dpx
 
 
@@ -264,6 +264,20 @@ class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make i
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.selectAll()
+
+
+class ValidatingPlainTextEdit(QPlainTextEdit):
+    """
+    A QPlainTextEdit subclass that emits a signal when editing is finished (actually focus out).
+    """
+    editingFinished = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def focusOutEvent(self, event: QFocusEvent | None):
+        self.editingFinished.emit()
+        super().focusOutEvent(event)
 
 
 DialogSingletonMixinType = TypeVar('DialogSingletonMixinType', bound='DialogSingletonMixin')

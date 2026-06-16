@@ -25,6 +25,7 @@ from vdu_controls.misc import LocalStrEnum, GeoLocation
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
 
+MAIN_CONFIG_NAME = 'vdu_controls'
 
 class ConfType(LocalStrEnum):
     BOOL = 'bool'
@@ -138,7 +139,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='smart-window', default_value="yes",
         ui_label=QT_TR_NOOP('smart window'),
         sub_group=SubGroup.USER_INTERFACE,
-        help=QT_TR_NOOP('Smart main window placement and geometry (x11 and xwayland).'), restart_required=True)
+        help=QT_TR_NOOP('Smart main window placement, restore\nplacement and geometry at start up.'),
+        restart_required=True)
 
     SMART_USES_XWAYLAND = ConfOptDef(
         conf_name='smart-uses-xwayland', default_value="yes", restart_required=True,
@@ -160,27 +162,28 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('monochrome tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('Monochrome dark themed system tray.'))
+        help=QT_TR_NOOP('Set the tray-icon to match a monochrome dark-themed system tray.'))
 
     MONO_LIGHT_TRAY_ENABLED = ConfOptDef(
         conf_name='mono-light-tray-enabled', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('mono light tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('Monochrome light themed system tray.'))
+        help=QT_TR_NOOP('Set the tray-icon to match a monochrome light-themed system tray.'))
 
     TRAY_FOLLOWS_THEME = ConfOptDef(
         conf_name='tray-follows-theme', default_value="yes", restart_required=False,
         ui_label=QT_TR_NOOP('tray follows theme'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('Tray dark/light theming follows desktop-theme changes.'))
+        help=QT_TR_NOOP('When the desktop-theme switches between dark and light,\n'
+                        'also invert the tray-theme.'))
 
     TOOLBAR_AT_TOP = ConfOptDef(
         conf_name='toolbar-at-top', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('toolbar at top'),
         sub_group=SubGroup.USER_INTERFACE,
-        help=QT_TR_NOOP('Toolbar resides at top of main window.'))
+        help=QT_TR_NOOP('Located the toolbar at the top of main window.'))
 
     SEPARATE_STATUS_BAR = ConfOptDef(
         conf_name='separate-status-bar', default_value="no", restart_required=True,
@@ -215,19 +218,19 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='lux-tray-icon', default_value="yes", restart_required=False,
         ui_label=QT_TR_NOOP('lux tray icon'),
         sub_group=SubGroup.SYSTEM_TRAY,
-        help=QT_TR_NOOP('Enable lux light-level system-tray icon.'))
+        help=QT_TR_NOOP('Show the current light-level icon in the system-tray icon.'))
 
     SCHEDULE_ENABLED = ConfOptDef(
         conf_name='schedule-enabled', default_value='yes',
         ui_label=QT_TR_NOOP('schedule'),
         sub_group=SubGroup.FEATURES,
-        help=QT_TR_NOOP('Enable preset schedule.'))
+        help=QT_TR_NOOP('Enable the solar-elevation and time based scheduling of presets.'))
 
     WEATHER_ENABLED = ConfOptDef(
         conf_name='weather-enabled', default_value='no',
         ui_label=QT_TR_NOOP('weather'),
         sub_group=SubGroup.FEATURES,
-        help=QT_TR_NOOP('Enable weather lookups.'))
+        help=QT_TR_NOOP('Enable weather lookups for vetoing preset scheduling.'))
 
     TICK_MARKS = ConfOptDef(
         conf_name='tick-marks', default_value="yes",
@@ -257,7 +260,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='syslog-enabled', default_value="no",
         ui_label=QT_TR_NOOP('syslog'),
         sub_group=SubGroup.FEATURES,
-        help=QT_TR_NOOP('Divert diagnostic output to the syslog.'))
+        help=QT_TR_NOOP('Divert diagnostic output from stdout to the syslog.'))
 
     DEBUG_ENABLED = ConfOptDef(
         conf_name='debug-enabled', default_value="no",
@@ -269,7 +272,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='single-instance', default_value="yes",
         ui_label=QT_TR_NOOP('single instance'),
         sub_group=SubGroup.USER_INTERFACE,
-        help=QT_TR_NOOP('Only allow one running vdu_controls, running another raises the existing instance.')
+        help=QT_TR_NOOP('Only allow one running vdu_controls. Running another raises the existing instance.')
     )
 
     WARNINGS_ENABLED = ConfOptDef(
@@ -325,12 +328,22 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='enable-vcp-codes', conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
         ui_label=QT_TR_NOOP('enable vcp codes'),
         conf_type=ConfType.CSV,
-        cmdline_arg='DISALLOWED', help=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
+        cmdline_arg='DISALLOWED',
+        help=QT_TR_NOOP('CSV list of VCP-code Features to enable (in hex).\n'
+                        'See capabilities-override for VCP Features.'),
+        warning=QT_TR_NOOP('While enabling well understood VCP Features should be fine, experimenting '
+                           'with undocumented or poorly understood vendor features may have '
+                           'irreversible consequences - including damaging or bricking hardware.'))
 
     CAPABILITIES_OVERRIDE = ConfOptDef(
         conf_name='capabilities-override', conf_section=ConfSec.DDCUTIL_CAPABILITIES,
         ui_label=QT_TR_NOOP('capabilities override'),
-        conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED')
+        conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED',
+        help=QT_TR_NOOP('Cached capabilities text. Edit this text to correct any\n'
+                        'inaccuracies in the vendor metadata extracted from the device.\n'),
+        warning=QT_TR_NOOP('While correcting well understood metadata should be fine, experimenting '
+                           'with undocumented or poorly understood vendor features may have '
+                           'irreversible consequences - including damaging or bricking hardware.'))
 
     UNKNOWN = ConfOptDef(
         conf_name="UNKNOWN", conf_section=ConfIni.UNKNOWN_SECTION,

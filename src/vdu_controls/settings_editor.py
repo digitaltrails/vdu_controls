@@ -16,14 +16,15 @@ from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame,
     QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QPlainTextEdit, QSizePolicy
 from vdu_controls.solar_calc import degrees_from_zone_center
 
-from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef
+from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef, MAIN_CONFIG_NAME
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 from vdu_controls.scaling import dpx, desktop_font_height
-from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin
+from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin, \
+    ValidatingPlainTextEdit
 
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
@@ -42,8 +43,8 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     """
 
     @staticmethod
-    def show_dialog(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
-        SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(default_config,
+    def show_dialog(main_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
+        SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(main_config,
                                                                                              vdu_config_list, change_callback)
 
     @staticmethod
@@ -60,7 +61,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
                     editor.tabs_widget.setCurrentIndex(tab_number)
                     editor.make_visible()
 
-    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
+    def __init__(self, main_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
         self.setLayout(widget_layout := QVBoxLayout())
@@ -113,7 +114,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.resize(dpx(900), dpx(500))
         self.setMinimumSize(dpx(512), dpx(400))
-        self.reconfigure([default_config, *vdu_config_list])
+        self.reconfigure(vdu_config_list, main_config)
         self.make_visible()
 
     def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
@@ -130,8 +131,8 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         self.tab_restore_defaults_button.setToolTip(
             tr('Remove {0}\nand restore {1} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
 
-    def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
-        for config in config_list:
+    def reconfigure(self, vdu_config_list: List[VduControlsConfig], main_config: VduControlsConfig | None = None) -> None:
+        for config in vdu_config_list if main_config is None else [main_config, *vdu_config_list]:
             vdu_label = config.get_vdu_preferred_name()
             conf_key = ConfIni.get_path(config.config_name)
             if tabs_found := [tab for tab in self.editor_tab_list if tab.config_path == conf_key]:
@@ -150,6 +151,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
                 self.tabs_widget.setTabToolTip(self.tabs_widget.indexOf(tab), config.file_path.as_posix())
 
     def cross_validate(self) -> int:
+        # Check for unique vdu labels
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(ConfOpt.VDU_NAME.conf_section, ConfOpt.VDU_NAME.conf_name, fallback=None):
@@ -227,6 +229,8 @@ class SettingsEditorTab(QWidget):
 
         # Use the INI data section names as the value to pass to ConfSec(value) which is a StrEnum.
         for section_def in [ConfSec(value) for value in self.ini_editable.data_sections()]:
+            if vdu_config.config_name == MAIN_CONFIG_NAME and section_def == section_def.DDCUTIL_CAPABILITIES:
+                continue  # Makes no sense to have a global default, skip section
             section_title = section_def.localized_name
             content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
@@ -357,6 +361,9 @@ class SettingsEditorFieldBase(QWidget):
         self.conf_name = option_def.conf_name
         self.has_error = False
         self.ui_label_text = option_def.localized_name
+        self.warning = option_def.localized_warning if option_def.warning else ''
+        self.off_warning = option_def.off_warning if option_def.off_warning else ''
+        self.related = option_def.related
         if option_def.help:
             self.setToolTip(option_def.localized_help)
 
@@ -371,19 +378,22 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[self.conf_section][self.conf_name] = 'yes' if is_checked else 'no'
-            if option_def.related:
+            if self.related:
                 MBox(MIcon.Information, msg=tr("You may optionally also set\n{}").format(
-                    "\n + ".join([other.localized_name for other in option_def.related])), buttons=MBtn.Ok).exec()
+                    "\n + ".join([other.localized_name for other in self.related])), buttons=MBtn.Ok).exec()
+                self.related = None   # Only advise them once per session.
             if is_checked and option_def.requires:
                 if any(section_editor.ini_editable.get(self.conf_section, other.conf_name, fallback='no') == 'no' for
                        other in option_def.requires):
                     # TODO - it would be nice to actually set them for the user.
                     MBox(MIcon.Warning, msg=tr("You will also need to set\n{}").format(
                         "\n + ".join([other.localized_name for other in option_def.requires])), buttons=MBtn.Ok).exec()
-            if is_checked and option_def.warning:
-                MBox(MIcon.Warning, msg=option_def.localized_warning, buttons=MBtn.Ok).exec()
-            if not is_checked and option_def.off_warning:
-                MBox(MIcon.Warning, msg=option_def.localized_off_warning, buttons=MBtn.Ok).exec()
+            if is_checked and self.warning:
+                MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
+                self.warning = None  # Only warn once
+            if not is_checked and self.off_warning:
+                MBox(MIcon.Warning, msg=self.ui_label_text, info=option_def.off_warning, buttons=MBtn.Ok).exec()
+                self.off_warning = None   # Only warn once
 
         checkbox.toggled.connect(_toggled)
         widget_layout.addWidget(checkbox)
@@ -418,6 +428,9 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
             self.has_error = self.validator.validate(text, 0)[0] != QValidator.State.Acceptable
             self.set_error_indication(self.has_error)
         if not self.has_error:
+            if text and self.warning:
+                MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
+                self.warning = None   # Only warn the first time
             internal_value = str(text)  # Why did I do this - is text not really a string?
             if not self.has_error:
                 self.section_editor.ini_editable[self.conf_section][self.conf_name] = internal_value
@@ -550,7 +563,8 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         self.setLayout(layout)
         text_label = QLabel(self.ui_label_text)
         layout.addWidget(text_label)
-        text_editor = QPlainTextEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
+        self.original_text = section_editor.ini_editable[self.conf_section][self.conf_name]
+        text_editor = ValidatingPlainTextEdit(self.original_text)
         text_editor.setMinimumHeight(desktop_font_height(100))
         text_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -559,6 +573,15 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
 
         text_editor.textChanged.connect(_text_changed)
         layout.addWidget(text_editor, stretch=1)
+
+        def _issue_warning() -> None:
+            # Check for any warnings
+            if self.original_text != self.text_editor.toPlainText().strip() and self.warning:
+                MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
+                self.warning = None  # Only warn the first time.
+
+        text_editor.editingFinished.connect(_issue_warning)
+
         self.text_editor = text_editor
 
     def reset(self) -> None:

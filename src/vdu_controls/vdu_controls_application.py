@@ -53,7 +53,7 @@ from vdu_controls.unicode import *
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
 from vdu_controls.vdu_controller import VduController
-from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
+from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability, MAIN_CONFIG_NAME
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
     alter_margins, DialogSingletonMixin, ToolButton, EnhancedSplashScreen
@@ -1615,15 +1615,16 @@ def main() -> None:
     except locale.Error:
         log.warning(f"Could not set the default locale - may not be an issue...", trace=True)
 
-    main_config = VduControlsConfig('vdu_controls', main_config=True)
-    default_config_path = ConfIni.get_path('vdu_controls')
+    main_config = VduControlsConfig(MAIN_CONFIG_NAME, main_config=True)
+    default_config_path = ConfIni.get_path(MAIN_CONFIG_NAME)
     log.info("Looking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
 
     if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
         if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XWAYLAND):
-            log.warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
+            log.warning(f"{ConfOpt.SMART_WINDOW.conf_id}: "
+                        "Many wayland implementations cannot save/restore window placement across sessions. Switching to XWayland.")
             force_xwayland()
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
