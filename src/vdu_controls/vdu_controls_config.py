@@ -139,7 +139,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='system-tray-enabled', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('system tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
-        help=QT_TR_NOOP('Start up in the system tray.'))
+        help=QT_TR_NOOP('Start up in the system tray.'),
+        related=['LUX_TRAY_ICON'])
 
     SMART_WINDOW = ConfOptDef(
         conf_name='smart-window', default_value="yes",
@@ -168,15 +169,21 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='monochrome-tray-enabled', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('monochrome dark tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        related=['TRAY_FOLLOWS_THEME'],
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('Set the tray-icon to match a monochrome dark-themed system tray.'))
+        help=QT_TR_NOOP('Set the tray-icon to match a monochrome dark-themed system tray.'
+                        '(The standard tray-icon is now neutrally-themed, try this '
+                        'monochrome option if you feel the standard option is inadequate.)'))
 
     MONO_LIGHT_TRAY_ENABLED = ConfOptDef(
         conf_name='mono-light-tray-enabled', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('monochrome light tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        related=['TRAY_FOLLOWS_THEME'],
         requires=[SYSTEM_TRAY_ENABLED],
-        help=QT_TR_NOOP('Set the tray-icon to match a monochrome light-themed system tray.'))
+        help=QT_TR_NOOP('Set the tray-icon to match a monochrome light-themed system tray.'
+                        '(The standard tray-icon is now neutrally themed, try this '
+                        'monochrome option if you feel the standard option is inadequate.)'))
 
     TRAY_FOLLOWS_THEME = ConfOptDef(
         conf_name='tray-follows-theme', default_value="yes", restart_required=False,
@@ -184,7 +191,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('When the desktop-theme switches between dark and light, '
-                        'also invert the tray-theme.'))
+                        'also invert the current monochrome tray-theme.'
+                        "(Tray theme inversion isn't necessary for the standard neutrally-themed tray-icon.)"))
 
     TOOLBAR_AT_TOP = ConfOptDef(
         conf_name='toolbar-at-top', default_value="no", restart_required=False,
