@@ -907,7 +907,7 @@ License
 This project is licensed under the **GNU General Public License Version 3** - see the [LICENSE.md](LICENSE.md) file 
 for details
 
-**vdu_controls Copyright (C) 2021 Michael Hamilton**
+**vdu_controls Copyright (C) 2021-2026 Contributors to vdu_controls**
 
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
