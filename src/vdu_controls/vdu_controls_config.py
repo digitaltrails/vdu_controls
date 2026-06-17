@@ -186,7 +186,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
                         'monochrome option if you feel the standard option is inadequate.)'))
 
     TRAY_FOLLOWS_THEME = ConfOptDef(
-        conf_name='tray-follows-theme', default_value="yes", restart_required=False,
+        conf_name='tray-follows-theme', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('tray follows theme'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
@@ -229,7 +229,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         help=QT_TR_NOOP('Enable light metering options.'))
 
     LUX_TRAY_ICON = ConfOptDef(
-        conf_name='lux-tray-icon', default_value="yes", restart_required=False,
+        conf_name='lux-tray-icon', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('lux tray icon'),
         sub_group=SubGroup.SYSTEM_TRAY,
         requires=[SYSTEM_TRAY_ENABLED],
