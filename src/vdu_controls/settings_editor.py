@@ -373,7 +373,7 @@ class SettingsEditorFieldBase(QWidget):
         self.has_error = False
         self.ui_label_text = option_def.localized_name
         self.warning = option_def.localized_warning if option_def.warning else ''
-        self.off_warning = option_def.off_warning if option_def.off_warning else ''
+        self.off_warning = option_def.localized_off_warning if option_def.off_warning else ''
         # Get related and resolve any forward refs (str values)
         self.related: List[SettingsEditorFieldBase] = []
         self.requires: List[SettingsEditorFieldBase] = []
@@ -431,7 +431,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                 MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
                 #self.warning = None  # Only warn once
             if not is_checked and self.off_warning:
-                MBox(MIcon.Warning, msg=self.ui_label_text, info=option_def.off_warning, buttons=MBtn.Ok).exec()
+                MBox(MIcon.Warning, msg=self.ui_label_text, info=self.off_warning, buttons=MBtn.Ok).exec()
                 #self.off_warning = None   # Only warn once
 
         checkbox.toggled.connect(_toggled)
