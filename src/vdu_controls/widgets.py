@@ -182,6 +182,7 @@ class MBox(QMessageBox):
             self.setSizeGripEnabled(True)
         self.setDefaultButton(default) if default is not None else None
         # Force a reasonable width by creating an unbreakable string of spaces - bit yucky
+        msg = f'<span/>{msg}'  # Prefix a span to force Qt to consider this text to be html.
         msg += '<br/>' + '&nbsp;' * min(max(len(msg) + MBox.PAD_ICON, MBox.PAD_MIN), MBox.PAD_MAX)
         if msg is not None:
             self.setText(msg)
