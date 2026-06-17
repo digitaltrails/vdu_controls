@@ -186,12 +186,10 @@ def degrees_from_zone_center(latitude: float, longitude: float) -> float:
     user in Kashgar is still in CST, but 40 degrees west of the CST center.
     Which may cause diagrams to look off.
     """
-    solar_noon = find_solar_noon(zoned_now(), latitude, longitude)  # Noon time
-    utcoffset = solar_noon.utcoffset()
-    if utcoffset is None:
+    tz_utc_offset = zoned_now().timetz().utcoffset()
+    if tz_utc_offset is None:
         return 0.0
-    offset_hours = utcoffset.total_seconds() / 3600  # Hours offset from UTC
-    zone_center = offset_hours * 15  # UTC offset * Earth 15 degrees/hour rotation -> approx zone center meridian.
-    longitude_deviation = longitude - zone_center  # diff location.longitude from zone-center
-    return longitude_deviation
+    offset_minutes = tz_utc_offset.total_seconds() / 60
+    zone_center = (offset_minutes / 60) * 15  # 15 degrees/hour rotation -> approx zone center meridian
+    return longitude - zone_center
 
