@@ -161,6 +161,14 @@ MBtn = QMessageBox.StandardButton
 
 class MBox(QMessageBox):
 
+    PAD_MIN = 80  # Controls number of '&nbsp;' used in forcing the width of the box.
+    PAD_MAX = 120
+    PAD_ICON = 10
+
+    BOX_MAX_WIDTH = 800   # Resizable QMessagbox hack
+    BOX_MAX_HEIGHT = 600
+    TEXT_MAX_HEIGHT = 300
+
     def __init__(self,
                  icon: QMessageBox.Icon,
                  msg: str | None = None,
@@ -173,10 +181,14 @@ class MBox(QMessageBox):
             self.setMouseTracking(True)
             self.setSizeGripEnabled(True)
         self.setDefaultButton(default) if default is not None else None
-        msg += '<br/>' + '&nbsp;' * min(max(len(msg) + 10, 80), 120)  # force a reasonable width - bit yucky
-        self.setText(msg) if msg is not None else None
-        self.setInformativeText(info) if info is not None else None
-        self.setDetailedText(details) if details is not None else None
+        # Force a reasonable width by creating an unbreakable string of spaces - bit yucky
+        msg += '<br/>' + '&nbsp;' * min(max(len(msg) + MBox.PAD_ICON, MBox.PAD_MIN), MBox.PAD_MAX)
+        if msg is not None:
+            self.setText(msg)
+        if info is not None:
+            self.setInformativeText(info)
+        if details is not None:
+            self.setDetailedText(details)
 
     def event(self, event: QEvent | None):
         # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
@@ -184,9 +196,9 @@ class MBox(QMessageBox):
         result = super().event(event)
         if RESIZABLE_MESSAGEBOX_HACK and event:
             if event.type() == QEvent.Type.MouseMove or event == QEvent.Type.MouseButtonPress:
-                self.setMaximumSize(dpx(600), dpx(400))
+                self.setMaximumSize(dpx(MBox.BOX_MAX_WIDTH), dpx(MBox.BOX_MAX_HEIGHT))
                 if text_edit_field := self.findChild(QTextEdit):
-                    text_edit_field.setMaximumHeight(dpx(300))
+                    text_edit_field.setMaximumHeight(dpx(MBox.TEXT_MAX_HEIGHT))
         return result
 
 
