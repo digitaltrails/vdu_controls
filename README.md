@@ -96,13 +96,26 @@ Starting with version 2.6, laptop panels are supported for brightness-only contr
 
 Laptop support is optional and controlled by the  __Settings->vdu_control globals->DDC options->laptop panel__.
 
-
 The command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl) is used to emulate DDC control of brightness.
 Brightness control is widely available and packaged for many distros.
 
 ``vdu_controls`` will  react to laptop brightness-function-keys or 
 inactivity-dimming.  (The ``python3-pyudev`` library is employed to listen for
 `brigthness` events.)
+
+#### Control of other devices, such as motherboard LED's
+
+`Vdu_controls` supports a DIY _virtual-DDC plugin_ for scripting the
+control of non-DDC displays or other devices such as keyboard-backlights or 
+motherboard-LEDs. 
+
+A plugin simply needs to emulate the dccutil
+command line interface, parsing simple text inputs and producing text
+outputs. It can be coded as a bash script or in any language 
+that's appropriate to the task.
+
+A sample [sample script](sample-scripts/laptop-ddcutil-emulator.bash) is 
+available in the sample-scripts folder.  
 
 #### Technical background
 
@@ -114,24 +127,28 @@ decreases. I created `vdu_controls` to allow me to more easily adjust my own
 displays.
 
 `vdu_controls` communicates with displays by using either 
-[ddcutil](https://www.ddcutil.com/), a command line utility, 
-or the [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), 
-a D-Bus interface to [libddcutil](https://www.ddcutil.com/api_main/).
-The `ddcutil` command line utility is commonly available in most Linux 
-distributions. The D-Bus `ddcutil-service` is relatively new and less widely
-distributed.  The service is preferred, it's faster, more reliable, 
-and supports DPMS and hotplug events.  If `ddcutil-service` isn't 
-available, `vdu_controls` falls back to the `ddcutil` command.
-(ddcutil-service is relatively easy to build, does not run as root, 
-a custom DIY install relatively simple.)
+the [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), 
+a D-Bus interface to [libddcutil](https://www.ddcutil.com/api_main/), or [ddcutil](https://www.ddcutil.com/), a command line utility.
+The D-Bus `ddcutil-service` is preferred, its more reliable, it detects 
+DPMS/hotplug events, and it's faster (noticably so if you have
+multiple displays). If `ddcutil-service` 
+isn't available, `vdu_controls` falls back to the `ddcutil` command.
 
 Both `ddcutil` and `libddcutil` interface to the **VESA** standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
 Both the command and the library  provide a robust interface that supports 
 many different OEM DDC implementations and GPU drivers. 
 
-`Vdu_controls` supports a _virtual-DDC plugin_ for interfacing to non DDC 
-displays. A sample script wrapper is included.
+The `ddcutil-service` is quite new and less commonly pre-packaged.
+If `libddcutil` is prepackaged, a DIY build of the service should be straight forward (it's 
+coded in C, in only one C source file). If 
+a distribution provides `ddcutil`, it probably also provides `libddcutil` and
+its dev/c-header packages. Beyond `libddcutil` the service has only standard requirments
+common to all distros .   The service 
+does not run as root, it runs a user-session service,
+`libddcutil` provides the necessary udev access to the user session.
+
+
 
 Does adjusting a VDU affect its lifespan or health?
 ---------------------------------------------------
