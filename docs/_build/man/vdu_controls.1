@@ -28,9 +28,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 13, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 19, 2026" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.6.5rc2
+vdu_controls \- vdu_controls 2.6.5rc3
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
@@ -45,12 +45,14 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-schedule|\-\-no\-schedule]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
+[\-\-single\-instance | \-\-no\-single\-instance]
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
 [\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xwayland|\-smart\-uses\-xwayland]
 [\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-tray\-follows\-theme|\-\-no\-tray\-follows\-theme]
 [\-\-toolbar\-at\-top|\-no\-toolbar\-at\-top]
 [\-\-separate\-status\-bar|\-\-separate\-status\-bar]
+[\-\-tick\-marks | \-\-no\-tick\-marks ]
 [\-\-laptop\-panel|\-\-no\-laptop\-panel]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
@@ -100,6 +102,10 @@ show the splash screen.  \fB\-\-splash\fP is the default.
 start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
 .TP
+.B \-\-single\-instance|\-\-no\-single\-instance
+run one instance only, further launches focus the existing instance.
+\fB\-\-single\-instance\fP is the default.
+.TP
 .B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
 minimize the main window automatically on focus out.
 \fB\-\-no\-hide\-on\-focus\-out\fP is the default.
@@ -131,6 +137,10 @@ locate the toolbar at the top or bottom of the main window
 .B \-\-separate\-status\-bar|\-\-no\-separate\-status\-bar
 separate the status\-bar from the toolbar
 \fB\-\-no\-separate\-status\-bar\fP is the default
+.TP
+.B \-\-tick\-marks|\-\-no\-tick\-marks
+show tick marks on control\-sliders.
+\fB\-\-tick\-marks\fP is the default
 .TP
 .B \-\-laptop\-panel|\-\-no\-laptop\-panel
 allow laptop panels to be controlled
@@ -219,7 +229,7 @@ script for the current user.
 \fBvdu_controls\fP control panel for external Visual Display Units (VDUs, monitors, displays). 
 It supports displays connected via DisplayPort, DVI, HDMI, USB, and built\-in laptop\-panels.
 Out of the box, \fBvdu_controls\fP offers a subset of controls including brightness, contrast 
-and audio controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
+and audio controls.  Additional controls can be enabled via the \fISettings\-Dialog*\fP\&.
 .sp
 \fBvdu_controls\fP interacts with VDUs by using \fBddcutil\fP to issue standard VESA
 \fIVirtual Control Panel\fP (\fIVCP\fP) commands via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP).
@@ -235,19 +245,19 @@ optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly 
 For desktops that don\(aqt integrate with Qt/KDE themeing, the \fIqt5ct\fP and \fIqt6ct\fP utilities may
 be used to alter the overall Qt theme.
 .sp
-The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
+The UI provides an optional \fIambient\-light slider\fP for simultaneously adjusting
 all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included
 for semi\-automatic adjustment proportional to daylight at a given geographic location, or
 fully automatic adjustment by accessing hardware light\-meters, webcams, or other devices.
 .sp
-Named \fBPreset\fP configurations can be saved and recalled. For example, presets may be created
+Named \fIPreset\fP configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
 light levels, scheduled according to local solar elevation, vetoed by local weather conditions,
 or activated by UNIX signals.
 .sp
-From any UI window, \fIF1\fP accesses help, and \fIF10\fP accesses the main\-menu.   The main\-menu is
+From any UI window, \fIF1\fP accesses help, and \fIF10\fP accesses the \fImain\-menu\fP\&.   The \fImain\-menu\fP is
 also available via the hamburger\-menu, and also via the right\-mouse button in either the
-main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortcuts for all menu items
+main\-window or the system\-tray icon.  The \fImain\-menu\fP has \fIALT\-key\fP shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
 The main\-toolbar includes a stealthy\-drag\-handle at extreme\-left.  The toolbar
@@ -260,10 +270,10 @@ The long\-term effects of repeatably rewriting a VDUs setting are not well under
 concerns have been expressed. See \fBLIMITATIONS\fP for further details.
 .SH CONFIGURATION
 .sp
-Configuration changes can be made via the \fBSettings\fP dialog or by editing the config\-files.
+Configuration changes can be made via the \fISettings\-Dialog\fP or by editing the config\-files.
 .SS Settings Menu and Config files
 .sp
-The \fBSettings\fP dialog features a tab for editing common/default settings as well as
+The \fISettings\-Dialog\fP features a tab for editing common/default settings as well as
 tabs specific to each VDU.  The config files are named according to the following scheme:
 .INDENT 0.0
 .INDENT 3.5
@@ -427,11 +437,11 @@ reload all configuration files and refresh all control values from the VDUs.
 When available, \fBvdu_controls\fP defaults to interacting with VDUs via the DBUS \fBddcutil\-service\fP
 service rather than the \fBddcutil\fP command. The service should be both faster and more
 reliable (especially when multiple VDUs need to be controlled). Whether to use the service
-can be controlled by the \fBDBUS client\fP checkbox in the settings dialog.
+can be controlled by the \fBDBUS client\fP checkbox in the \fISettings\-Dialog\fP\&.
 .sp
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot\-plugging cables or power\-cycling VDUs).  Whether to enable events
-is controlled by the \fBDBUS events\fP checkbox in the settings dialog.  The reliability
+is controlled by the \fBDBUS events\fP checkbox in the \fISettings\-Dialog\fP\&.  The reliability
 and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
 and VDU connector\-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBlibddcutil\fP offer
@@ -443,7 +453,7 @@ When laptop support is enabled, the widely available command line utility \fBbri
 is used to emulate DDC control of brightness (\%<https://\:github\:.com/\:Hummer12007/\:brightnessctl>).
 Additionally, \fBvdu_controls\fP will react to laptop brightness\-function\-keys or
 inactivity\-dimming by using the \fBpython3\-pyudev\fP library to monitor udev
-for _brightness_ events.
+for  \fIbrightness\fP events.
 .SS DDC emulation for special cases
 .sp
 The \fIddcutil\-emulator\fP option is provided for handling special cases.  When set,
@@ -454,13 +464,13 @@ case\-LED\(aqs.  To use it you would have to create a script that emulates the
 basic \fIddcutil\fP command set (see included sample script).
 .SS Presets
 .sp
-A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
+A named \fIPreset\fP can be used to save the current VDU settings for later recall. Any number of
 presets can be created for different lighting conditions or different applications, for example,
 \fINight\fP, \fIDay\fP, \fIOvercast\fP, \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&. Each preset can be assigned a
 name and icon.
 .sp
-The \fBPresets\fP item in \fBmain\-menu\fP will bring up a \fBPresets\fP dialog for managing and
-applying presets.  The \fBmain\-menu\fP also includes an item for each existing preset.
+The \fIPresets\fP item in \fImain\-menu\fP will bring up a \fBPresets\-Dialog\fP for managing and
+applying presets.  The \fImain\-menu\fP also includes an item for each existing preset.
 .sp
 Any small SVG or PNG can be assigned as a preset\(aqs icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
@@ -471,7 +481,7 @@ Any time the current VDUs settings match those of a preset, the preset\(aqs name
 automatically show in the window\-title, tray tooltip, tray icon.
 .sp
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation);
-or gradually always (when triggered by schedule, main\-menu, or UNIX signal).  The speed of
+or gradually always (when triggered by schedule, \fImain\-menu\fP, or UNIX signal).  The speed of
 transition is determined by how quickly each VDU can respond to adjustment.  During a transition,
 the transition will be abandoned if the controls involved in the transition are altered by any other
 activity.
@@ -528,11 +538,11 @@ year.  For example, a preset with a positive solar elevation will not trigger at
 Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
 regardless of its specified solar elevations.
 .sp
-To assign a trigger, use the Preset Dialog to set a preset\(aqs \fBsolar\-elevation\fP\&.  A solar elevation
+To assign a trigger, use the \fIPresets\-Dialog\fP to set a preset\(aqs \fBsolar\-elevation\fP\&.  A solar elevation
 may range from \-19 degrees in the eastern sky (morning/ascending) to \-19 degrees in the western sky
 (afternoon/descending), with a maximum nearing 90 degrees at midday.
 .sp
-On any given day, the Preset Dialog may be used to temporarily override any trigger, in which case
+On any given day, the \fIPresets\-Dialog\fP may be used to temporarily override any trigger, in which case
 the trigger is suspended until the following day.  For example, a user might choose to disable
 a trigger intended for the brightest part of the day if the day is particularly dull.
 .sp
@@ -545,21 +555,21 @@ overdue dawn preset will be triggered at login.
 A preset may be set to trigger at a fixed time each day.  This is an alternative to the
 elevation trigger.  It\(aqs not possible for a single preset to have both kinds of trigger.
 .sp
-As with the elevation trigger, the Preset Dialog may be used to temporarily
+As with the elevation trigger, the \fIPresets\-Dialog\fP may be used to temporarily
 override any trigger, in which case the trigger is suspended until the following day.
 Similarly, at startup, the most recent preset that would have been triggered for this
 day will be restored.
 .SS Presets \- Smooth Transitions
 .sp
-__To minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
-default. To re\-enable smooth transitions, uncheck the \fBprotect\-nvram\fP option in _Settings_.__
+\fBTo minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
+default. To re\-enable smooth transitions, uncheck the\fP \fIprotect\-nvram\fP \fBoption in\fP \fISettings\fP\&.
 .sp
 A preset may be set to \fBSmoothly Transition\fP, in which case changes to controls continuous\-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.
 .sp
-The Preset Dialog includes a combo\-box for defining when to apply transitions to a preset:
+The \fIPresets\-Dialog\fP includes a combo\-box for defining when to apply transitions to a preset:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -570,14 +580,14 @@ The Preset Dialog includes a combo\-box for defining when to apply transitions t
 .IP \(bu 2
 \fBOn signal\fP \- slowly change on the appropriate UNIX signal;
 .IP \(bu 2
-\fBOn menu\fP \- slowly change when selected in the main\-menu;
+\fBOn menu\fP \- slowly change when selected in the \fImain\-menu\fP;
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .sp
 Normally a transition single\-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
-controls being altered.  The Presets Dialog includes a \fBTransition Step seconds\fP control that can
+controls being altered.  The \fIPresets\-Dialog\fP includes a \fBTransition Step seconds\fP control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 .sp
 If any transitioning controls change independently of the transition, the transition will cease.  In
@@ -728,7 +738,7 @@ The script optionally runs in the system\-tray.
 .sp
 The examples may require customizing for your own webcam and lighting conditions.
 .sp
-If ambient light level controls are not required, the Settings Dialog includes an option to
+If ambient light level controls are not required, the \fISettings\-Dialog\fP includes an option to
 disable and hide them.
 .SS Lux Metering and brightness transitions
 .sp
@@ -759,7 +769,7 @@ of intermediate values.
 .UNINDENT
 .sp
 When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
-can be manually suspended.  The main\-panel, main\-menu, and light\-metering dialog each contain controls for
+can be manually suspended.  The main\-panel, \fImain\-menu\fP, and light\-metering dialog each contain controls for
 toggling Auto/Manual.  Additionally, moving the manual lux\-slider turns off automatic adjustment.
 .sp
 The Light\-metering dialog includes an option to enable auto\-brightness interpolation. This option
@@ -823,8 +833,8 @@ If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will d
 \fBddcutil\fP \fIdynamic sleep optimizer\fP\&.  The optimizer automatically tunes and caches VDU specific
 timings when ever \fBddcutil\fP is run.  Any reliability\-issues or errors may be automatically
 resolved as the optimizer refines its cached timings.  Should problems persist, the
-optimizer can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
-the \fBSettings Dialog\fP (either globally on the \fBvdu_controls tab\fP or selectively under each VDU\(aqs
+optimizer can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fIddcutil extra arguments\fP in
+the \fISettings\-Dialog\fP (either globally on the \fIvdu_controls tab\fP or selectively under each VDU\(aqs
 tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimizer\(aqs
 heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
 recent version of \fBlibddcutil/ddcutil\fP\&.
@@ -859,50 +869,21 @@ to reduce the overall frequency of adjustments to acceptable levels.
 .INDENT 0.0
 .IP \(bu 2
 Inbuilt mitigations:
-+ Slider and spin\-box controls only update the VDU when adjustments become slow or stop (when
-.INDENT 2.0
-.INDENT 3.5
-no change occurs in 0.5 seconds).
-.UNINDENT
-.UNINDENT
-.INDENT 2.0
-.IP \(bu 2
-Preset restoration only updates the VDU values that differ from its current values.
-.IP \(bu 2
-Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
-.IP \(bu 2
-Automatic ambient brightness adjustment only triggers a change when the proposed brightness
-differs from the current brightness by at least 10%.
-.UNINDENT
++ Slider and spin\-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
++ Preset restoration only updates the VDU values that differ from its current values.
++ Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
++ Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 .IP \(bu 2
 Electable mitigations:
 + Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
 + Refrain from adding transitions to \fIpresets\fP\&.
-+ If using the ambient\-light brightness response curves, tune the settings and
-.INDENT 2.0
-.INDENT 3.5
-curves to minimize frequent small changes.
-.UNINDENT
-.UNINDENT
-.INDENT 2.0
-.IP \(bu 2
-If using a light\-meter, disengage metered automatic adjustment when faced with
-rapidly fluctuating levels of ambient brightness.
-.IP \(bu 2
-Consider adjusting the ambient lighting instead of the VDU.
-.UNINDENT
++ If using the ambient\-light brightness response curves, tune the settings and curves to minimize frequent small changes.
++ If using a light\-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
++ Consider adjusting the ambient lighting instead of the VDU.
 .IP \(bu 2
 Monitoring to assist with making adjustments:
-+ Hovering over a VDU name in the main window reveals a popup that includes
-.INDENT 2.0
-.INDENT 3.5
-the number of VCP (NVRAM) writes.
-.UNINDENT
-.UNINDENT
-.INDENT 2.0
-.IP \(bu 2
-The bottom of the About\-dialog shows the same numbers. They update dynamically.
-.UNINDENT
++ Hovering over a VDU name in the main window reveals a popup that includes the number of VCP (NVRAM) writes.
++ The bottom of the \fIAbout\-Dialog\fP shows the same numbers. They update dynamically.
 .UNINDENT
 .SS Cross\-platform differences
 .sp
@@ -911,16 +892,12 @@ the UI on each may not be exactly the same.
 .sp
 Depending on which desktop or system\-tray\-extension you are using, a
 left\-mouse\-click on the app\-icon in the system\-tray may restore
-the application\(aqs main\-widow or it may bring up the the application\(aqs
-context\-menu.  To support both kinds of desktop, the context\-menu includes a
-a _Control 
-.nf
-Panel_
-.fi
-  menu option that toggles visibility of the main window.
+the application\(aqs main\-widow or it may bring up the application\(aqs
+\fImain\-menu\fP\&.  To support both kinds of desktop, the \fImain\-menu\fP includes a 
+\fIControl Panel\fP  menu option that toggles visibility of the main window.
 .sp
 Wayland doesn\(aqt allow an application to precisely position its windows.  When the
-\fBsmart\-window\fP option is enabled and the desktop platform is Wayland, the
+\fIsmart\-window\fP option is enabled and the desktop platform is Wayland, the
 application switches its platform to XWayland (X11 xcb).
 .sp
 The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
@@ -942,21 +919,17 @@ several manual settings that can alter the tray/dock icon theming between
 colored, monochrome\-dark and monochrome\-light.
 .SS Localization
 .sp
-If _Settings_ _translations 
-.nf
-enabled_
-.fi
- is set, the application will 
+If \fISettings\fP → \fItranslations\fP is set, the application will 
 load a translation matching your system\(aqs locale if available.
 .sp
-__The supplied translations are 
-unverified and should be regarded as samples that may be incorrect.__
+\fBThe supplied translations are 
+unverified and should be regarded as samples that may be incorrect.\fP
 .sp
 Where a supported locale is right\-to\-left oriented, layouts will be 
 reconfigured appropriately.
 .sp
 Locale is determined by the Linux and Qt environment variables,
-\fILC_ALL\fP and \fILANGUAGE\fP, which should prefereably be in agreement.
+\fILC_ALL\fP and \fILANGUAGE\fP, which should preferably be in agreement.
 These two enviroment variables can be manually set to force
 a locale, for example:
 .sp
@@ -974,7 +947,7 @@ The following locations are searched for localized translations:
 .UNINDENT
 .UNINDENT
 .sp
-To date, there hasn\(aqt been any espression of interest in the localization
+To date, there hasn\(aqt been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
 be supported over the long term.
 .SS Other concerns
@@ -1083,8 +1056,8 @@ at \%<https://\:www\:.ddcutil\:.com/>
 .B LC_ALL, LANG, LANGUAGE
 These variables specify the locale for language translations and units of distance.
 LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-value, for example, \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
-\fBTranslations Enabled\fP must also be enabled.
+value, for example, \fBDa_DK\fP\&. For these to have any effect on 
+language, \fISettings\fP \-> \fITranslations\fP must also be enabled.
 .TP
 .B VDU_CONTROLS_UI_IDLE_SECS
 The length of pause in slider or spin\-box control motion that triggers commit of
@@ -1099,7 +1072,7 @@ Overrides the default weather service URL (\fBhttps://wttr.in\fP).
 .TP
 .B VDU_CONTROLS_WEATHER_KM
 Overrides the default maximum permissible spherical distance (in kilometres)
-between the \fBSettings\fP \fBLocation\fP and \fBwttr.in\fP reported location (\fB200 km\fP, 124 miles).
+between the \fISettings\fP\->*Location* and \fBwttr.in\fP reported location (\fB200 km\fP, 124 miles).
 .TP
 .B VDU_CONTROLS_DDCUTIL_ARGS
 Add to the list of arguments passed to each exec of ddcutil.
@@ -1113,10 +1086,10 @@ Dbus call wait timeout. Default is 10000, 10 seconds.
 .B VDU_CONTROLS_DEVELOPER
 Changes some search paths to include the current working directory, which is
 more convenient in a development scenario. Enables control of desktop LEDs 
-via brightnessctl so a laptop isn\(aqt required for testing. (\fBno\fP or yes).
+via brightnessctl so a laptop isn\(aqt required for testing. (\fBno\fP or \fByes\fP).
 .TP
 .B VDU_CONTROLS_DEBUG_LAYOUT
-Draws boxes around the UI elements.  (\fBno\fP or yes).
+Draws boxes around the UI elements.  (\fBno\fP or \fByes\fP).
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -1130,8 +1103,8 @@ Location for config files, Presets, and other persistent data.
 .TP
 .B $HOME/.config/vdu_controls/tray_icon.svg
 If present, this file is the preferred source for the system\-tray icon. It can be used if the normal
-icon conflicts with the desktop theme. If the \fBSettings\fP \fBmonochrome\-tray\fP
-and \fBmono\-light\-tray\fP are enabled, they are applied to the file when it is read.
+icon conflicts with the desktop theme. If the \fISettings\fP \fImonochrome\-tray\fP
+and \fImono\-light\-tray\fP are enabled, they are applied to the file when it is read.
 .TP
 .B $HOME/.config/vdu_controls/translations/
 Location for user supplied translations.

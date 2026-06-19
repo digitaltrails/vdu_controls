@@ -9,12 +9,14 @@ a DDC control panel for monitors</h1>
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                  [--splash|--no-splash] [--system-tray|--no-system-tray]
+                 [--single-instance | --no-single-instance]
                  [--hide-on-focus-out|--no-hide-on-focus-out]
                  [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                  [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                  [--tray-follows-theme|--no-tray-follows-theme]
                  [--toolbar-at-top|-no-toolbar-at-top]
                  [--separate-status-bar|--separate-status-bar]
+                 [--tick-marks | --no-tick-marks ]
                  [--laptop-panel|--no-laptop-panel]
                  [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
@@ -44,6 +46,9 @@ equivalent settings.</p>
   --system-tray|--no-system-tray
                         start up as an entry in the system tray.
                         ``--no-system-tray`` is the default.
+  --single-instance|--no-single-instance
+                        run one instance only, further launches focus the existing instance.
+                        ``--single-instance`` is the default.
   --hide-on-focus-out|--no-hide-on-focus-out
                         minimize the main window automatically on focus out.
                         ``--no-hide-on-focus-out`` is the default.
@@ -68,6 +73,9 @@ equivalent settings.</p>
   --separate-status-bar|--no-separate-status-bar
                         separate the status-bar from the toolbar
                         ``--no-separate-status-bar`` is the default
+  --tick-marks|--no-tick-marks
+                        show tick marks on control-sliders.
+                        ``--tick-marks`` is the default
   --laptop-panel|--no-laptop-panel
                         allow laptop panels to be controlled
                         ``--laptop-panel`` is the default
@@ -125,7 +133,7 @@ Units (VDUs, monitors, displays). It supports displays connected via
 DisplayPort, DVI, HDMI, USB, and built-in laptop-panels. Out of the box,
 <code>vdu_controls</code> offers a subset of controls including
 brightness, contrast and audio controls. Additional controls can be
-enabled via the <code>Settings</code> dialog.</p>
+enabled via the *Settings-Dialog**.</p>
 <p><code>vdu_controls</code> interacts with VDUs by using
 <code>ddcutil</code> to issue standard VESA <em>Virtual Control
 Panel</em> (<em>VCP</em>) commands via the VESA <em>Display Data
@@ -142,23 +150,24 @@ The application may optionally run in the system tray of KDE, Deepin,
 GNOME, and Xfce (and possibly others). For desktops that don’t integrate
 with Qt/KDE themeing, the <code>qt5ct</code> and <code>qt6ct</code>
 utilities may be used to alter the overall Qt theme.</p>
-<p>The UI provides an optional <code>ambient-light slider</code> for
+<p>The UI provides an optional <em>ambient-light slider</em> for
 simultaneously adjusting all VDUs according to custom per-VDU ambient
 lux/brightness profiles. Options are included for semi-automatic
 adjustment proportional to daylight at a given geographic location, or
 fully automatic adjustment by accessing hardware light-meters, webcams,
 or other devices.</p>
-<p>Named <code>Preset</code> configurations can be saved and recalled.
-For example, presets may be created for night, day, photography, movies,
-and so forth. Presets can be triggered by specific ambient light levels,
+<p>Named <em>Preset</em> configurations can be saved and recalled. For
+example, presets may be created for night, day, photography, movies, and
+so forth. Presets can be triggered by specific ambient light levels,
 scheduled according to local solar elevation, vetoed by local weather
 conditions, or activated by UNIX signals.</p>
 <p>From any UI window, <code>F1</code> accesses help, and
-<code>F10</code> accesses the main-menu. The main-menu is also available
-via the hamburger-menu, and also via the right-mouse button in either
-the main-window or the system-tray icon. The main-menu has
-<code>ALT-key</code> shortcuts for all menu items (subject to sufficient
-letters being available to distinguish all user defined presets).</p>
+<code>F10</code> accesses the <em>main-menu</em>. The <em>main-menu</em>
+is also available via the hamburger-menu, and also via the right-mouse
+button in either the main-window or the system-tray icon. The
+<em>main-menu</em> has <code>ALT-key</code> shortcuts for all menu items
+(subject to sufficient letters being available to distinguish all user
+defined presets).</p>
 <p>The main-toolbar includes a stealthy-drag-handle at extreme-left. The
 toolbar can be dragged and docked at either the top or bottom top of the
 main-window. The toolbar’s position persists across restarts.</p>
@@ -168,11 +177,11 @@ https://github.com/digitaltrails/vdu_controls .</p>
 well understood, but some concerns have been expressed. See
 <strong>LIMITATIONS</strong> for further details.</p>
 <h1 id="configuration">Configuration</h1>
-<p>Configuration changes can be made via the <code>Settings</code>
-dialog or by editing the config-files.</p>
+<p>Configuration changes can be made via the <em>Settings-Dialog</em> or
+by editing the config-files.</p>
 <h2 id="settings-menu-and-config-files">Settings Menu and Config
 files</h2>
-<p>The <code>Settings</code> dialog features a tab for editing
+<p>The <em>Settings-Dialog</em> features a tab for editing
 common/default settings as well as tabs specific to each VDU. The config
 files are named according to the following scheme:</p>
 <ul>
@@ -288,11 +297,11 @@ with VDUs via the DBUS <code>ddcutil-service</code> service rather than
 the <code>ddcutil</code> command. The service should be both faster and
 more reliable (especially when multiple VDUs need to be controlled).
 Whether to use the service can be controlled by the
-<code>DBUS client</code> checkbox in the settings dialog.</p>
+<code>DBUS client</code> checkbox in the <em>Settings-Dialog</em>.</p>
 <p>When using the service, you may optionally enable service detection
 of DPMS events and VDU connectivity events (hot-plugging cables or
 power-cycling VDUs). Whether to enable events is controlled by the
-<code>DBUS events</code> checkbox in the settings dialog. The
+<code>DBUS events</code> checkbox in the <em>Settings-Dialog</em>. The
 reliability and timeliness of events may vary depending on the GPU
 model, GPU driver, VDU model, and VDU connector-cable (DP, HDMI, …). In
 some cases, the service polling for DPMS or connection status may wake
@@ -325,10 +334,9 @@ lighting conditions or different applications, for example,
 <em>Night</em>, <em>Day</em>, <em>Overcast</em>, <em>Sunny</em>,
 <em>Photography</em>, and <em>Video</em>. Each preset can be assigned a
 name and icon.</p>
-<p>The <code>Presets</code> item in <code>main-menu</code> will bring up
-a <code>Presets</code> dialog for managing and applying presets. The
-<code>main-menu</code> also includes an item for each existing
-preset.</p>
+<p>The <em>Presets</em> item in <em>main-menu</em> will bring up a
+<strong>Presets-Dialog</strong> for managing and applying presets. The
+<em>main-menu</em> also includes an item for each existing preset.</p>
 <p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
@@ -340,10 +348,10 @@ preset’s name and icon will automatically show in the window-title, tray
 tooltip, tray icon.</p>
 <p>Presets may be set to transition immediately (the default); gradually
 on schedule (solar elevation); or gradually always (when triggered by
-schedule, main-menu, or UNIX signal). The speed of transition is
-determined by how quickly each VDU can respond to adjustment. During a
-transition, the transition will be abandoned if the controls involved in
-the transition are altered by any other activity.</p>
+schedule, <em>main-menu</em>, or UNIX signal). The speed of transition
+is determined by how quickly each VDU can respond to adjustment. During
+a transition, the transition will be abandoned if the controls involved
+in the transition are altered by any other activity.</p>
 <p>Each preset is stored in config directory as:
 <code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
 <p>Preset files are saved in INI-file format for ease of editing. Each
@@ -393,16 +401,16 @@ may be confined to specific times of the year. For example, a preset
 with a positive solar elevation will not trigger at mid-winter in the
 Arctic circle (because the sun never gets that high). Any preset may be
 manually invoked regardless of its specified solar elevations.</p>
-<p>To assign a trigger, use the Preset Dialog to set a preset’s
-<code>solar-elevation</code>. A solar elevation may range from -19
-degrees in the eastern sky (morning/ascending) to -19 degrees in the
+<p>To assign a trigger, use the <em>Presets-Dialog</em> to set a
+preset’s <code>solar-elevation</code>. A solar elevation may range from
+-19 degrees in the eastern sky (morning/ascending) to -19 degrees in the
 western sky (afternoon/descending), with a maximum nearing 90 degrees at
 midday.</p>
-<p>On any given day, the Preset Dialog may be used to temporarily
-override any trigger, in which case the trigger is suspended until the
-following day. For example, a user might choose to disable a trigger
-intended for the brightest part of the day if the day is particularly
-dull.</p>
+<p>On any given day, the <em>Presets-Dialog</em> may be used to
+temporarily override any trigger, in which case the trigger is suspended
+until the following day. For example, a user might choose to disable a
+trigger intended for the brightest part of the day if the day is
+particularly dull.</p>
 <p>At startup <code>vdu_controls</code> will restore the most recent
 preset that would have been triggered for this day (if any). For
 example, say a user has <code>vdu_controls</code> set to run at login,
@@ -414,23 +422,24 @@ triggers</h2>
 <p>A preset may be set to trigger at a fixed time each day. This is an
 alternative to the elevation trigger. It’s not possible for a single
 preset to have both kinds of trigger.</p>
-<p>As with the elevation trigger, the Preset Dialog may be used to
-temporarily override any trigger, in which case the trigger is suspended
-until the following day. Similarly, at startup, the most recent preset
-that would have been triggered for this day will be restored.</p>
+<p>As with the elevation trigger, the <em>Presets-Dialog</em> may be
+used to temporarily override any trigger, in which case the trigger is
+suspended until the following day. Similarly, at startup, the most
+recent preset that would have been triggered for this day will be
+restored.</p>
 <h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
 <p><strong>To minimize writes to VDU NVRAM, smooth-transitions have been
 deprecated and are disabled by default. To re-enable smooth transitions,
-uncheck the <code>protect-nvram</code> option in
-<em>Settings</em>.</strong></p>
+uncheck the</strong> <em>protect-nvram</em> <strong>option in</strong>
+<em>Settings</em>.</p>
 <p>A preset may be set to <code>Smoothly Transition</code>, in which
 case changes to controls continuous-value slider controls such as
 brightness and contrast will be stepped by one until the final values
 are reached. Any non-continuous values will be set after all continuous
 values have reached their final values, for example, if input-source is
 included in a preset, it will be restored at the end.</p>
-<p>The Preset Dialog includes a combo-box for defining when to apply
-transitions to a preset:</p>
+<p>The <em>Presets-Dialog</em> includes a combo-box for defining when to
+apply transitions to a preset:</p>
 <ul>
 <li><code>None</code> - change immediately;</li>
 <li><code>On schedule</code> - slowly change according to a solar
@@ -438,12 +447,12 @@ elevation trigger;</li>
 <li><code>On signal</code> - slowly change on the appropriate UNIX
 signal;</li>
 <li><code>On menu</code> - slowly change when selected in the
-main-menu;</li>
+<em>main-menu</em>;</li>
 </ul>
 <p>Normally a transition single-steps the controls as quickly as
 possible. In practice, this means each step takes one or more seconds
 and increases linearly depending on the number of VDUs and number of
-controls being altered. The Presets Dialog includes a
+controls being altered. The <em>Presets-Dialog</em> includes a
 <code>Transition Step seconds</code> control that can be used to
 increase the step interval and extend a transition over a longer period
 of time.</p>
@@ -562,8 +571,9 @@ sample brightness values. The script optionally runs in the
 system-tray.</p>
 <p>The examples may require customizing for your own webcam and lighting
 conditions.</p>
-<p>If ambient light level controls are not required, the Settings Dialog
-includes an option to disable and hide them.</p>
+<p>If ambient light level controls are not required, the
+<em>Settings-Dialog</em> includes an option to disable and hide
+them.</p>
 <h2 id="lux-metering-and-brightness-transitions">Lux Metering and
 brightness transitions</h2>
 <p>Due to VDU hardware and DDC protocol limitations, gradual transitions
@@ -588,9 +598,9 @@ interpolation of intermediate values.</li>
 </ul>
 <p>When ambient light conditions are fluctuating, for example, due to
 passing clouds, automatic adjust can be manually suspended. The
-main-panel, main-menu, and light-metering dialog each contain controls
-for toggling Auto/Manual. Additionally, moving the manual lux-slider
-turns off automatic adjustment.</p>
+main-panel, <em>main-menu</em>, and light-metering dialog each contain
+controls for toggling Auto/Manual. Additionally, moving the manual
+lux-slider turns off automatic adjustment.</p>
 <p>The Light-metering dialog includes an option to enable
 auto-brightness interpolation. This option will enable the calculation
 of values between steps in the profiles. To avoid small fluctuating
@@ -655,13 +665,12 @@ caches VDU specific timings when ever <code>ddcutil</code> is run. Any
 reliability-issues or errors may be automatically resolved as the
 optimizer refines its cached timings. Should problems persist, the
 optimizer can be disabled by adding <code>--disable-dynamic-sleep</code>
-to the <strong>ddcutil extra arguments</strong> in the <strong>Settings
-Dialog</strong> (either globally on the <strong>vdu_controls
-tab</strong> or selectively under each VDU’s tab). If dynamic sleep is
-disabled, multipliers can then be manually assigned. The optimizer’s
-heuristics continue to be refined, it may be that some issues may be
-resolved by moving to a more recent version of
-<code>libddcutil/ddcutil</code>.</p>
+to the <em>ddcutil extra arguments</em> in the <em>Settings-Dialog</em>
+(either globally on the <em>vdu_controls tab</em> or selectively under
+each VDU’s tab). If dynamic sleep is disabled, multipliers can then be
+manually assigned. The optimizer’s heuristics continue to be refined, it
+may be that some issues may be resolved by moving to a more recent
+version of <code>libddcutil/ddcutil</code>.</p>
 <p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
 set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
 <code>ddcutil</code>. A sleep multiplier less than one will speed up the
@@ -723,8 +732,8 @@ faced with rapidly fluctuating levels of ambient brightness.</li>
 <ul>
 <li>Hovering over a VDU name in the main window reveals a popup that
 includes the number of VCP (NVRAM) writes.</li>
-<li>The bottom of the About-dialog shows the same numbers. They update
-dynamically.</li>
+<li>The bottom of the <em>About-Dialog</em> shows the same numbers. They
+update dynamically.</li>
 </ul></li>
 </ul>
 <h2 id="cross-platform-differences">Cross-platform differences</h2>
@@ -732,12 +741,12 @@ dynamically.</li>
 and the rest, the UI on each may not be exactly the same.</p>
 <p>Depending on which desktop or system-tray-extension you are using, a
 left-mouse-click on the app-icon in the system-tray may restore the
-application’s main-widow or it may bring up the the application’s
-context-menu. To support both kinds of desktop, the context-menu
-includes a a <em>Control Panel</em> menu option that toggles visibility
-of the main window.</p>
+application’s main-widow or it may bring up the application’s
+<em>main-menu</em>. To support both kinds of desktop, the
+<em>main-menu</em> includes a <em>Control Panel</em> menu option that
+toggles visibility of the main window.</p>
 <p>Wayland doesn’t allow an application to precisely position its
-windows. When the <code>smart-window</code> option is enabled and the
+windows. When the <em>smart-window</em> option is enabled and the
 desktop platform is Wayland, the application switches its platform to
 XWayland (X11 xcb).</p>
 <p>The scaling and appearance of Qt6 differs from Qt5, its more chunky
@@ -758,15 +767,14 @@ the application includes several manual settings that can alter the
 tray/dock icon theming between colored, monochrome-dark and
 monochrome-light.</p>
 <h2 id="localization">Localization</h2>
-<p>If <em>Settings</em> <em>translations enabled</em> is set, the
-application will load a translation matching your system’s locale if
-available.</p>
+<p>If <em>Settings</em> → <em>translations</em> is set, the application
+will load a translation matching your system’s locale if available.</p>
 <p><strong>The supplied translations are unverified and should be
 regarded as samples that may be incorrect.</strong></p>
 <p>Where a supported locale is right-to-left oriented, layouts will be
 reconfigured appropriately.</p>
 <p>Locale is determined by the Linux and Qt environment variables,
-<code>LC_ALL</code> and <code>LANGUAGE</code>, which should prefereably
+<code>LC_ALL</code> and <code>LANGUAGE</code>, which should preferably
 be in agreement. These two enviroment variables can be manually set to
 force a locale, for example:</p>
 <p>The following locations are searched for localized translations:</p>
@@ -775,7 +783,7 @@ force a locale, for example:</p>
 <li><code>/usr/share/vdu_controls/translations/</code></li>
 <li><code>zipapp-root/vdu_controls/resources/translations/</code></li>
 </ol>
-<p>To date, there hasn’t been any espression of interest in the
+<p>To date, there hasn’t been any expression of interest in the
 localization features. The provided translations are all testing samples
 which may not be supported over the long term.</p>
 <h2 id="other-concerns">Other concerns</h2>
@@ -859,8 +867,8 @@ GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
 <pre><code>LC_ALL, LANG, LANGUAGE
     These variables specify the locale for language translations and units of distance.
     LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-    value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
-    ``Translations Enabled`` must also be enabled.
+    value, for example, ``Da_DK``. For these to have any effect on 
+    language, *Settings* -&gt; *Translations* must also be enabled.
 
 VDU_CONTROLS_UI_IDLE_SECS
     The length of pause in slider or spin-box control motion that triggers commit of
@@ -875,7 +883,7 @@ VDU_CONTROLS_WTTR_URL
 
 VDU_CONTROLS_WEATHER_KM
     Overrides the default maximum permissible spherical distance (in kilometres)
-    between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
+    between the *Settings*-&gt;*Location* and ``wttr.in`` reported location (``200 km``, 124 miles).
 
 VDU_CONTROLS_DDCUTIL_ARGS
     Add to the list of arguments passed to each exec of ddcutil.
@@ -889,18 +897,18 @@ VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
 VDU_CONTROLS_DEVELOPER
     Changes some search paths to include the current working directory, which is
     more convenient in a development scenario. Enables control of desktop LEDs 
-    via brightnessctl so a laptop isn&#39;t required for testing. (``no`` or yes).
+    via brightnessctl so a laptop isn&#39;t required for testing. (``no`` or ``yes``).
 
 VDU_CONTROLS_DEBUG_LAYOUT
-    Draws boxes around the UI elements.  (``no`` or yes).</code></pre>
+    Draws boxes around the UI elements.  (``no`` or ``yes``).</code></pre>
 <h1 id="files">Files</h1>
 <pre><code>$HOME/.config/vdu_controls/
     Location for config files, Presets, and other persistent data.
 
 $HOME/.config/vdu_controls/tray_icon.svg
     If present, this file is the preferred source for the system-tray icon. It can be used if the normal
-    icon conflicts with the desktop theme. If the ``Settings`` ``monochrome-tray``
-    and ``mono-light-tray`` are enabled, they are applied to the file when it is read.
+    icon conflicts with the desktop theme. If the *Settings* *monochrome-tray*
+    and *mono-light-tray* are enabled, they are applied to the file when it is read.
 
 $HOME/.config/vdu_controls/translations/
     Location for user supplied translations.

@@ -33,7 +33,7 @@ is provided by ``brightnessctrl`` for brightness only).
 
 A subset of controls is shown by default - these include brightness, 
 contrast, and audio controls - with additional options available in the 
-**Settings dialog**.
+*Settings-Dialog*.
 
 For convenience, a single **ambient-light-level slider** can simultaneously
 adjust _all_ displays, each following its own custom profile:
@@ -74,10 +74,10 @@ the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 The main-toolbar may be dragged to either the top or bottom of the main-window.
 The toolbar's location persists across restarts.
 
-From any application window, use **F1** to access **help**, and **F10** to access the context-menu.   The 
-**Context Menu** is also available via the right-mouse button in the main-window, the hamburger-menu item 
+From any application window, use **F1** to access **help**, and **F10** to access the *main-menu*.   The 
+*main-menu* is also available via the right-mouse button in the main-window, the hamburger-menu item 
 on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
-context-menu provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
+*main-menu* provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
 
 > [!TIP]
@@ -199,7 +199,7 @@ Some feedback is provided to help with making reducing NVRAM usage:
 
   + Hovering over a display name in the main window reveals a tooltip that includes
     the number of VCP (NVRAM) writes. 
-  + The bottom of the About-Dialog shows the same numbers. They update dynamically.
+  + The bottom of the *About-Dialog* shows the same numbers. They update dynamically.
 
 #### Other concerns
 
@@ -348,7 +348,7 @@ is likely to install some or all of the following, typically to these locations:
 Help
 ----
 
-Detailed help can be accessed by using the right mouse-button to bring up a context-menu.  Access to the context-menu
+Detailed help can be accessed by using the right mouse-button to bring up the *main-menu*.  Access to the *main-menu*
 is available in the application-window and in the system-tray icon.
 
 Both brief help and detailed help can also be accessed via the command line:
@@ -362,14 +362,14 @@ Both brief help and detailed help can also be accessed via the command line:
 % vdu_controls --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
 ```
 
-Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
+Whether run from the desktop start-menu or run from the command line, ``vdu-controls`` behaviour can be altered
 in a number of ways:
 
-* The `Settings` item in the context-menu.
+* The *Settings* item in the *main-menu*.
 * Command line options.
 * Configurations files in `$HOME/.config/vdu_controls/`
 
-See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+See the *main-menu* or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for details.
 
 Localization
@@ -508,21 +508,24 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
-  * Default to running one instance of vdu_controls, running another 
-    raises the existing instance. Contributed by Mohammed Elsayed Ahmed.
+  * vdu_controls now defaults to a new  _single-instance_ mode. Subsequent launches 
+    focus the existing window. Uncheck the _single-instance_ option to override. 
+    Contributed by Mohammed Elsayed Ahmed.
   * The ambient-light-level slider now works even if location is not set.
   * The DDC-options laptop-panel option now defaults to enabled.
   * The Light-Metering-Dialog now offers two profile starter-templates
     for older and newer monitors.
-  * The Settings global-options are now grouped under subheadings.
+  * The Settings-Dialog global-options are now grouped under subheadings.
+  * The Settings-Dialog now offers more popup-guidence
+    on dependencies between major options.
   * The layout of the Preset and Light-Metering dialogs better reflect the
-    the style of the main panel (slightly).
+    the new style of the main panel.
   * The system tray default icon is now primarily monochrome to reflect 
-    prevailing desktop aesthetics. It's also been designed to reasonably
-    visible for both dark and light tray backgrounds (as far as is possible).
+    prevailing desktop aesthetics. It's been designed to visible for both 
+    dark and light tray backgrounds (as far as is possible).
   * The program-icon and splash-screen icons have been replaced with
     SVG versions. The new program-icon responds to light/dark theme changes.
-  * Tick marks on control-sliders are now optional (see settings).
+  * Tick marks on control-sliders are now optional (see the Settings-Dialog).
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
@@ -538,7 +541,7 @@ Version History
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
-    the translations have been created for testing purposes and may not 
+    the translations have been generated for testing purposes and may not 
     be accurate.
 
 * 2.6.0
@@ -559,7 +562,7 @@ Version History
     separated from its toolbar.  This may be useful when combined with "toolbar-at-top".
   * Replaced QProgressBar with a more modern circular busy-spinner.
   * Added a tooltip to the status-bar that shows the last 10 status messages.
-  * The context-menu now includes a Control-Panel menu-item on all desktops - previously it 
+  * The main-menu now includes a Control-Panel menu-item on all desktops - previously it 
     was Gnome-only (for tray extensions), but Xfce's tray also needs it.
   * Light-Metering window - corrected the horizontal tick mark placement on the sun-plot.
   * Light-Metering window - added enlarged tick-marks to the sun-plot at 3,6,9,15,18,21 hours.
@@ -603,9 +606,9 @@ Version History
   * Light-Metering dialog: added a plot of the current day's estimated solar and indoor illumination.
   * Light-Metering dialog: replaced the profile-selector combo-box with a list for easier accessibility.
   * Light-Metering dialog: added the ability to dynamically adjust for display DPI.
-  * Preset dialog: added an option to save/restore the daylight-factor. This can be
+  * Presets-Dialog: added an option to save/restore the daylight-factor. This can be
     used to save daylight factors for various conditions, or to activate them at a solar-elevation.
-  * Settings dialog: disabling protect-nvam now works properly for adjustments due to light-metering.
+  * Settings-Dialog: disabling protect-nvam now works properly for adjustments due to light-metering.
   * Duplicate Lux-profile points are filtered out to prevent confusing the UI and lux evaluation process.
   * DBus ddcutil-service: altered the detection parameters to request only valid displays (prevents errors).
   * Ambient-light brightness adjustment: prevent an infinite-loop if no brightness controls are enabled.
@@ -717,14 +720,14 @@ Version History
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
   * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
-  * Fix the refresh of the LuxDialog meter-readout/plot when changing to a new meter.
-  * Apply context-aware defaults to the LuxDialog device file-chooser. 
+  * Fix the refresh of the Lux-Dialog meter-readout/plot when changing to a new meter.
+  * Apply context-aware defaults to the Lux-Dialog device file-chooser. 
   * Improve/fix the handling of displays/laptop-displays that may be detected but lack proper DDC.
   * Force the file-picker to always show devices and FIFOs - it wasn't showing then on some desktops.
 
 * 2.0.0
   * Added an optional D-Bus interface to ddcutil for up to 10x faster response times.
-  * Added an immediate-lighting-check button and corresponding context-menu item (when lux-metering is enabled).
+  * Added an immediate-lighting-check button and corresponding main-menu item (when lux-metering is enabled).
   * Added an ambient-light-control for manual lux input, one slider to adjust brightness on all displays.
   * Added more preset icons.
 
@@ -748,7 +751,7 @@ Version History
 * 1.11.1
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.
-  * Update the Settings Dialog when a new VDU becomes available.
+  * Update the Settings-Dialog when a new VDU becomes available.
   * Light-metering: show both a lux-auto indicator (an orange "LED") AND the current preset (if any) in the app icon.
   * Fix first time use crash (issue #60).
   * Allow % in config files by turning off ConfigParser interpolation (issue #60).
@@ -761,15 +764,15 @@ Version History
   * Main-Window: added a smart-main-window option to make main window placement and geometry preservation optional.
   * Main-Window: the main window can now be raised above the other sub-windows (gnome issue only).
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
-  * Context-Menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
-  * Context-Menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
+  * main-menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
+  * main-menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
   * Tray-Icon: made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55).
   * Settings-Dialog: added a Reset button to makes it possible to un-ignore a VDU (issue #51).
   * Settings-Dialog: added tool-tips to main config-settings, made them consistent with command line help (issue #52).
-  * Preset-Dialog: combined the Activate and Edit buttons into one button (simpler and more intuitive).
-  * Preset Dialog: made the dialog bold the text button of the currently active Preset (if any).
-  * Preset Dialog: added code to detect and and warn of unsaved changes.
-  * Preset Dialog: made the dialog lock out any scheduled or automatic VDU changes while a Preset is being edited.
+  * Presets-Dialog: combined the Activate and Edit buttons into one button (simpler and more intuitive).
+  * Presets-Dialog: made the dialog bold the text button of the currently active Preset (if any).
+  * Presets-Dialog: added code to detect and and warn of unsaved changes.
+  * Presets-Dialog: made the dialog lock out any scheduled or automatic VDU changes while a Preset is being edited.
   * Preset-Dialog: supplied a starter set of Prest icons - a selection of KDE breeze5-icons (issue #56).
   * Popup-Messages: made message box popups resizable for increased readability.
   * Command-line: made config-settings and command-line arguments consistent, command line has precedence (issue #52).
@@ -805,7 +808,7 @@ Version History
 * 1.9.2
   * Optional _Smooth Transitions_ for presets:
     * The Presets Dialog now includes an option to set a Preset to _Transition Smoothly_.
-    * The tray, main panel, and Preset Dialog indicate when a smooth transition is in progress.
+    * The tray, main panel, and Presets-Dialog indicate when a smooth transition is in progress.
     * Transitions are performed by a non-GUI thread, the GUI remains accessible during smooth transitions.
     * A smooth transition can be interrupted by moving the controls being transitioned or invoking a preset.
 * 1.9.1
@@ -820,9 +823,9 @@ Version History
   * Bug fixes and speedy performance improvements:
     * Speed up initialization and refresh by combining multiple ddcutil `getvcp` requests.
     * Stop executing a `getvcp` precheck before each `setvcp`. 
-    * Fix repeat-initialisation bug in _Context-Menu Refresh_.
-    * Fix _Settings Dialog_ text field validation, some errors were invisibly ignored.
-    * Fix _Settings Dialog_ _Settings Enable VCP Codes_, they had stopped working.
+    * Fix repeat-initialisation bug in _main-menu Refresh_.
+    * Fix _Settings-Dialog_ text field validation, some errors were invisibly ignored.
+    * Fix _Settings-Dialog_ _Settings Enable VCP Codes_, they had stopped working.
     * Fix the monitor specific sleep multipliers, they were not always being used.
     * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
     * Fix event handling so that tablet+pen input works on the main window.
@@ -883,7 +886,7 @@ Version History
 * 1.5.0
   * New presets feature: easily switch between named presets such as *Night*, *Day*, *Overcast*, *Sunny*, 
     *Photography*, and *Video*.
-  * ``Presets`` context-menu item for access to the new ``preset management widget``.
+  * ``Presets`` main-menu item for access to the new ``preset management widget``.
   * Context menu shortcuts for quickly accessing presets.
   * INI preset file format for ease of editing.
 * 1.4.2
@@ -895,7 +898,7 @@ Version History
   * Updated the help.
 * 1.4.0
   * Added global and VDU-specific INI style configuration files in `$HOME/.conf/vdu_controls/`.
-  * Added a GUI settings-editor as a `settings` menu-item in the context-menu.
+  * Added a GUI settings-editor as a `settings` menu-item in the main-menu.
 * 1.3.1
   * A minor enhancement to ease installation on Ubuntu, create ``$HOME/bin`` if it doesn't exist. 
 * 1.3.0

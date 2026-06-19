@@ -12,12 +12,14 @@ Synopsis:
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
+                     [--single-instance | --no-single-instance]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--tray-follows-theme|--no-tray-follows-theme]
                      [--toolbar-at-top|-no-toolbar-at-top]
                      [--separate-status-bar|--separate-status-bar]
+                     [--tick-marks | --no-tick-marks ]
                      [--laptop-panel|--no-laptop-panel]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -50,6 +52,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --system-tray|--no-system-tray
                             start up as an entry in the system tray.
                             ``--no-system-tray`` is the default.
+      --single-instance|--no-single-instance
+                            run one instance only, further launches focus the existing instance.
+                            ``--single-instance`` is the default.
       --hide-on-focus-out|--no-hide-on-focus-out
                             minimize the main window automatically on focus out.
                             ``--no-hide-on-focus-out`` is the default.
@@ -74,6 +79,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --separate-status-bar|--no-separate-status-bar
                             separate the status-bar from the toolbar
                             ``--no-separate-status-bar`` is the default
+      --tick-marks|--no-tick-marks
+                            show tick marks on control-sliders.
+                            ``--tick-marks`` is the default
       --laptop-panel|--no-laptop-panel
                             allow laptop panels to be controlled
                             ``--laptop-panel`` is the default
@@ -132,7 +140,7 @@ Description
 ``vdu_controls`` control panel for external Visual Display Units (VDUs, monitors, displays). 
 It supports displays connected via DisplayPort, DVI, HDMI, USB, and built-in laptop-panels.
 Out of the box, ``vdu_controls`` offers a subset of controls including brightness, contrast 
-and audio controls.  Additional controls can be enabled via the ``Settings`` dialog.
+and audio controls.  Additional controls can be enabled via the *Settings-Dialog**.
 
 ``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
 *Virtual Control Panel* (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).
@@ -148,19 +156,19 @@ optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly 
 For desktops that don't integrate with Qt/KDE themeing, the `qt5ct` and `qt6ct` utilities may
 be used to alter the overall Qt theme.
 
-The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
+The UI provides an optional *ambient-light slider* for simultaneously adjusting
 all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included
 for semi-automatic adjustment proportional to daylight at a given geographic location, or
 fully automatic adjustment by accessing hardware light-meters, webcams, or other devices.
 
-Named ``Preset`` configurations can be saved and recalled. For example, presets may be created
+Named *Preset* configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
 light levels, scheduled according to local solar elevation, vetoed by local weather conditions,
 or activated by UNIX signals.
 
-From any UI window, `F1` accesses help, and `F10` accesses the main-menu.   The main-menu is
+From any UI window, `F1` accesses help, and `F10` accesses the *main-menu*.   The *main-menu* is
 also available via the hamburger-menu, and also via the right-mouse button in either the
-main-window or the system-tray icon.  The main-menu has `ALT-key` shortcuts for all menu items
+main-window or the system-tray icon.  The *main-menu* has `ALT-key` shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 
 The main-toolbar includes a stealthy-drag-handle at extreme-left.  The toolbar
@@ -175,12 +183,12 @@ concerns have been expressed. See **LIMITATIONS** for further details.
 Configuration
 =============
 
-Configuration changes can be made via the ``Settings`` dialog or by editing the config-files.
+Configuration changes can be made via the *Settings-Dialog* or by editing the config-files.
 
 Settings Menu and Config files
 ------------------------------
 
-The ``Settings`` dialog features a tab for editing common/default settings as well as
+The *Settings-Dialog* features a tab for editing common/default settings as well as
 tabs specific to each VDU.  The config files are named according to the following scheme:
 
  - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
@@ -294,11 +302,11 @@ DBUS ddcutil-service
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
 service rather than the ``ddcutil`` command. The service should be both faster and more
 reliable (especially when multiple VDUs need to be controlled). Whether to use the service
-can be controlled by the ``DBUS client`` checkbox in the settings dialog.
+can be controlled by the ``DBUS client`` checkbox in the *Settings-Dialog*.
 
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
-is controlled by the ``DBUS events`` checkbox in the settings dialog.  The reliability
+is controlled by the ``DBUS events`` checkbox in the *Settings-Dialog*.  The reliability
 and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
 and VDU connector-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
@@ -312,7 +320,7 @@ When laptop support is enabled, the widely available command line utility ``brig
 is used to emulate DDC control of brightness (https://github.com/Hummer12007/brightnessctl).
 Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
 inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
-for _brightness_ events.
+for  *brightness* events.
 
 DDC emulation for special cases
 -------------------------------
@@ -328,13 +336,13 @@ basic `ddcutil` command set (see included sample script).
 Presets
 -------
 
-A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
+A named *Preset* can be used to save the current VDU settings for later recall. Any number of
 presets can be created for different lighting conditions or different applications, for example,
 *Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each preset can be assigned a
 name and icon.
 
-The ``Presets`` item in ``main-menu`` will bring up a ``Presets`` dialog for managing and
-applying presets.  The ``main-menu`` also includes an item for each existing preset.
+The *Presets* item in *main-menu* will bring up a **Presets-Dialog** for managing and
+applying presets.  The *main-menu* also includes an item for each existing preset.
 
 Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
@@ -345,7 +353,7 @@ Any time the current VDUs settings match those of a preset, the preset's name an
 automatically show in the window-title, tray tooltip, tray icon.
 
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation);
-or gradually always (when triggered by schedule, main-menu, or UNIX signal).  The speed of
+or gradually always (when triggered by schedule, *main-menu*, or UNIX signal).  The speed of
 transition is determined by how quickly each VDU can respond to adjustment.  During a transition,
 the transition will be abandoned if the controls involved in the transition are altered by any other
 activity.
@@ -400,11 +408,11 @@ year.  For example, a preset with a positive solar elevation will not trigger at
 Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
 regardless of its specified solar elevations.
 
-To assign a trigger, use the Preset Dialog to set a preset's ``solar-elevation``.  A solar elevation
+To assign a trigger, use the *Presets-Dialog* to set a preset's ``solar-elevation``.  A solar elevation
 may range from -19 degrees in the eastern sky (morning/ascending) to -19 degrees in the western sky
 (afternoon/descending), with a maximum nearing 90 degrees at midday.
 
-On any given day, the Preset Dialog may be used to temporarily override any trigger, in which case
+On any given day, the *Presets-Dialog* may be used to temporarily override any trigger, in which case
 the trigger is suspended until the following day.  For example, a user might choose to disable
 a trigger intended for the brightest part of the day if the day is particularly dull.
 
@@ -419,7 +427,7 @@ Presets - time-of-day triggers
 A preset may be set to trigger at a fixed time each day.  This is an alternative to the
 elevation trigger.  It's not possible for a single preset to have both kinds of trigger.
 
-As with the elevation trigger, the Preset Dialog may be used to temporarily
+As with the elevation trigger, the *Presets-Dialog* may be used to temporarily
 override any trigger, in which case the trigger is suspended until the following day.
 Similarly, at startup, the most recent preset that would have been triggered for this
 day will be restored.
@@ -427,24 +435,24 @@ day will be restored.
 Presets - Smooth Transitions
 ----------------------------
 
-__To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
-default. To re-enable smooth transitions, uncheck the ``protect-nvram`` option in _Settings_.__
+**To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
+default. To re-enable smooth transitions, uncheck the** *protect-nvram* **option in** *Settings*.
 
 A preset may be set to ``Smoothly Transition``, in which case changes to controls continuous-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.
 
-The Preset Dialog includes a combo-box for defining when to apply transitions to a preset:
+The *Presets-Dialog* includes a combo-box for defining when to apply transitions to a preset:
 
  - ``None`` - change immediately;
  - ``On schedule`` - slowly change according to a solar elevation trigger;
  - ``On signal`` - slowly change on the appropriate UNIX signal;
- - ``On menu`` - slowly change when selected in the main-menu;
+ - ``On menu`` - slowly change when selected in the *main-menu*;
 
 Normally a transition single-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
-controls being altered.  The Presets Dialog includes a ``Transition Step seconds`` control that can
+controls being altered.  The *Presets-Dialog* includes a ``Transition Step seconds`` control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 
 If any transitioning controls change independently of the transition, the transition will cease.  In
@@ -559,7 +567,7 @@ The script optionally runs in the system-tray.
 
 The examples may require customizing for your own webcam and lighting conditions.
 
-If ambient light level controls are not required, the Settings Dialog includes an option to
+If ambient light level controls are not required, the *Settings-Dialog* includes an option to
 disable and hide them.
 
 Lux Metering and brightness transitions
@@ -582,7 +590,7 @@ changes passed to the VDU:
    of intermediate values.
 
 When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
-can be manually suspended.  The main-panel, main-menu, and light-metering dialog each contain controls for
+can be manually suspended.  The main-panel, *main-menu*, and light-metering dialog each contain controls for
 toggling Auto/Manual.  Additionally, moving the manual lux-slider turns off automatic adjustment.
 
 The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
@@ -647,8 +655,8 @@ If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will defau
 ``ddcutil`` *dynamic sleep optimizer*.  The optimizer automatically tunes and caches VDU specific
 timings when ever ``ddcutil`` is run.  Any reliability-issues or errors may be automatically
 resolved as the optimizer refines its cached timings.  Should problems persist, the
-optimizer can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
-the **Settings Dialog** (either globally on the **vdu_controls tab** or selectively under each VDU's
+optimizer can be disabled by adding `--disable-dynamic-sleep` to the *ddcutil extra arguments* in
+the *Settings-Dialog* (either globally on the *vdu_controls tab* or selectively under each VDU's
 tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimizer's
 heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
 recent version of ``libddcutil/ddcutil``.
@@ -688,26 +696,21 @@ That said, ``vdu_controls`` does include a number of features that can be used
 to reduce the overall frequency of adjustments to acceptable levels.
 
 + Inbuilt mitigations:
-  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when
-    no change occurs in 0.5 seconds).
+  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
   + Preset restoration only updates the VDU values that differ from its current values.
   + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
-  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness
-    differs from the current brightness by at least 10%.
+  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
 + Electable mitigations:
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + If using the ambient-light brightness response curves, tune the settings and
-    curves to minimize frequent small changes.
-  + If using a light-meter, disengage metered automatic adjustment when faced with
-    rapidly fluctuating levels of ambient brightness.
+  + If using the ambient-light brightness response curves, tune the settings and curves to minimize frequent small changes.
+  + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 + Monitoring to assist with making adjustments:
-  + Hovering over a VDU name in the main window reveals a popup that includes
-    the number of VCP (NVRAM) writes.
-  + The bottom of the About-dialog shows the same numbers. They update dynamically.
+  + Hovering over a VDU name in the main window reveals a popup that includes the number of VCP (NVRAM) writes.
+  + The bottom of the *About-Dialog* shows the same numbers. They update dynamically.
 
 Cross-platform differences
 --------------------------
@@ -717,12 +720,12 @@ the UI on each may not be exactly the same.
 
 Depending on which desktop or system-tray-extension you are using, a
 left-mouse-click on the app-icon in the system-tray may restore
-the application's main-widow or it may bring up the the application's
-context-menu.  To support both kinds of desktop, the context-menu includes a
-a _Control Panel_  menu option that toggles visibility of the main window.
+the application's main-widow or it may bring up the application's
+*main-menu*.  To support both kinds of desktop, the *main-menu* includes a 
+*Control Panel*  menu option that toggles visibility of the main window.
 
 Wayland doesn't allow an application to precisely position its windows.  When the
-``smart-window`` option is enabled and the desktop platform is Wayland, the
+*smart-window* option is enabled and the desktop platform is Wayland, the
 application switches its platform to XWayland (X11 xcb).
 
 The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
@@ -748,17 +751,17 @@ colored, monochrome-dark and monochrome-light.
 Localization
 ------------
 
-If _Settings_ _translations enabled_ is set, the application will 
+If *Settings* → *translations* is set, the application will 
 load a translation matching your system's locale if available. 
 
-__The supplied translations are 
-unverified and should be regarded as samples that may be incorrect.__
+**The supplied translations are 
+unverified and should be regarded as samples that may be incorrect.**
 
 Where a supported locale is right-to-left oriented, layouts will be 
 reconfigured appropriately. 
 
 Locale is determined by the Linux and Qt environment variables,
-`LC_ALL` and `LANGUAGE`, which should prefereably be in agreement.
+`LC_ALL` and `LANGUAGE`, which should preferably be in agreement.
 These two enviroment variables can be manually set to force
 a locale, for example:
 
@@ -768,7 +771,7 @@ The following locations are searched for localized translations:
   2. `/usr/share/vdu_controls/translations/`
   3. `zipapp-root/vdu_controls/resources/translations/`
 
-To date, there hasn't been any espression of interest in the localization
+To date, there hasn't been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
 be supported over the long term. 
 
@@ -859,8 +862,8 @@ Environment
     LC_ALL, LANG, LANGUAGE
         These variables specify the locale for language translations and units of distance.
         LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-        value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
-        ``Translations Enabled`` must also be enabled.
+        value, for example, ``Da_DK``. For these to have any effect on 
+        language, *Settings* -> *Translations* must also be enabled.
 
     VDU_CONTROLS_UI_IDLE_SECS
         The length of pause in slider or spin-box control motion that triggers commit of
@@ -875,7 +878,7 @@ Environment
 
     VDU_CONTROLS_WEATHER_KM
         Overrides the default maximum permissible spherical distance (in kilometres)
-        between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
+        between the *Settings*->*Location* and ``wttr.in`` reported location (``200 km``, 124 miles).
 
     VDU_CONTROLS_DDCUTIL_ARGS
         Add to the list of arguments passed to each exec of ddcutil.
@@ -889,10 +892,10 @@ Environment
     VDU_CONTROLS_DEVELOPER
         Changes some search paths to include the current working directory, which is
         more convenient in a development scenario. Enables control of desktop LEDs 
-        via brightnessctl so a laptop isn't required for testing. (``no`` or yes).
+        via brightnessctl so a laptop isn't required for testing. (``no`` or ``yes``).
 
     VDU_CONTROLS_DEBUG_LAYOUT
-        Draws boxes around the UI elements.  (``no`` or yes).
+        Draws boxes around the UI elements.  (``no`` or ``yes``).
 
 Files
 =====
@@ -901,8 +904,8 @@ Files
 
     $HOME/.config/vdu_controls/tray_icon.svg
         If present, this file is the preferred source for the system-tray icon. It can be used if the normal
-        icon conflicts with the desktop theme. If the ``Settings`` ``monochrome-tray``
-        and ``mono-light-tray`` are enabled, they are applied to the file when it is read.
+        icon conflicts with the desktop theme. If the *Settings* *monochrome-tray*
+        and *mono-light-tray* are enabled, they are applied to the file when it is read.
 
     $HOME/.config/vdu_controls/translations/
         Location for user supplied translations.
