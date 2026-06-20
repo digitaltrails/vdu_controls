@@ -251,14 +251,16 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
             if solar_lux < 100:  # only for reasonable daylight lux levels.
-                log.info(f"LuxSemiAuto: update daylight-factor: ignored {new_lux_value=}, associated {solar_lux=} too small.")
+                log.debug(f"LuxSemiAuto: update daylight-factor: ignored " 
+                          f"{new_lux_value=}, associated {solar_lux=} too small.") if log.debug_enabled else None
                 LuxMeterSemiAutoDevice.status_message = tr('Ignoring daylight-factor, Sun not bright enough.')
             else:
                 daylight_factor = new_lux_value / solar_lux
                 if 0.0 < daylight_factor <= 2.0:
                     LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
                 else:
-                    log.info(f"LuxSemiAuto: update daylight-factor: ignored {daylight_factor:0.3f}={new_lux_value}/{solar_lux}, DF out of workable range.")
+                    log.debug(f"LuxSemiAuto: update daylight-factor: ignored "
+                              f"{daylight_factor:0.3f}={new_lux_value}/{solar_lux}, DF out of workable range.") if log.debug_enabled else None
                     LuxMeterSemiAutoDevice.status_message = tr('Ignoring daylight-factor, out of viable range.')
 
     @staticmethod
