@@ -177,8 +177,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if to_do.brightness != -1:
                 bulk_change_item = BulkChangeItem(to_do.vdu_sid, BRIGHTNESS_VCP_CODE, to_do.brightness,
                                                   current_value=to_do.current_brightness,
-                                                  transition=True)  # only transitions if protect-nvram is False.
-                bulk_changer.add_item(bulk_change_item)
+                                                  transition=True)
+                bulk_changer.add_item(bulk_change_item)  # will flip transition to False if protect-nvram is True
             if to_do.preset_name and to_do.preset_name not in to_do_preset_names:
                 to_do_preset_names.append(to_do.preset_name)
         bulk_changer.run()  # Call run instead of start; run in this thread instead of a new thread.
