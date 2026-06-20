@@ -191,15 +191,16 @@ class VduController(QObject):
             # raise subprocess.SubprocessError("get_attributes")  # for testing
             values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
             for vcp_code, vcp_value in zip(vcp_codes, values):
-                value = vcp_value.current
+                current_value = vcp_value.current
                 cached_value = self.values_cache.get(vcp_code, None)
-                if value != cached_value:
-                    self.values_cache[vcp_code] = value
+                if current_value != cached_value:
+                    self.values_cache[vcp_code] = current_value
                     if cached_value is not None:  # Not just initialization, but an actual change...
                         if log.debug_enabled:
                             log.debug(
-                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:02x} {value} {VcpOrigin.EXTERNAL}")
-                        self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
+                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:02x} "
+                                f"{cached_value=} {current_value=} {VcpOrigin.EXTERNAL}")
+                        self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, current_value, VcpOrigin.EXTERNAL,
                                                              self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
