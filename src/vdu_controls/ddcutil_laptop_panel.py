@@ -154,9 +154,9 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported
         try:
-            new_value = f"{round(new_value_int * self._get_max_brightness(edid_txt) / 100)}"
-            log.info(f"set_vcp: Panel set {new_value}")
-            self.__run__('set', '-d', edid_txt, new_value)
+            physical_value = f"{round(new_value_int * self._get_max_brightness(edid_txt) / 100)}"
+            log.info(f"set_vcp: Panel set {new_value_int=} {physical_value=}")
+            self.__run__('set', '-d', edid_txt, physical_value)
         finally:
             self.set_vcp_time = datetime.now()
 
