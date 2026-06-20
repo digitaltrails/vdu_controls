@@ -154,8 +154,8 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported
         try:
-            new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
-            log.info(f"laptop set {new_value}")
+            new_value = f"{round(new_value_int * self._get_max_brightness(edid_txt) / 100)}"
+            log.info(f"set_vcp: Panel set {new_value}")
             self.__run__('set', '-d', edid_txt, new_value)
         finally:
             self.set_vcp_time = datetime.now()
@@ -166,8 +166,8 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
             try:
                 brightness = int(self.__run__('get', '-d', edid_txt).stdout)
                 max_brightness = self._get_max_brightness(edid_txt)
-                percent = (100 * brightness) // max_brightness
-                log.info(f"Panel {brightness=} {max_brightness=} {percent=}")
+                percent = round((100.0 * brightness) / max_brightness)
+                log.info(f"get_vcp_values: Panel {brightness=} {max_brightness=} {percent=}")
                 return [VcpValue(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
