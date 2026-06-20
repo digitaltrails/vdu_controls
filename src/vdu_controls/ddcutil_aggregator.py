@@ -237,7 +237,7 @@ class DdcutilAggregator(DdcutilInterface):
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
                 raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for {vcp_code=:#02x}")
             results.append(value)  # if we reach here all values will be present (none are None).
-        log.info(f"{results=}")
+        log.debug(f"DdcutilAggregator {results=}") if log.debug_enabled else None
         return results
 
 

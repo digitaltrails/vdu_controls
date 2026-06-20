@@ -194,7 +194,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             for vcp, value, maximum, text_val in raw:
                 vcp_code_int = int.from_bytes(vcp, 'big')
                 results.append(VcpValue(vcp_code_int, value, maximum, None))  # TODO is None for type really OK?
-            print(f"results {len(results)=} {results=}")
+            #print(f"results {len(results)=} {results=}")
             return results
 
     def vcp_info(self):
