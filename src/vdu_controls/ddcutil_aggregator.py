@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import re
-import subprocess
-import time as sys_time
 from typing import List, Dict, Callable, Tuple, NewType
 
 import vdu_controls.logging as log
-from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, DdcutilServiceNotFound, DdcutilDisplayNotFound, \
-    DdcutilInterface, VcpTypeInfo
+from vdu_controls.ddcutil_abstract import VcpValue, DdcutilServiceNotFound, DdcutilInterface, VcpTypeInfo
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
