@@ -255,7 +255,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
-                log.info(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                log.debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} " 
+                          f" {current_brightness=} {proposed_brightness=} ignored, too small") if log.debug_enabled else None
                 self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}",
                                     timeout=5000)
                 return None
