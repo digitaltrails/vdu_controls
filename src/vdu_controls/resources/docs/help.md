@@ -341,7 +341,7 @@ presets can be created for different lighting conditions or different applicatio
 *Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each preset can be assigned a
 name and icon.
 
-The *Presets* item in *main-menu* will bring up a **Presets-Dialog** for managing and
+The *Presets* item in *main-menu* will bring up a *Presets-Dialog* for managing and
 applying presets.  The *main-menu* also includes an item for each existing preset.
 
 Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
@@ -402,13 +402,13 @@ is to allow a preset to trigger relative to dawn or dusk, or when the sun rises 
 surrounding terrain (the time of which will vary as the seasons change).
 
 If a preset has an elevation, the preset will be triggered each day at a time calculated according
-to the latitude and longitude specified by in the ``vdu-controls-globals`` ``location`` option.
-By choosing an appropriate ``solar-elevation`` a preset may be confined to specific times of the
+to the latitude and longitude specified by in the *Settings-Dialog* *location* option.
+By choosing an appropriate *solar-elevation* a preset may be confined to specific times of the
 year.  For example, a preset with a positive solar elevation will not trigger at mid-winter in the
 Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
 regardless of its specified solar elevations.
 
-To assign a trigger, use the *Presets-Dialog* to set a preset's ``solar-elevation``.  A solar elevation
+To assign a trigger, use the *Presets-Dialog* to set a preset's *solar-elevation*.  A solar elevation
 may range from -19 degrees in the eastern sky (morning/ascending) to -19 degrees in the western sky
 (afternoon/descending), with a maximum nearing 90 degrees at midday.
 
@@ -438,21 +438,21 @@ Presets - Smooth Transitions
 **To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
 default. To re-enable smooth transitions, uncheck the** *protect-nvram* **option in** *Settings*.
 
-A preset may be set to ``Smoothly Transition``, in which case changes to controls continuous-value
+A preset may be set to *Smoothly Transition*, in which case changes to controls continuous-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.
 
 The *Presets-Dialog* includes a combo-box for defining when to apply transitions to a preset:
 
- - ``None`` - change immediately;
- - ``On schedule`` - slowly change according to a solar elevation trigger;
- - ``On signal`` - slowly change on the appropriate UNIX signal;
- - ``On menu`` - slowly change when selected in the *main-menu*;
+ - **None** - change immediately;
+ - **On schedule** - slowly change according to a solar elevation trigger;
+ - **On signal** - slowly change on the appropriate UNIX signal;
+ - **On menu** - slowly change when selected in the *main-menu*;
 
 Normally a transition single-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
-controls being altered.  The *Presets-Dialog* includes a ``Transition Step seconds`` control that can
+controls being altered.  The *Presets-Dialog* includes a *Transition Step seconds* control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 
 If any transitioning controls change independently of the transition, the transition will cease.  In

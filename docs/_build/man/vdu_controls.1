@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 19, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 20, 2026" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.6.5rc3
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -469,7 +469,7 @@ presets can be created for different lighting conditions or different applicatio
 \fINight\fP, \fIDay\fP, \fIOvercast\fP, \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&. Each preset can be assigned a
 name and icon.
 .sp
-The \fIPresets\fP item in \fImain\-menu\fP will bring up a \fBPresets\-Dialog\fP for managing and
+The \fIPresets\fP item in \fImain\-menu\fP will bring up a \fIPresets\-Dialog\fP for managing and
 applying presets.  The \fImain\-menu\fP also includes an item for each existing preset.
 .sp
 Any small SVG or PNG can be assigned as a preset\(aqs icon.  Monochrome SVG icons that conform to the
@@ -532,13 +532,13 @@ is to allow a preset to trigger relative to dawn or dusk, or when the sun rises 
 surrounding terrain (the time of which will vary as the seasons change).
 .sp
 If a preset has an elevation, the preset will be triggered each day at a time calculated according
-to the latitude and longitude specified by in the \fBvdu\-controls\-globals\fP \fBlocation\fP option.
-By choosing an appropriate \fBsolar\-elevation\fP a preset may be confined to specific times of the
+to the latitude and longitude specified by in the \fISettings\-Dialog\fP \fIlocation\fP option.
+By choosing an appropriate \fIsolar\-elevation\fP a preset may be confined to specific times of the
 year.  For example, a preset with a positive solar elevation will not trigger at mid\-winter in the
 Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
 regardless of its specified solar elevations.
 .sp
-To assign a trigger, use the \fIPresets\-Dialog\fP to set a preset\(aqs \fBsolar\-elevation\fP\&.  A solar elevation
+To assign a trigger, use the \fIPresets\-Dialog\fP to set a preset\(aqs \fIsolar\-elevation\fP\&.  A solar elevation
 may range from \-19 degrees in the eastern sky (morning/ascending) to \-19 degrees in the western sky
 (afternoon/descending), with a maximum nearing 90 degrees at midday.
 .sp
@@ -564,7 +564,7 @@ day will be restored.
 \fBTo minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
 default. To re\-enable smooth transitions, uncheck the\fP \fIprotect\-nvram\fP \fBoption in\fP \fISettings\fP\&.
 .sp
-A preset may be set to \fBSmoothly Transition\fP, in which case changes to controls continuous\-value
+A preset may be set to \fISmoothly Transition\fP, in which case changes to controls continuous\-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.
@@ -587,7 +587,7 @@ The \fIPresets\-Dialog\fP includes a combo\-box for defining when to apply trans
 .sp
 Normally a transition single\-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
-controls being altered.  The \fIPresets\-Dialog\fP includes a \fBTransition Step seconds\fP control that can
+controls being altered.  The \fIPresets\-Dialog\fP includes a \fITransition Step seconds\fP control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 .sp
 If any transitioning controls change independently of the transition, the transition will cease.  In

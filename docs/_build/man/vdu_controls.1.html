@@ -335,7 +335,7 @@ lighting conditions or different applications, for example,
 <em>Photography</em>, and <em>Video</em>. Each preset can be assigned a
 name and icon.</p>
 <p>The <em>Presets</em> item in <em>main-menu</em> will bring up a
-<strong>Presets-Dialog</strong> for managing and applying presets. The
+<em>Presets-Dialog</em> for managing and applying presets. The
 <em>main-menu</em> also includes an item for each existing preset.</p>
 <p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
@@ -395,15 +395,15 @@ to dawn or dusk, or when the sun rises above some surrounding terrain
 (the time of which will vary as the seasons change).</p>
 <p>If a preset has an elevation, the preset will be triggered each day
 at a time calculated according to the latitude and longitude specified
-by in the <code>vdu-controls-globals</code> <code>location</code>
-option. By choosing an appropriate <code>solar-elevation</code> a preset
-may be confined to specific times of the year. For example, a preset
-with a positive solar elevation will not trigger at mid-winter in the
-Arctic circle (because the sun never gets that high). Any preset may be
-manually invoked regardless of its specified solar elevations.</p>
+by in the <em>Settings-Dialog</em> <em>location</em> option. By choosing
+an appropriate <em>solar-elevation</em> a preset may be confined to
+specific times of the year. For example, a preset with a positive solar
+elevation will not trigger at mid-winter in the Arctic circle (because
+the sun never gets that high). Any preset may be manually invoked
+regardless of its specified solar elevations.</p>
 <p>To assign a trigger, use the <em>Presets-Dialog</em> to set a
-preset’s <code>solar-elevation</code>. A solar elevation may range from
--19 degrees in the eastern sky (morning/ascending) to -19 degrees in the
+preset’s <em>solar-elevation</em>. A solar elevation may range from -19
+degrees in the eastern sky (morning/ascending) to -19 degrees in the
 western sky (afternoon/descending), with a maximum nearing 90 degrees at
 midday.</p>
 <p>On any given day, the <em>Presets-Dialog</em> may be used to
@@ -432,30 +432,30 @@ restored.</p>
 deprecated and are disabled by default. To re-enable smooth transitions,
 uncheck the</strong> <em>protect-nvram</em> <strong>option in</strong>
 <em>Settings</em>.</p>
-<p>A preset may be set to <code>Smoothly Transition</code>, in which
-case changes to controls continuous-value slider controls such as
-brightness and contrast will be stepped by one until the final values
-are reached. Any non-continuous values will be set after all continuous
-values have reached their final values, for example, if input-source is
-included in a preset, it will be restored at the end.</p>
+<p>A preset may be set to <em>Smoothly Transition</em>, in which case
+changes to controls continuous-value slider controls such as brightness
+and contrast will be stepped by one until the final values are reached.
+Any non-continuous values will be set after all continuous values have
+reached their final values, for example, if input-source is included in
+a preset, it will be restored at the end.</p>
 <p>The <em>Presets-Dialog</em> includes a combo-box for defining when to
 apply transitions to a preset:</p>
 <ul>
-<li><code>None</code> - change immediately;</li>
-<li><code>On schedule</code> - slowly change according to a solar
+<li><strong>None</strong> - change immediately;</li>
+<li><strong>On schedule</strong> - slowly change according to a solar
 elevation trigger;</li>
-<li><code>On signal</code> - slowly change on the appropriate UNIX
+<li><strong>On signal</strong> - slowly change on the appropriate UNIX
 signal;</li>
-<li><code>On menu</code> - slowly change when selected in the
+<li><strong>On menu</strong> - slowly change when selected in the
 <em>main-menu</em>;</li>
 </ul>
 <p>Normally a transition single-steps the controls as quickly as
 possible. In practice, this means each step takes one or more seconds
 and increases linearly depending on the number of VDUs and number of
 controls being altered. The <em>Presets-Dialog</em> includes a
-<code>Transition Step seconds</code> control that can be used to
-increase the step interval and extend a transition over a longer period
-of time.</p>
+<em>Transition Step seconds</em> control that can be used to increase
+the step interval and extend a transition over a longer period of
+time.</p>
 <p>If any transitioning controls change independently of the transition,
 the transition will cease. In that manner, a transition can be abandoned
 by dragging a slider or choosing a different preset.</p>
