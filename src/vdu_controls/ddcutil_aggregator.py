@@ -187,16 +187,9 @@ class DdcutilAggregator(DdcutilInterface):
         """Send a new value to a specific VDU and vcp_code."""
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
-        for attempt_count in range(DDCUTIL_RETRIES):
-            try:
-                impl.set_vcp(edid_txt, vcp_code, new_value)
-                DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
-                log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}")
-                return
-            except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
-                if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
-                    raise e
-            sys_time.sleep(attempt_count * 0.25)
+        impl.set_vcp(edid_txt, vcp_code, new_value)
+        DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
+        log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}")
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -225,13 +218,9 @@ class DdcutilAggregator(DdcutilInterface):
         values_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_int_list}
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
-        # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-        for attempt_count in range(DDCUTIL_RETRIES):
-            values_list = impl.get_vcp_values(edid_txt, vcp_code_int_list)
-            for vcp_value in values_list:
-                values_dict[vcp_value.vcp_code] = vcp_value
-            if None not in values_dict.values():
-                break  # Got all values - OK to stop, otherwise try again
+        values_list = impl.get_vcp_values(edid_txt, vcp_code_int_list)
+        for vcp_value in values_list:
+            values_dict[vcp_value.vcp_code] = vcp_value
         results = []
         for vcp_code, value in values_dict.items():
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
