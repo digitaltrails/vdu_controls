@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import List, Dict, Callable, Tuple, NewType
+from collections import defaultdict
+from typing import List, Dict, Callable, Tuple, NewType, DefaultDict
 
 import vdu_controls.logging as log
 from vdu_controls.ddcutil_abstract import VcpValue, DdcutilServiceNotFound, DdcutilInterface, VcpTypeInfo
@@ -21,7 +22,7 @@ class DdcutilAggregator(DdcutilInterface):
     For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
     DdcutilPanelImpl, with the results aggregated together.
     """
-    vcp_write_counters: Dict[str, int] = {}
+    vcp_write_counters: DefaultDict[str, int] = defaultdict(int)
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
                  connected_vdus_changed_callback: Callable | None = None) -> None:
@@ -93,7 +94,7 @@ class DdcutilAggregator(DdcutilInterface):
 
     def get_write_count(self, vdu_number: str) -> int:
         if edid_txt := self.get_edid_txt(vdu_number):
-            return DdcutilAggregator.vcp_write_counters.get(edid_txt, 0)
+            return DdcutilAggregator.vcp_write_counters[edid_txt]
         return 0
 
     def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
@@ -185,7 +186,7 @@ class DdcutilAggregator(DdcutilInterface):
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
         impl.set_vcp(edid_txt, vcp_code, new_value)
-        DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
+        DdcutilAggregator.vcp_write_counters[edid_txt] += 1
         log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}")
 
     def vcp_info(self) -> str:
