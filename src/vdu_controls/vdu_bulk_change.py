@@ -28,6 +28,7 @@ class BulkChangeItem:
     starting_value: int | None = None
     current_value: int | None = None
     transition: bool = False
+    finished: bool = False
 
 
 class BulkChangeWorker(WorkerThread):
@@ -40,7 +41,7 @@ class BulkChangeWorker(WorkerThread):
         super().__init__(task_body=self._perform_changes, task_finished=finished_callable)  # type: ignore
         log.debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log.debug_enabled else None
         self.name = name
-        self.ignore_others = ignore_others
+        self.ignore_others = ignore_others  # ignore any other work going on - don't let other changes stop the work.
         self.context = context
         self.start_time: datetime | None = None
         self.main_controller = main_controller
@@ -48,13 +49,15 @@ class BulkChangeWorker(WorkerThread):
         self.progress_qtsignal.connect(self.progress_callable)
         self.to_do_list: List[BulkChangeItem] = []
         self.step_interval = step_interval
-        self.protect_nvram = self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
+        # Turn off transitions if we are protecting NVRAM.
+        # Also, if we're ignoring other work - we should do things as fast as possible.
+        self.immediately = self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED) or ignore_others
         self.change_count = 0
         self.total_elapsed_seconds = 0.0
         self.completed = False
 
     def add_item(self, item: BulkChangeItem):
-        if self.protect_nvram or self.step_interval < 0.1:
+        if self.immediately or self.step_interval < 0.1:
             item.transition = False
         self.to_do_list.append(item)
 
@@ -63,14 +66,15 @@ class BulkChangeWorker(WorkerThread):
         try:
             if any([item.current_value is None for item in self.to_do_list]):  # has parent filled out expected values.
                 self._refresh_current_values_from_vdu()
-            self._do_stepped_changes()  # transitions in a series of steps
-            if not self.stop_requested:
+            if not self.immediately:
+                self._do_stepped_changes()  # transitions in a series of steps - may not be any.
+            if not self.stop_requested:  # if we did any stepping, we may have decided to stop.
                 self._do_normal_changes()
                 self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
         finally:
-            (_ := self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
+            self.total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
             if log.debug_enabled:
-                log.debug(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
+                log.debug(f"BulkChangeWorker: {self.name} {self.completed=} {self.change_count=} {self.total_elapsed_seconds=:.3f}")
 
     def _do_normal_changes(self):
         for item in [item for item in self.to_do_list if not item.transition and item.current_value != item.final_value]:
@@ -79,10 +83,15 @@ class BulkChangeWorker(WorkerThread):
             if item.final_value != item.current_value:
                 self.main_controller.set_value(item.vdu_sid, item.vcp_code, item.final_value)
                 item.current_value = item.final_value
+                item.finished = True
                 self.change_count += 1
 
     def _do_stepped_changes(self):
-        while step_changes := [item for item in self.to_do_list if item.transition and item.current_value != item.final_value]:
+        while step_changes := [item for item in self.to_do_list if item.transition
+                                                                   and not item.finished
+                                                                   and item.current_value != item.final_value]:
+            assert not self.immediately
+            log.debug(f"BulkChangeWorker stepping {len(step_changes)=}")
             if self.stop_requested:
                 break
             for item in step_changes:
@@ -93,7 +102,8 @@ class BulkChangeWorker(WorkerThread):
                 step_size = max(5, abs(diff) // 2)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_value = item.current_value + step
-                origin = VcpOrigin.TRANSIENT if new_value != item.final_value else VcpOrigin.NORMAL
+                item.finished = new_value == item.final_value   # Worried that the value might change again later
+                origin = VcpOrigin.NORMAL if item.finished else VcpOrigin.TRANSIENT
                 self.main_controller.set_value(item.vdu_sid, item.vcp_code, new_value, origin)
                 item.current_value = new_value
                 self.change_count += 1
@@ -116,8 +126,9 @@ class BulkChangeWorker(WorkerThread):
                                                                            [item.vcp_code for item in vdu_items_by_code.values()]):
                 vdu_current_value = vcp_value.current
                 item = vdu_items_by_code[vcp_code]
+                # This prevents initialization tripping over other automatic changes that happen shortly after startup.
                 if item.current_value is not None and item.current_value != vdu_current_value and not self.ignore_others:
-                    log.warning(f"Interrupted bulk change {id=} "
+                    log.warning(f"BulkChangeWorker: Interrupted transitioning change {id=} "
                                 f"something else changed the VDU: {vdu_current_value=} != {item.current_value=}")
                     self.stop_requested = True
                     break
