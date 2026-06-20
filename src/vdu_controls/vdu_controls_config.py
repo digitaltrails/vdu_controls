@@ -207,7 +207,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         help=QT_TR_NOOP('Separate the status-bar from the toolbar.'))
 
     PROTECT_NVRAM_ENABLED = ConfOptDef(
-        conf_name='protect-nvram', default_value="yes", restart_required=True,
+        conf_name='protect-nvram', default_value="yes",
         ui_label=QT_TR_NOOP('protect NVRAM'),
         sub_group=SubGroup.DDC,
         off_warning=QT_TR_NOOP("NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes."),
