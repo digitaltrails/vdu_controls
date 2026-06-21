@@ -1045,7 +1045,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.editor_controls_widget)
 
         self.editor_transitions_widget = PresetTransitionWidget()
-        if self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED):
+        if self.main_config.is_protecting_nvram():
             self.editor_layout.addItem(QSpacerItem(1, 10))
         else:
             self.editor_layout.addWidget(self.editor_transitions_widget)
@@ -1410,7 +1410,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         return PresetItemWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
                                 delete_action=self.delete_preset, edit_action=self.edit_preset,
                                 up_action=self.up_action, down_action=self.down_action,
-                                protect_nvram=self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
+                                protect_nvram=self.main_config.is_protecting_nvram())
 
     def event(self, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.

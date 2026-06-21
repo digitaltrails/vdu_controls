@@ -51,7 +51,7 @@ class BulkChangeWorker(WorkerThread):
         self.step_interval = step_interval
         # Turn off transitions if we are protecting NVRAM.
         # Also turn off if we're ignoring other work - we should do things as fast as possible.
-        self.immediately = self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED) or ignore_others
+        self.immediately = self.main_controller.main_config.is_protecting_nvram() or ignore_others
         self.change_count = 0
         self.total_elapsed_seconds = 0.0
         self.completed = False

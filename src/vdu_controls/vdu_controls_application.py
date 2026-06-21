@@ -611,7 +611,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if initialization_preset:
             background_activity = True
             immediately = True
-        elif self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED):
+        elif self.main_config.is_protecting_nvram():
             immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not gui_misc.is_running_in_gui_thread():  # Transfer this request into the GUI thread
@@ -649,8 +649,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if worker_thread.change_count != 0:
                             self.get_main_window().show_preset_status(tr("Restored {0} (elapsed time {1} seconds)").format(
                                 preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
-                            if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
-                                    and preset.get_transition_type() != PresetTransitionFlag.NONE):
+                            if self.main_config.is_protecting_nvram() and preset.get_transition_type() != PresetTransitionFlag.NONE:
                                 log.warning(
                                     f"restore-preset: protect-nvram prevents '{preset.name}' from stepping, changes are immediate.")
                         else:

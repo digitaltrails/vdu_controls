@@ -7,6 +7,15 @@ import re
 import sys
 from enum import Enum
 from pathlib import Path
+import vdu_controls.logging as log
+
+
+def getenv_logged(key: str, default: str = None):
+    """Get an environment variable and log the result"""
+    value = os.getenv(key, default=default)
+    log.info(f"getenv_logged('{key}', default='{default}')={value}")
+    return value
+
 
 APPNAME = "VDU Controls"
 
@@ -49,14 +58,17 @@ TOOLTIP_DURATION_MSEC = 750
 WESTERN_SKY = 'western-sky'  # TODO seems suspect - not an enum? no translations?
 EASTERN_SKY = 'eastern-sky'
 
-IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
-WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example, 'Europe/Berlin' 'Asia/Shanghai'
+IP_ADDRESS_INFO_URL = getenv_logged('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
+WEATHER_FORECAST_URL = getenv_logged('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
+TESTING_TIME_ZONE = getenv_logged('VDU_CONTROLS_TEST_TIME_ZONE')  # for example, 'Europe/Berlin' 'Asia/Shanghai'
 TESTING_TIME_DELTA = None  # timedelta(hours=-6.2)
 
 HELP_FILENAME = "help.md"
 
-VDU_CONTROLS_DEVELOPER = os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
+VDU_CONTROLS_DEVELOPER = getenv_logged('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
+
+# Final step before removing any transitioning/stepping code in a later version
+PROTECT_NVRAM_IS_MANDATORY = getenv_logged('VDU_CONTROLS_PROTECT_NVRAM', default='yes') == 'yes'
 
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH / 'current_preset.txt'
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH / 'tray_icon.svg'

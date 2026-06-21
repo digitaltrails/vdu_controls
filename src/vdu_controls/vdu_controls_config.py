@@ -18,7 +18,7 @@ import vdu_controls.logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import APPNAME
+from vdu_controls.constants import APPNAME, PROTECT_NVRAM_IS_MANDATORY
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.misc import LocalStrEnum, GeoLocation
@@ -580,6 +580,10 @@ class VduControlsConfig:
         except ValueError as ve:
             log.error("Problem with geolocation:", ve)
             return None
+
+    def is_protecting_nvram(self) -> bool:
+        # Disabling transitions for all but the determined - to be removed at a later date.
+        return PROTECT_NVRAM_IS_MANDATORY or self.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
 
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
