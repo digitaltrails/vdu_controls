@@ -6,6 +6,8 @@ import os
 import queue
 import re
 import subprocess
+from dataclasses import dataclass
+from enum import Enum
 from typing import Callable, Dict, Tuple, List
 
 from vdu_controls.qt_imports import QObject, pyqtSignal
@@ -22,6 +24,27 @@ from vdu_controls.misc import proper_name
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.work_scheduler import WorkerThread
 
+class VduSetterRequestStatus(Enum):
+    QUEUED = 0
+    BOUNCED = 1
+    ERRORED = 2
+    SUCCEEDED = 3
+
+
+@dataclass(frozen=True)
+class VduSetterRequestKey:
+    controller: VduController
+    vcp_code: int
+
+
+@dataclass
+class VduSetterRequest:
+    controller: VduController
+    vcp_code: int
+    value: int
+    origin: VcpOrigin
+    status: VduSetterRequestStatus = VduSetterRequestStatus.QUEUED
+  
 
 class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp from the GUI
 
@@ -33,32 +56,41 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         log.info(f"env VDU_CONTROLS_UI_IDLE_SECS={self._idle_seconds}")
 
     def _async_setvcp_task_body(self, _: WorkerThread):
-        latest_pending = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.
+        latest_pending_requests: dict[VduSetterRequestKey, VduSetterRequest] = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.
         while not self._async_setvcp_queue.empty():  # Keep going while there is something in the queue
             try:
-                # print(f"{self._async_setvcp_queue.qsize()=}")
-                controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
-                key = (controller, vcp_code)
-                if log.debug_enabled:
-                    log.debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin=}") if key in latest_pending else None
-                latest_pending[key] = (value, origin)  # keep the latest for each controller+vcp_code.
+                request = self._async_setvcp_queue.get_nowait()
+                async_key = VduSetterRequestKey(request.controller, request.vcp_code)
+                if request.controller.no_longer_in_use:
+                    request.status = VduSetterRequestStatus.BOUNCED
+                    log.debug(f"VduControllerAsyncSetter: discard request from expired for {request.controller.vdu_number=} "
+                              f"{request.vcp_code=:#02x} {request.value=} {request.status} {request.origin}") if log.debug_enabled else None
+                else:
+                    if discard := latest_pending_requests.get(async_key, None):
+                        discard.status = VduSetterRequestStatus.BOUNCED
+                        log.debug(f"VduControllerAsyncSetter: newer request displaces {discard.controller.vdu_number=} "
+                                  f"{discard.vcp_code=:#02x} {discard.value=} {discard.status} {discard.origin}") if log.debug_enabled else None
+                    latest_pending_requests[async_key] = request  # keep the latest for each controller+vcp_code.
                 self._async_setvcp_queue.task_done()
             except queue.Empty:
                 pass
-            if latest_pending and self._async_setvcp_queue.empty():  # some setvcp requests are pending,
+            if latest_pending_requests and self._async_setvcp_queue.empty():  # some setvcp requests are pending,
                 self.doze(self._idle_seconds)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
-        if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
-            for (controller, vcp_code), (value, origin) in latest_pending.items():
-                if controller.values_cache.get(vcp_code, None) != value:
-                    log.debug(f"UI set {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
-                    controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
+        if latest_pending_requests:  # nothing more has arrived, if any setvcp requests are pending, set for real now
+            for request in latest_pending_requests.values():
+                if request.controller.set_vcp_value(request.vcp_code, request.value, request.origin, from_async_setter=True):
+                    request.status = VduSetterRequestStatus.SUCCEEDED
                 else:
-                    log.debug(f"UI nochange {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
+                    request.status = VduSetterRequestStatus.ERRORED
+                log.debug(f"VduControllerAsyncSetter: set {request.controller.vdu_number=} "
+                          f"{request.vcp_code=:#02x} {request.value=} {request.status} {request.origin}") if log.debug_enabled else None
         else:
             self.doze(self._idle_seconds)
 
-    def queue_setvcp(self, controller: VduController, vcp_code: int, value: int, origin: VcpOrigin):
-        self._async_setvcp_queue.put((controller, vcp_code, value, origin))
+    def queue_setvcp(self, controller: VduController, vcp_code: int, value: int, origin: VcpOrigin) -> VduSetterRequest:
+        request = VduSetterRequest(controller, vcp_code, value, origin)
+        self._async_setvcp_queue.put(request)
+        return request
 
 
 class VduController(QObject):
@@ -83,7 +115,7 @@ class VduController(QObject):
     _LIMITED_RANGE_KEY = "%%RANGE%%"  # A key internal to vdu_controls for storing Range n..m values.
     _FORCE_REFRESH_NAME_SUFFIX = "*refresh*"
 
-    vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
+    ctlr_vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
     _async_setvcp_exception_qtsignal = pyqtSignal(int, int, VcpOrigin, Exception)
 
     _async_setvcp_task: VduControllerAsyncSetter | None = None
@@ -118,7 +150,7 @@ class VduController(QObject):
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str = ''
         self.config = None
-        self.values_cache: Dict[int, int] = {}
+        self._values_cache: Dict[int, int] = {}
         self.ignore_vdu = remedy == VduController.IGNORE_VDU
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
@@ -192,47 +224,69 @@ class VduController(QObject):
             values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
             for vcp_code, vcp_value in zip(vcp_codes, values):
                 current_value = vcp_value.current
-                cached_value = self.values_cache.get(vcp_code, None)
+                cached_value = self._values_cache.get(vcp_code, None)
                 if current_value != cached_value:
-                    self.values_cache[vcp_code] = current_value
+                    self._values_cache[vcp_code] = current_value
                     if cached_value is not None:  # Not just initialization, but an actual change...
-                        if log.debug_enabled:
-                            log.debug(
-                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:02x} "
-                                f"{cached_value=} {current_value=} {VcpOrigin.EXTERNAL}")
-                        self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, current_value, VcpOrigin.EXTERNAL,
-                                                             self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
+                        log.debug(
+                            f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:02x} "
+                            f"{cached_value=} {current_value=} {VcpOrigin.EXTERNAL}") if log.debug_enabled else None
+                        self.ctlr_vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, current_value, VcpOrigin.EXTERNAL,
+                                                                      self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             codes_csv = ", ".join([f"{vcp_code:02x}" for vcp_code in vcp_codes])
             raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=codes_csv,
                                exception=e, operation="get_vcp_values") from e
 
-    def set_vcp_value(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
-                      asynchronous_caller: bool = False) -> None:
-        if self.no_longer_in_use:
-            log.info(f"Expired controller discards set_vcp_value({vcp_code=:#02x}, {value=}, {origin=}) {asynchronous_caller=}")
-            return
+    def set_vcp_value(self, vcp_code: int, value: int, origin: VcpOrigin, from_async_setter=False) -> bool:
+        """Set the value immediately with no queue waiting.  Returns true if the set succeeded"""
+        if self.no_longer_in_use:   # VDU has gone or application has reloaded while queu was active.
+            log.info(f"Freed controller discards set_vcp_value({vcp_code=:#02x}, {value=}, {origin=})")
+            return False
+
+        previous_value = self._values_cache.get(vcp_code, None)
+        if previous_value == value:   # Nothing to do, we already are on this value
+            log.debug(f"VduController set_vcp_value: nochange {self.vdu_number=} {vcp_code=:#02x} {value=} {origin} "
+                      f"({previous_value=})") if log.debug_enabled else None
+            return True
+
+        log.debug(f"VduController set_vcp_value: new value {self.vdu_number=} {vcp_code=:#02x} {value=} {origin} "
+                  f"({previous_value=})") if log.debug_enabled else None
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
-            retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
-            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value, retry_on_error=retry_on_error)
-            self.values_cache[vcp_code] = value
+            # TODO retry_on_error is removed - possibly it could be reimplemented - but is it necessary?
+            # retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
+            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value)
+            self._values_cache[vcp_code] = value
             if log.debug_enabled:
                 log.debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:#02x} {value} {origin}")
-            self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
-                                                 self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
+            self.ctlr_vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
+                                                      self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             vdu_exception = VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=vcp_code, exception=e,
                                          operation="set_vcp_value")
-            if not asynchronous_caller:
-                raise vdu_exception from e
-            self._async_setvcp_exception_qtsignal.emit(vcp_code, value, origin, vdu_exception)
+            if from_async_setter:  # send exception back to application thread
+                self._async_setvcp_exception_qtsignal.emit(vcp_code, value, origin, vdu_exception)
+            else:
+                raise vdu_exception
+            return False
+        return True
 
-    def set_vcp_value_asynchronously(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
-        # Queue the change for the queue processing thread - avoids blocking the GUI.
+    def set_vcp_value_asynchronously(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> bool:
+        """
+        Set the value with a slight delay by waiting in a debounce queue.
+        Debounce multiple requests for a given controller+vcp_code in favor of the last one standing.
+        Returns True if wait=True and the set succeeded.
+        """
+        # Queue the change for the queue processing thread:
+        # - avoids blocking the GUI
+        # -
         assert VduController._async_setvcp_task is not None
-        VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin)
+        request = VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin)
+        log.debug(f"set_vcp_value_asynchronously {request.controller.vdu_number=} {request.vcp_code=} "
+                  f"{request.value=} {request.status} {request.origin} ") if log.debug_enabled else None
+        return request.status == VduSetterRequestStatus.SUCCEEDED
 
     def get_range_restrictions(self, vcp_code: int, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:

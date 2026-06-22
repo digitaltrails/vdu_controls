@@ -152,7 +152,7 @@ class VduMainToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
-    vdu_vcp_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
+    app_vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -189,7 +189,7 @@ class VduControlsMainPanel(QWidget):
         for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")  # pyright: ignore
             vdu_control_panel = VduControlPanel(controller, self.show_vdu_exception)
-            controller.vcp_value_changed_qtsignal.connect(self.vdu_vcp_changed_qtsignal)
+            controller.ctlr_vcp_value_changed_qtsignal.connect(self.app_vcp_value_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
                 controllers_layout.addWidget(vdu_control_panel)
@@ -249,6 +249,9 @@ class VduControlsMainPanel(QWidget):
             self.main_toolbar.show_active_preset(preset)
 
     def show_vdu_exception(self, exception: Exception, can_retry: bool = False) -> bool:
+        # Values could now be out of wack, try to refresh,
+        # set external_event to prevent exception cascades
+        self.main_controller.start_refresh(external_event=True)
         if isinstance(exception, VduException):
             log.error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
             msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
@@ -965,12 +968,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log.error(f"get_value: No controller for {vdu_stable_id}")
         return 0
 
-    def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
+    def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         if panel := self.get_main_window().get_main_panel().vdu_control_panels.get(vdu_stable_id):
             if control := panel.get_control(vcp_code):
                 control.set_value(value, origin)  # Apply to physical VDU
                 return
-        log.error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=:#02x}")
+        log.error(f"set_value: No control for {vdu_stable_id=} {vcp_code=:#02x}")
 
     def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: int) -> bool:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
@@ -1258,7 +1261,7 @@ class VduAppWindow(QMainWindow):
         self.main_panel.initialise_control_panels(self.main_controller, self.app_context_menu, self.main_config,
                                                   tool_buttons, extra_controls, self.splash_message_qtsignal)
         # Wire-up after successful init to avoid deadlocks
-        self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)
+        self.main_panel.app_vcp_value_changed_qtsignal.connect(self.respond_to_changes_handler)
         self.indicate_busy(True)
 
         self.scroll_area = QScrollArea()

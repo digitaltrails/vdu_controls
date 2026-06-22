@@ -143,9 +143,11 @@ class VduControlBase(QWidget):
         self.refresh_ui_view()
 
     def set_value(self, new_value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
-        if self.controller.values_cache[self.vcp_capability.vcp_code] != new_value:
-            self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin)
-            self.current_value = new_value
+        # Set the value immediately
+        if self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin):
+            self.current_value = new_value  # Succeeded, save the new value
+        # If it failed, error handling will have already informed the user and updated the control with the correct current value.
+        # If it was bounced by a later request, one of the later requests will eventually set the correct value.
         self.refresh_ui_view()
 
     def ui_change_vdu_attribute(self, new_value: int) -> None:  # Used by UI controls to change values
