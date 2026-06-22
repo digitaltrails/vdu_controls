@@ -7,9 +7,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple, Dict
 
+from vdu_controls.constants import getenv_logged
+
 # Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
 # Note retrying a set may not be wise, sets are not repeatable.
-DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
+DDCUTIL_RETRIES = int(getenv_logged("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
 
 #: Could be a str enumeration of VCP types
 CONTINUOUS_TYPE = 'C'

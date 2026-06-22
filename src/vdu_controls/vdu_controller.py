@@ -14,7 +14,8 @@ from vdu_controls.qt_imports import QObject, pyqtSignal
 
 from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, SUPPORTED_VCP_BY_CODE, VcpCapability
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFIG_VCP_CODES, ASSUMED_CONTROLS_CONFIG_TEXT
+from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFIG_VCP_CODES, ASSUMED_CONTROLS_CONFIG_TEXT, \
+    getenv_logged
 
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, \
     SIMPLE_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE
@@ -52,8 +53,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
         self._async_setvcp_queue: queue.Queue = queue.Queue()
         # limit set_vcp to a sustainable interval - KDE powerdevil recommendation - 0.5s, ddcui 1.0 seconds
-        self._idle_seconds = float(os.getenv("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
-        log.info(f"env VDU_CONTROLS_UI_IDLE_SECS={self._idle_seconds}")
+        self._idle_seconds = float(getenv_logged("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
 
     def _async_setvcp_task_body(self, _: WorkerThread):
         latest_pending_requests: dict[VduSetterRequestKey, VduSetterRequest] = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.

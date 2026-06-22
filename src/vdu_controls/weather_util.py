@@ -13,7 +13,7 @@ from datetime import datetime
 
 from vdu_controls.qt_imports import QLocale
 
-from vdu_controls.constants import WEATHER_FORECAST_URL
+from vdu_controls.constants import WEATHER_FORECAST_URL, getenv_logged
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, GeoLocation
@@ -25,7 +25,7 @@ class WeatherQuery:
 
     def __init__(self, location: GeoLocation) -> None:
         self.location = location
-        self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
+        self.maximum_distance_km = int(getenv_logged("VDU_CONTROLS_WEATHER_KM", default='200'))
         local_local = locale.getlocale()
         lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
         assert location.place_name is not None

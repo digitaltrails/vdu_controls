@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Dict, Tuple, Callable, List
 
 import vdu_controls.logging as log
+from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
     VcpValue, DdcCapabilities, VcpTypeInfo
 from vdu_controls.misc import intV
@@ -29,15 +30,15 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
-        self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
-        env_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        self.dbus_interface_name = getenv_logged('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
+        env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         self.common_args = env_args + common_args if common_args else []
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
-        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
+        self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
         self._status_values: Dict[int, str] = {}
-        self.dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        self.dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
+        self.dbus_service_name = getenv_logged('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
+        self.dbus_object_path = getenv_logged('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         for try_count in range(1, 5):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again

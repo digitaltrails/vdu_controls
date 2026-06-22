@@ -14,7 +14,7 @@ from typing import Tuple
 
 from vdu_controls.qt_imports import QObject, pyqtSignal
 
-from vdu_controls.constants import CONFIG_DIR_PATH
+from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged
 
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
@@ -121,7 +121,7 @@ class LuxMeterExecutableDevice(LuxMeterDevice):
     def __init__(self, device_name: str) -> None:
         super().__init__()
         self.runnable = device_name
-        self.sleep_time = float(os.getenv("LUX_METER_RUNNABLE_SLEEP", default='60.0'))
+        self.sleep_time = float(getenv_logged("LUX_METER_RUNNABLE_SLEEP", default='60.0'))
 
     def update_from_worker_thread(self, _: WorkerThread) -> None:
         try:

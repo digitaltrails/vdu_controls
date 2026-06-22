@@ -1032,7 +1032,7 @@ class VduAppWindow(QMainWindow):
     def __init__(self, main_config: VduControlsConfig, main_controller: VduAppController) -> None:
         super().__init__()
         app_instance = get_app_instance()
-        if os.getenv('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
+        if getenv_logged('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
             app_instance.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
         #set_gui_thread(app.thread())
         self.main_controller: VduAppController = main_controller

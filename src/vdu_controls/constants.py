@@ -13,7 +13,7 @@ import vdu_controls.logging as log
 def getenv_logged(key: str, default: str = None):
     """Get an environment variable and log the result"""
     value = os.getenv(key, default=default)
-    log.info(f"getenv_logged('{key}', default='{default}')={value}")
+    log.info(f"getenv_logged('{key}', default='{default}') -> '{value}'")
     return value
 
 

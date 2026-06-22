@@ -10,6 +10,7 @@ from threading import Lock
 from typing import Dict, List, Tuple
 
 import vdu_controls.logging as log
+from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
     COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities, VcpTypeInfo
 
@@ -28,7 +29,7 @@ class DdcutilExeImpl(DdcutilInterface):
     def __init__(self, common_args: List[str] | None):
         self.vdu_sleep_multiplier: Dict[str, float] = {}
         self.extra_args: Dict[str, List[str]] = {}
-        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        self.common_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         if common_args:
             self.common_args += common_args
         self.ddcutil_access_lock = Lock()
