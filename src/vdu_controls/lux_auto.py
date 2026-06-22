@@ -202,7 +202,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         self.main_controller.update_window_status_indicators()
         else:
             log.debug("LuxAuto: bulk worker failed to complete.") if log.debug_enabled else None
-            self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL}")
+            msg = str(worker.work_exception) if worker.work_exception is not None else tr('Unknown error')
+            self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {msg}")
             self.consecutive_error_count += 1
 
     def _adjust_for_lux_finished(self, _: WorkerThread) -> None:
