@@ -377,6 +377,8 @@ class SettingsEditorFieldBase(QWidget):
         # Get related and resolve any forward refs (str values)
         self.related: List[SettingsEditorFieldBase] = []
         self.requires: List[SettingsEditorFieldBase] = []
+        if option_def.constant:
+            self.setDisabled(True)
         if option_def.help:
             self.setToolTip(f"<p>{option_def.localized_help}</p>")
 

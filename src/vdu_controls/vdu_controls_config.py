@@ -18,7 +18,7 @@ import vdu_controls.logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import APPNAME, PROTECT_NVRAM_IS_MANDATORY
+from vdu_controls.constants import APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.misc import LocalStrEnum, GeoLocation
@@ -72,6 +72,7 @@ class ConfOptDef:
     conf_section: str = ConfSec.VDU_CONTROLS_GLOBALS
     conf_type: ConfType = ConfType.BOOL
     default_value: str | None = None
+    constant: bool = False
     restart_required: bool = False
     cmdline_arg: str = 'DEFAULT'  # Can be DISALLOWED if not allowed to be a command line option.
     ui_label: str | None = None   # If None, then it won't appear in the Settings Editor.
@@ -207,14 +208,16 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         help=QT_TR_NOOP('Separate the status-bar from the toolbar.'))
 
     PROTECT_NVRAM_ENABLED = ConfOptDef(
-        conf_name='protect-nvram', default_value="yes",
+        conf_name='protect-nvram', default_value="yes", constant=True,
         ui_label=QT_TR_NOOP('protect NVRAM'),
         sub_group=SubGroup.DDC,
         off_warning=QT_TR_NOOP("NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes."),
-        help=QT_TR_NOOP('Alter options and defaults to minimize VDU NVRAM writes. This setting mainly '
+        help=QT_TR_NOOP(
+                        'Alter options and defaults to minimize VDU NVRAM writes. This setting mainly '
                         'affects whether transitions are gradual, using several writes, or instant, with as '
-                        'few writes as possible.'
-                        ))
+                        'few writes as possible.<p>'
+                        '<b>This option is now permanently enabled. '
+                        'If this is an issue for you, please contact the author.</b>'))
 
     ORDER_BY_NAME = ConfOptDef(
         conf_name='order-by-name', default_value="no",
@@ -581,10 +584,6 @@ class VduControlsConfig:
             log.error("Problem with geolocation:", ve)
             return None
 
-    def is_protecting_nvram(self) -> bool:
-        # Disabling transitions for all but the determined - to be removed at a later date.
-        return PROTECT_NVRAM_IS_MANDATORY or self.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
-
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
         self.file_path = config_path
@@ -603,6 +602,12 @@ class VduControlsConfig:
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
         self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, alt_text)
+        for option in ConfOpt:  # Enforce constant values.
+            if option.constant:
+                default_str = str(option.default_value) if option.default_value is not None else ''
+                if self.ini_content.has_option(option.conf_section, option.conf_name):   # Ensure it has the default value
+                    self.ini_content.set(option.conf_section, option.conf_name, default_str)
+
 
     def reload(self) -> None:
         log.info(f"Reloading config: {self.file_path}")

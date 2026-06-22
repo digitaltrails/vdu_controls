@@ -67,12 +67,8 @@ HELP_FILENAME = "help.md"
 
 VDU_CONTROLS_DEVELOPER = getenv_logged('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
 
-# Final step before removing any transitioning/stepping code in a later version
-PROTECT_NVRAM_IS_MANDATORY = getenv_logged('VDU_CONTROLS_PROTECT_NVRAM', default='yes') == 'yes'
-
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH / 'current_preset.txt'
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH / 'tray_icon.svg'
-
 
 STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
