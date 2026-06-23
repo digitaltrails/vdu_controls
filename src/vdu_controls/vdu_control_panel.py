@@ -8,8 +8,7 @@ import vdu_controls.gui_misc as gui_misc
 import vdu_controls.logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
-from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue, \
-    VcpOrigin
+from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue
 from vdu_controls.misc import proper_name, clamp
 from vdu_controls.preset import Preset
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox, \
@@ -17,7 +16,7 @@ from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, 
 from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import PANEL_CONNECTED_ICON_SVG, VDU_CONNECTED_ICON_SVG
-from vdu_controls.vdu_controller import VduController
+from vdu_controls.vdu_controller import VduController, VcpSetterOrigin
 from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import alter_margins, TitleButton, MBox, MIcon, ThemedSvgWidget, ClickableSlider, LineEditAll
@@ -83,6 +82,22 @@ class VduControlPanel(QWidget):
     def get_control(self, vcp_code: int) -> VduControlBase | None:
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)
 
+    def set_value(self, vcp_code: int, value: int, origin: VcpSetterOrigin) -> bool:
+        """Sets the physical value and updates the UI view.  Returns True if a control exists."""
+        # Used by background tasks to alter physical VDU.
+        # Not use by UI controls, UI controls use the asynchronous ui_change_vdu_attribute() that handles debounce.
+        # Sets the value immediately
+        assert VcpSetterOrigin.NORMAL_EVENT in origin or VcpSetterOrigin.TRANSIENT_EVENT in origin
+        if control := self.get_control(vcp_code):
+            if self.controller.set_vcp_value(vcp_code, value, origin):  # Apply to physical VDU
+                control.set_value(value)  # Update UI control
+            else:
+                # If it failed, error handling will have already done something about it
+                # and updated the control with the correct current value.
+                control.refresh_ui_view()
+            return True  # Control was found
+        return False  # No such control
+
     def refresh_from_vdu(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI operations here)."""
         if values := self.controller.get_vcp_values([control.vcp_capability.vcp_code for control in self.vcp_controls]):
@@ -142,20 +157,17 @@ class VduControlBase(QWidget):
             self.current_value = vcp_value.current
         self.refresh_ui_view()
 
-    def set_value(self, new_value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
-        # Set the value immediately
-        if self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin):
-            self.current_value = new_value  # Succeeded, save the new value
-        # If it failed, error handling will have already informed the user and updated the control with the correct current value.
-        # If it was bounced by a later request, one of the later requests will eventually set the correct value.
+    def set_value(self, new_value: int) -> None:
+        self.current_value = new_value
         self.refresh_ui_view()
 
-    def ui_change_vdu_attribute(self, new_value: int) -> None:  # Used by UI controls to change values
-        log.info("ui_change_vdu_attribute") if self.debug else None
+    def ui_set_physical_vdu(self, new_value: int) -> None:
+        # Used by UI controls to change values. Asynchronous due to queueing to handle debounce
+        log.info("ui_set_physical_vdu") if self.debug else None
         if self.refresh_ui_only:  # Called from a GUI control when it was already responding to a vdu attribute change.
             log.info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
             return  # Avoid repeating a setvcp by skipping the physical change
-        self.controller.set_vcp_value_asynchronously(self.vcp_capability.vcp_code, new_value, VcpOrigin.NORMAL)
+        self.controller.set_vcp_value_asynchronously(self.vcp_capability.vcp_code, new_value, VcpSetterOrigin.NORMAL_UI)
 
     def get_current_text_value(self) -> str | None:  # Return text in correct base: continuous->base10 non-continuous->base16
         assert False, "subclass failed to implement get_current_text_value"
@@ -230,7 +242,7 @@ class VduControlSlider(VduControlBase):
 
         def _slider_changed(value: int) -> None:
             self.current_value = value
-            self.ui_change_vdu_attribute(value)
+            self.ui_set_physical_vdu(value)
 
         slider.valueChanged.connect(_slider_changed)
 
@@ -271,7 +283,7 @@ class VduControlComboBox(VduControlBase):
         def _index_changed(_: int) -> None:
             self.current_value = int(self.combo_box.currentData(), 16)
             if self.validate_value() >= 0:
-                self.ui_change_vdu_attribute(self.current_value)
+                self.ui_set_physical_vdu(self.current_value)
 
         combo_box.currentIndexChanged.connect(_index_changed)
 

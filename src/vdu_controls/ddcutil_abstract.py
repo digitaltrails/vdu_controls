@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple, Dict
@@ -70,12 +69,6 @@ class DdcEventType(Enum):  # Has to correspond to what the service supports
     DPMS_ASLEEP = 1
     DISPLAY_CONNECTED = 2
     DISPLAY_DISCONNECTED = 3
-
-
-class VcpOrigin(Enum):  # Cause of a VCP value change
-    NORMAL = 0  # Change generated internally within vdu_controls.
-    TRANSIENT = 1  # Intermediate VDU VCP change as a result of vdu_controls transitioning to a new value
-    EXTERNAL = 2  # Detected a change of value that must have been done externally to this vdu_controls run.
 
 
 class DdcutilServiceNotFound(Exception):

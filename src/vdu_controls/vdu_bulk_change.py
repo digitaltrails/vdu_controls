@@ -10,7 +10,7 @@ from typing import Callable, Any, List, Dict, TYPE_CHECKING
 from vdu_controls.qt_imports import pyqtSignal
 
 from vdu_controls.vdu_controls_config import ConfOpt
-from vdu_controls.ddcutil_abstract import VcpOrigin
+from vdu_controls.vdu_controller import VcpSetterOrigin
 
 from vdu_controls.ddcutil_aggregator import VduStableId
 import vdu_controls.logging as log
@@ -81,7 +81,7 @@ class BulkChangeWorker(WorkerThread):
             if self.stop_requested:
                 break
             if item.final_value != item.current_value:
-                self.main_controller.set_value(item.vdu_sid, item.vcp_code, item.final_value)
+                self.main_controller.set_value(item.vdu_sid, item.vcp_code, item.final_value, VcpSetterOrigin.NORMAL_EVENT)
                 item.current_value = item.final_value
                 item.finished = True
                 self.change_count += 1
@@ -103,7 +103,7 @@ class BulkChangeWorker(WorkerThread):
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_value = item.current_value + step
                 item.finished = new_value == item.final_value   # Worried that the value might change again later
-                origin = VcpOrigin.NORMAL if item.finished else VcpOrigin.TRANSIENT
+                origin = VcpSetterOrigin.NORMAL_EVENT if item.finished else VcpSetterOrigin.TRANSIENT_EVENT
                 self.main_controller.set_value(item.vdu_sid, item.vcp_code, new_value, origin)
                 item.current_value = new_value
                 self.change_count += 1

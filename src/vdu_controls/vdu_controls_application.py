@@ -24,7 +24,7 @@ from vdu_controls.app_locale import tr, initialise_locale_translations
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import *
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
-from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
+from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     BRIGHTNESS_VCP_CODE, DdcEventType, \
     DdcutilServiceNotFound
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
@@ -52,7 +52,7 @@ from vdu_controls.svg import VDU_CONTROLS_SPLASH_SVG
 from vdu_controls.unicode import *
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
-from vdu_controls.vdu_controller import VduController
+from vdu_controls.vdu_controller import VduController, VcpSetterOrigin
 from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability, MAIN_CONFIG_NAME
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
@@ -152,7 +152,7 @@ class VduMainToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
-    app_vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
+    app_vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpSetterOrigin, bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -968,12 +968,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log.error(f"get_value: No controller for {vdu_stable_id}")
         return 0
 
-    def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
+    def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpSetterOrigin) -> None:
+        # Used by the BulkChangeWorker to make the actual changes.
+        assert origin in VcpSetterOrigin.NORMAL_EVENT or origin in VcpSetterOrigin.TRANSIENT_EVENT
         if panel := self.get_main_window().get_main_panel().vdu_control_panels.get(vdu_stable_id):
-            if control := panel.get_control(vcp_code):
-                control.set_value(value, origin)  # Apply to physical VDU
+            if panel.set_value(vcp_code, value, origin):  # Apply to physical VDU - show in UI
                 return
-        log.error(f"set_value: No control for {vdu_stable_id=} {vcp_code=:#02x}")
+        log.error(f"set_value: No control for {vdu_stable_id=} {vcp_code=:#02x}")   # TODO - is this really needed?
 
     def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: int) -> bool:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
@@ -1357,20 +1358,22 @@ class VduAppWindow(QMainWindow):
         if palette_change or preset is not None:
             self.refresh_preset_menu(palette_change=palette_change)
 
-    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin,
+    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpSetterOrigin,
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
         AboutDialog.refresh()
         for panel in self.get_main_panel().vdu_control_panels.values():
             panel.update_stats()
-        if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
+        if causes_config_change and (VcpSetterOrigin.NORMAL_UI in origin or VcpSetterOrigin.NORMAL_EVENT in origin):
+            # only respond if this is an internally initiated change
             log.info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=:#02x} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
         log.debug(f"respond_to_changes_handler {vdu_stable_id=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
-        if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
+        if VcpSetterOrigin.TRANSIENT_EVENT not in origin:  # Only want to indicate final status (not when stepping)
             self.update_status_indicators()
-            if origin != VcpOrigin.EXTERNAL:
+            if VcpSetterOrigin.EXTERNAL not in origin:
+                # Tiny status indication that the change generated internally went through.
                 self.status_message(SET_VCP_SYMBOL, timeout_ms=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
