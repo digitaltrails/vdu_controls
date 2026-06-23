@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -1976,6 +1976,18 @@ Tēnā, tirohia ēnei kōnae, ā, whakatikahia, tangohia rānei mēnā ka puta m
 </context><context>
     <name>VduControlPanel</name>
     <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
+        <source>Panel {}</source>
+        <translation>Pae {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
+        <source>Monitor {}</source>
+        <translation>Mātiti {}</translation>
+    </message>
+    <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>Ki te hiahia koe ki te whakawhānui i te huinga uara e whakaaetia ana, tirohia te whārangi man e pā ana ki ngā kōnae whirihora VDU/tauira-VDU.</translation>
@@ -1984,16 +1996,6 @@ Tēnā, tirohia ēnei kōnae, ā, whakatikahia, tangohia rānei mēnā ka puta m
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
         <source>Set-VCP writes: {}</source>
         <translation>Ngā tuhituhi Set-VCP: {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
-        <source>Monitor {}</source>
-        <translation>Mātiti {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
-        <source>Panel {}</source>
-        <translation>Pae {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />

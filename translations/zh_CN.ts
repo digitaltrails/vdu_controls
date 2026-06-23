@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -1974,6 +1974,18 @@ Please check these files and edit or remove them if they cause further issues.</
 </context><context>
     <name>VduControlPanel</name>
     <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
+        <source>Panel {}</source>
+        <translation>面板 {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
+        <source>Monitor {}</source>
+        <translation>显示器 {}</translation>
+    </message>
+    <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>如果您想扩展允许值的集合，请参阅关于 VDU/VDU 模型配置文件的说明手册页。</translation>
@@ -1982,16 +1994,6 @@ Please check these files and edit or remove them if they cause further issues.</
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
         <source>Set-VCP writes: {}</source>
         <translation>Set-VCP 写入次数：{}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
-        <source>Monitor {}</source>
-        <translation>显示器 {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
-        <source>Panel {}</source>
-        <translation>面板 {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />

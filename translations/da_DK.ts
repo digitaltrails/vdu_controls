@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -1977,6 +1977,18 @@ Tjek venligst disse filer og rediger eller fjern dem, hvis de forårsager yderli
 </context><context>
     <name>VduControlPanel</name>
     <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
+        <source>Panel {}</source>
+        <translation>Panel {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
+        <source>Monitor {}</source>
+        <translation>Skærm {}</translation>
+    </message>
+    <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>Hvis du vil udvide sættet af tilladte værdier, se manualsiden om VDU/VDU-model konfigurationsfiler.</translation>
@@ -1985,16 +1997,6 @@ Tjek venligst disse filer og rediger eller fjern dem, hvis de forårsager yderli
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
         <source>Set-VCP writes: {}</source>
         <translation>Set-VCP skrivninger: {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
-        <source>Monitor {}</source>
-        <translation>Skærm {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
-        <source>Panel {}</source>
-        <translation>Panel {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />

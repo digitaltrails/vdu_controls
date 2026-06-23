@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
@@ -1975,6 +1975,18 @@ Bitte überprüfen Sie diese Dateien und bearbeiten oder entfernen Sie sie, wenn
 </context><context>
     <name>VduControlPanel</name>
     <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
+        <source>Panel {}</source>
+        <translation>Panel {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
+        <source>Monitor {}</source>
+        <translation>Monitor {}</translation>
+    </message>
+    <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>Wenn Sie die Menge der zulässigen Werte erweitern möchten, lesen Sie die Manpage zu VDU/VDU-Modell-Konfigurationsdateien.</translation>
@@ -1983,16 +1995,6 @@ Bitte überprüfen Sie diese Dateien und bearbeiten oder entfernen Sie sie, wenn
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
         <source>Set-VCP writes: {}</source>
         <translation>Set-VCP-Schreibvorgänge: {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
-        <source>Monitor {}</source>
-        <translation>Monitor {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
-        <source>Panel {}</source>
-        <translation>Panel {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />

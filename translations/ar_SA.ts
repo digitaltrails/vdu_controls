@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="sa_IN">
 <context>
@@ -1970,6 +1970,18 @@ Please check these files and edit or remove them if they cause further issues.</
 </context><context>
     <name>VduControlPanel</name>
     <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
+        <source>Panel {}</source>
+        <translation>اللوحة {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
+        <source>Monitor {}</source>
+        <translation>الشاشة {}</translation>
+    </message>
+    <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>إذا كنت ترغب في توسيع مجموعة القيم المسموح بها، فراجع صفحة الدليل الخاصة بملفات تكوين نموذج VDU/VDU.</translation>
@@ -1978,16 +1990,6 @@ Please check these files and edit or remove them if they cause further issues.</
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
         <source>Set-VCP writes: {}</source>
         <translation>كتابات Set-VCP: {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
-        <source>Monitor {}</source>
-        <translation>الشاشة {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
-        <source>Panel {}</source>
-        <translation>اللوحة {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />
