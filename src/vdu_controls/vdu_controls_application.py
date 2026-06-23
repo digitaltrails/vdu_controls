@@ -74,7 +74,7 @@ def force_xwayland():
     """
     # Force Qt to use XWayland, or reverse the previous force
     global original_qt_qpa_platform
-    original_qt_qpa_platform = os.environ.get('QT_QPA_PLATFORM', '')  # save original value
+    original_qt_qpa_platform = getenv_logged('QT_QPA_PLATFORM', '')  # save original value
     log.info("Forcing Xwayland, setting environment variable QT_QPA_PLATFORM=xcb")
     os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
@@ -1140,7 +1140,7 @@ class VduAppWindow(QMainWindow):
 
         self.main_controller.configure_application(self)
 
-        self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
+        self.inactive_pause_millis = int(getenv_logged('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
         self.active_event_count = 0
         app_instance.applicationStateChanged.connect(self.on_application_state_changed)
         self.installEventFilter(self)
@@ -1626,7 +1626,7 @@ def main() -> None:
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
 
-    if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
+    if getenv_logged('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
         if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XWAYLAND):
             log.warning(f"{ConfOpt.SMART_WINDOW.conf_id}: "
                         "Many wayland implementations cannot save/restore window placement across sessions. Switching to XWayland.")
@@ -1646,8 +1646,8 @@ def main() -> None:
 
     log.info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
     log.info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
-    log.info(f"desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
-             f"session-type: {os.environ.get('XDG_SESSION_TYPE', default='unknown')}; "
+    log.info(f"desktop: {getenv_logged('XDG_CURRENT_DESKTOP', default='unknown')}; "
+             f"session-type: {getenv_logged('XDG_SESSION_TYPE', default='unknown')}; "
              f"platform: {QApplication.platformName()}; Qt: {QtCore.qVersion()}")
     app_style = app.style()
     if app_style is not None:
