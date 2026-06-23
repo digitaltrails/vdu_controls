@@ -96,7 +96,7 @@
     <rect x="376" y="430" width="48" height="46" fill="url(#columnStemGradient)"/>
 
     <!-- Top shadow intersection where stem meets the display -->
-    <path d="M 376 430 L 424 430" stroke="#252a33" stroke-width="2"/>
+    <path d="M 376 431 L 424 431" stroke="#252a33" stroke-width="2"/>
 
     <!-- 5. RECTANGULAR PROFILE BASE PLATE -->
     <rect x="290" y="474" width="220" height="12" rx="2" ry="2" fill="url(#rectangularBaseGradient)"/>
