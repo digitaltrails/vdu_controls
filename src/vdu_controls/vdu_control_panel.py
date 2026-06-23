@@ -83,20 +83,22 @@ class VduControlPanel(QWidget):
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)
 
     def set_value(self, vcp_code: int, value: int, origin: VcpSetterOrigin) -> bool:
-        """Sets the physical value and updates the UI view.  Returns True if a control exists."""
-        # Used by background tasks to alter physical VDU.
-        # Not use by UI controls, UI controls use the asynchronous ui_change_vdu_attribute() that handles debounce.
-        # Sets the value immediately
+        """
+        Sets the physical value and updates the UI view.
+        Used by background tasks to alter physical VDU.
+        Not used by UI controls, UI controls use the asynchronous ui_change_vdu_attribute() that handles debounce.
+        Sets the value immediately.
+        Returns True if a control exists.
+        """
         assert VcpSetterOrigin.NORMAL_EVENT in origin or VcpSetterOrigin.TRANSIENT_EVENT in origin
         if control := self.get_control(vcp_code):
             if self.controller.set_vcp_value(vcp_code, value, origin):  # Apply to physical VDU
                 control.set_value(value)  # Update UI control
             else:
-                # If it failed, error handling will have already done something about it
+                # The set failed, error handling will have already done something about it
                 # and updated the control with the correct current value.
                 control.refresh_ui_view()
-            return True  # Control was found
-        return False  # No such control
+        return control is not None  # Control was found?
 
     def refresh_from_vdu(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI operations here)."""
