@@ -33,12 +33,12 @@ class VduControlPanel(QWidget):
         if int(controller.vdu_number) < 1:
             self.title_button = TitleButton(PANEL_CONNECTED_ICON_SVG,
                                             controller.get_vdu_preferred_name(),
-                                            tr("Panel {}".format(-int(controller.vdu_number))),
+                                            tr("Panel {}").format(-int(controller.vdu_number)),
                                             clicked=controller.edit_config)
         else:
             self.title_button = TitleButton(VDU_CONNECTED_ICON_SVG,
                                             controller.get_vdu_preferred_name(),
-                                            tr("Monitor {}".format(controller.vdu_number)),
+                                            tr("Monitor {}").format(controller.vdu_number),
                                             clicked=controller.edit_config)
         layout.addWidget(self.title_button, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
 
