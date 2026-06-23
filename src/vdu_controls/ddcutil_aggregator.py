@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import re
-from collections import defaultdict
+import threading
+from collections import defaultdict, deque
 from typing import List, Dict, Callable, Tuple, NewType, DefaultDict
+import time as sys_time
 
 import vdu_controls.logging as log
-from vdu_controls.ddcutil_abstract import VcpValue, DdcutilServiceNotFound, DdcutilInterface, VcpTypeInfo
+from vdu_controls.constants import getenv_logged
+from vdu_controls.ddcutil_abstract import VcpValue, DdcutilServiceNotFound, DdcutilInterface, VcpTypeInfo, DdcutilSetterRateExceeded
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.ddcutil_qdbus import DdcutilDBusImpl
+
 
 VduStableId = NewType('VduStableId', str)
 
@@ -23,6 +27,11 @@ class DdcutilAggregator(DdcutilInterface):
     DdcutilPanelImpl, with the results aggregated together.
     """
     vcp_write_counters: DefaultDict[str, int] = defaultdict(int)
+
+    _setter_history: dict[tuple[str, int], deque] = {}
+    _setter_history_lock = threading.Lock()
+    _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))
+    _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
                  connected_vdus_changed_callback: Callable | None = None) -> None:
@@ -181,13 +190,49 @@ class DdcutilAggregator(DdcutilInterface):
         self.vcp_type_map[vcp_type_key] = info
         return info
 
-    def set_vcp(self, vdu_number: str, vcp_code: int, new_value: int, retry_on_error: bool = False) -> None:
-        """Send a new value to a specific VDU and vcp_code."""
+    @classmethod
+    def clear_setter_cascade_blocking(cls):
+        with cls._setter_history_lock:
+            cls._setter_history.clear()
+
+    @classmethod
+    def _check_setter_rate_limit(cls, key: tuple[str, int]) -> bool:
+        """
+        Enforce sliding‑window rate limit for a given (vdu_number, vcp_code).
+        Raises DdcutilRateLimitExceeded if too many calls are made in the time window.
+        Boilerplate.
+
+        Once too many calls are made block further writes until reset
+        """
+        with cls._setter_history_lock:
+
+            now = sys_time.monotonic()
+            vdu_vcp_history = cls._setter_history.setdefault(key, deque())
+            log.debug(f"{key=} {len(vdu_vcp_history)=}")
+            if len(vdu_vcp_history) >= cls._RATE_MAX_CALLS:
+                log.debug("Rate limit currently exceeded - waiting for it to be reset.") if log.debug_enabled else None
+                return False
+
+            while vdu_vcp_history and (now - vdu_vcp_history[0]) > cls._RATE_WINDOW_SECONDS:  # Prune expired entries
+                vdu_vcp_history.popleft()
+
+            vdu_vcp_history.append(now)
+            if len(vdu_vcp_history) >= cls._RATE_MAX_CALLS:  # Check if a cascade might be occurring
+                vdu_number, vcp_code = key
+                log.error(msg := f"Cascade detected for {vdu_number=} {vcp_code=:#02x} : {len(vdu_vcp_history)} calls in last "
+                                 f"{cls._RATE_WINDOW_SECONDS}s (limit {cls._RATE_MAX_CALLS})")
+                raise DdcutilSetterRateExceeded(msg)
+            return True
+
+    def set_vcp(self, vdu_number: str, vcp_code: int, new_value: int) -> None:
+        key = (vdu_number, vcp_code)
+        if not self._check_setter_rate_limit(key):  # check if rate limit is exceeded, raises if exceeded
+            return   # When the limit is reached, stop writing until reset is called.
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
         impl.set_vcp(edid_txt, vcp_code, new_value)
         DdcutilAggregator.vcp_write_counters[edid_txt] += 1
-        log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}")
+        log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}") if log.debug_enabled else None
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""

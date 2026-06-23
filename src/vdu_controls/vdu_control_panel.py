@@ -25,7 +25,7 @@ from vdu_controls.widgets import alter_margins, TitleButton, MBox, MIcon, Themed
 class VduControlPanel(QWidget):
     """Widget that contains all the controls for a single VDU (monitor/display)."""
 
-    def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
+    def __init__(self, controller: VduController) -> None:
         super().__init__()
         self.controller: VduController = controller
         layout = QVBoxLayout()
@@ -43,7 +43,6 @@ class VduControlPanel(QWidget):
         layout.addWidget(self.title_button, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
 
         self.vcp_controls: List[VduControlBase] = []
-        self.vdu_exception_handler = vdu_exception_handler
 
         for capability in controller.enabled_capabilities:
             control = None
@@ -77,7 +76,7 @@ class VduControlPanel(QWidget):
         try:
             self.refresh_from_vdu()
         except VduException as e:
-            self.vdu_exception_handler(e)
+            self.controller.vdu_exception_handler(e)
 
     def get_control(self, vcp_code: int) -> VduControlBase | None:
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)

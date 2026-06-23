@@ -26,7 +26,7 @@ from vdu_controls.constants import *
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
 from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     BRIGHTNESS_VCP_CODE, DdcEventType, \
-    DdcutilServiceNotFound
+    DdcutilServiceNotFound, DdcutilSetterRateExceeded
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
@@ -188,7 +188,7 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")  # pyright: ignore
-            vdu_control_panel = VduControlPanel(controller, self.show_vdu_exception)
+            vdu_control_panel = VduControlPanel(controller)
             controller.ctlr_vcp_value_changed_qtsignal.connect(self.app_vcp_value_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
@@ -248,35 +248,6 @@ class VduControlsMainPanel(QWidget):
         if self.main_toolbar:
             self.main_toolbar.show_active_preset(preset)
 
-    def show_vdu_exception(self, exception: Exception, can_retry: bool = False) -> bool:
-        # Values could now be out of wack, try to refresh,
-        # set external_event to prevent exception cascades
-        self.main_controller.start_refresh(external_event=True)
-        if isinstance(exception, VduException):
-            log.error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
-            msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
-            if exception.is_display_not_found_error():
-                info = tr('Monitor appears to be switched off or disconnected.')
-            else:
-                info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
-            if isinstance(exception.cause, subprocess.CalledProcessError):
-                details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
-            else:
-                details = str(exception.cause)
-        else:
-            msg = str(exception)
-            info = repr(exception)
-            details = ''
-        if self.alert is not None:  # Dismiss any existing alert
-            self.alert.done(MBtn.Close)
-        self.alert = MBox(MIcon.Critical, msg=msg, info=info, details=details,
-                          buttons=MBtn.Close | MBtn.Retry if can_retry else MBtn.Close,
-                          default=MBtn.Retry if can_retry else MBtn.Close)
-        self.alert.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        answer = self.alert.exec()
-        self.alert = None
-        return answer == MBtn.Retry
-
     def status_message(self, message: str, timeout_ms: int):
         if message.strip():  # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
             self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
@@ -313,6 +284,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
+        self.alert = None
         self.find_vdu_config_files()
         self.application_lock = threading.RLock()  # thread level, thread-safe, access lock
         self.main_config = main_config
@@ -465,13 +437,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
-        main_panel_error_handler = self.get_main_window().get_main_panel().show_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
             controller = None
             while True:
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, self.edit_config, main_panel_error_handler, VduController.NORMAL_VDU)
+                                               self.ddcutil, self.edit_config, self.show_vdu_exception, VduController.NORMAL_VDU)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilDisplayNotFound) as e:
                     log.error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
@@ -480,7 +451,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         sys_time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
                         continue  # Loop and retry as a normal VDU
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, self.edit_config, main_panel_error_handler, remedy)
+                                               self.ddcutil, self.edit_config, self.show_vdu_exception, remedy)
                     controller.write_template_config_files()
                 break  # Normally expect to just pass through the loop once
             if controller is not None:
@@ -579,11 +550,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and gui_misc.is_running_in_gui_thread()
                 log.debug(f"Refresh - update UI view {external_event=} {values_only=}") if log.debug_enabled else None
-                main_panel = self.get_main_window().get_main_panel()
                 if self.refresh_data_task.work_exception is not None:
                     log.debug(f"Refresh - update UI view - exception {self.refresh_data_task.work_exception} {external_event=}")
                     if not external_event:
-                        main_panel.show_vdu_exception(self.refresh_data_task.work_exception, can_retry=False)
+                        self.show_vdu_exception(self.refresh_data_task.work_exception, can_retry=False)
                 if not values_only:
                     if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                             external_event and False):
@@ -631,13 +601,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.get_main_window().show_preset_status(
                     tr("Transitioning to preset {0} (elapsed time {1} seconds)...").format(
                         preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
-                #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.get_main_window().update_status_indicators(preset)
 
             def _restore_finished_callback(worker_thread: BulkChangeWorker) -> None:
-                # self.transitioning_dummy_preset = None
                 if worker_thread.work_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
-                    if self.get_main_window().get_main_panel().show_vdu_exception(worker_thread.work_exception, can_retry=True):
+                    if self.show_vdu_exception(worker_thread.work_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 preset.in_transition_step = 0
@@ -1009,6 +977,44 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def status_message(self, message: str, timeout_ms: int, destination: MsgDestination = MsgDestination.DEFAULT):
         self.get_main_window().status_message(message, timeout_ms, destination)
+
+    def show_vdu_exception(self, exception: Exception, can_retry: bool = False) -> bool:
+        # Values could now be out of wack, try to refresh,
+        # set external_event to prevent exception cascades
+        self.start_refresh(external_event=True)
+        if isinstance(exception, VduException):
+            log.error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
+            if isinstance(exception.cause, DdcutilSetterRateExceeded):
+                msg = tr("Set display value: setter rate exceeded {}").format(exception.vdu_description)
+                info = tr("A display setting is being changed too frequently. "
+                          "As a precautionary measure, setting further values has been suspended until this dialog is dismissed.")
+                details = tr(f"{exception.cause}\n\nThis could be an indication of an application, driver, or hardware issue. "
+                             "If this error repeats, it might be worth restarting vdu_controls or rebooting to reset drivers."
+                             "You system logs or dmesg output might help diagnose the situation.")
+            else:
+                msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
+                if exception.is_display_not_found_error():
+                    info = tr('Monitor appears to be switched off or disconnected.')
+                else:
+                    info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
+                if isinstance(exception.cause, subprocess.CalledProcessError):
+                    details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
+                else:
+                    details = str(exception.cause)
+        else:
+            msg = str(exception)
+            info = repr(exception)
+            details = ''
+        if self.alert is not None:  # Dismiss any existing alert
+            self.alert.done(MBtn.Close)
+        self.alert = MBox(MIcon.Critical, msg=msg, info=info, details=details,
+                          buttons=MBtn.Close | MBtn.Retry if can_retry else MBtn.Close,
+                          default=MBtn.Retry if can_retry else MBtn.Close)
+        self.alert.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        answer = self.alert.exec()
+        DdcutilAggregator.clear_setter_cascade_blocking()
+        self.alert = None
+        return answer == MBtn.Retry
 
     def restart_application(self, reason: str):
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).

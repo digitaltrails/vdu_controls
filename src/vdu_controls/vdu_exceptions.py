@@ -20,3 +20,7 @@ class VduException(WorkException):
 
     def __str__(self) -> str:
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
+
+
+class VduSetterRateExceededException(VduException):
+    pass

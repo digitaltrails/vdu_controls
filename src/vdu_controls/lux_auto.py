@@ -13,7 +13,7 @@ import vdu_controls.logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination
-from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
+from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilSetterRateExceeded
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.lux_ambient_slider import LuxZone, LuxAmbientSlider
 from vdu_controls.lux_config import LuxConfig, LuxPoint
@@ -203,6 +203,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         else:
             log.debug("LuxAuto: bulk worker failed to complete.") if log.debug_enabled else None
             msg = str(worker.work_exception) if worker.work_exception is not None else tr('Unknown error')
+            if isinstance(worker.work_exception, VduException):
+                if isinstance(worker.work_exception.cause, DdcutilSetterRateExceeded):
+                    self.main_controller.show_vdu_exception(worker.work_exception, can_retry=False)
             self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {msg}")
             self.consecutive_error_count += 1
 

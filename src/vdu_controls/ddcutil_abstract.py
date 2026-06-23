@@ -78,6 +78,12 @@ class DdcutilServiceNotFound(Exception):
 class DdcutilDisplayNotFound(Exception):
     pass
 
+
+
+class DdcutilSetterRateExceeded(ValueError):
+    pass
+
+
 # Cannot make this ABC - will conflict with QObject in the dbus implementation
 # Plain interface class
 class DdcutilInterface:
