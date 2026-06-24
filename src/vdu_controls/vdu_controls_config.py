@@ -116,7 +116,7 @@ class ConfOptDef:
         object.__setattr__(self, "cmdline_arg", proper_arg)
 
     def __eq__(self, other):
-        return self.conf_id == self.conf_id
+        return self.conf_id == other.conf_id
 
     def __hash__(self):
         return hash(self.conf_id)
