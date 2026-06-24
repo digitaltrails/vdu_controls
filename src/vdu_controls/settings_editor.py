@@ -285,11 +285,14 @@ class SettingsEditorTab(QWidget):
                 conf_option = vdu_config.get_conf_option(section_def, option_name)  # Option from config file
                 if conf_option == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
                     # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
+                    if section_def == str(ConfSec.VDU_CONTROLS_GLOBALS):
+                        log.warning(f"SettingsEditor: ignoring unknown option {section_def}.{option_name} (probably an obsolete option)")
+                        continue
                     option_definition = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-', ' '))
                 else:  # It's a known config option with an enum value other than UNKNOWN, it will have an attached definition
                     option_definition = conf_option.value  # use the existing attached ConfOptDef
                 if option_definition.ui_label is None:   # Cannot appear in GUI, no way to localize the lable.
-                    log.warning(f"SettingsEditor - ignoring {section_def}.{option_name}, it has no ui_label.")
+                    log.warning(f"SettingsEditor: ignoring option {section_def}.{option_name}, it has no ui_label.")
                 else:
                     ordered_by_sub_group[(option_definition.sub_group.intval, num)] = (option_name, option_definition)
             except ValueError:  # Probably an old no-longer-valid option, or a typo.
