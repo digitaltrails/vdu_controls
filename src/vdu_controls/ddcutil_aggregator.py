@@ -30,6 +30,7 @@ class DdcutilAggregator(DdcutilInterface):
 
     _setter_history: dict[tuple[str, int], deque] = {}
     _setter_history_lock = threading.Lock()
+    _setter_cascade_detected = False
     _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))
     _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
@@ -193,6 +194,7 @@ class DdcutilAggregator(DdcutilInterface):
     @classmethod
     def clear_setter_cascade_blocking(cls):
         with cls._setter_history_lock:
+            cls._setter_cascade_detected = False
             cls._setter_history.clear()
 
     @classmethod
@@ -206,18 +208,20 @@ class DdcutilAggregator(DdcutilInterface):
         """
         with cls._setter_history_lock:
 
-            now = sys_time.monotonic()
-            vdu_vcp_history = cls._setter_history.setdefault(key, deque())
-            log.debug(f"{key=} {len(vdu_vcp_history)=}")
-            if len(vdu_vcp_history) >= cls._RATE_MAX_CALLS:
+            if cls._setter_cascade_detected:
                 log.debug("Rate limit currently exceeded - waiting for it to be reset.") if log.debug_enabled else None
                 return False
+
+            now = sys_time.monotonic()
+            vdu_vcp_history = cls._setter_history.setdefault(key, deque())
+            log.debug(f"{key=} {len(vdu_vcp_history)=}") if log.debug_enabled else None
 
             while vdu_vcp_history and (now - vdu_vcp_history[0]) > cls._RATE_WINDOW_SECONDS:  # Prune expired entries
                 vdu_vcp_history.popleft()
 
             vdu_vcp_history.append(now)
-            if len(vdu_vcp_history) >= cls._RATE_MAX_CALLS:  # Check if a cascade might be occurring
+            if len(vdu_vcp_history) > cls._RATE_MAX_CALLS: # Check if a cascade might be occurring
+                cls._setter_cascade_detected = True   # stop all setting
                 vdu_number, vcp_code = key
                 log.error(msg := f"Cascade detected for {vdu_number=} {vcp_code=:#02x} : {len(vdu_vcp_history)} calls in last "
                                  f"{cls._RATE_WINDOW_SECONDS}s (limit {cls._RATE_MAX_CALLS})")

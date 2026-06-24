@@ -988,9 +988,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 msg = tr("Set display value: setter rate exceeded {}").format(exception.vdu_description)
                 info = tr("A display setting is being changed too frequently. "
                           "As a precautionary measure, setting further values has been suspended until this dialog is dismissed.")
-                details = tr(f"{exception.cause}\n\nThis could be an indication of an application, driver, or hardware issue. "
-                             "If this error repeats, it might be worth restarting vdu_controls or rebooting to reset drivers."
-                             "You system logs or dmesg output might help diagnose the situation.")
+                details = f"{exception.cause}\n\n" + tr(
+                    "This could be an indication of an application, driver, or hardware issue. "
+                    "Your system logs or dmesg output might help diagnose the situation. "
+                    "If this error repeats, try restarting vdu_controls or rebooting to reset drivers.")
             else:
                 msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
                 if exception.is_display_not_found_error():
