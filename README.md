@@ -181,15 +181,13 @@ the frequency of writes to VDU NVRAM:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
  + Preset restoration only updates the VDU values that differ from its current values.
- + Transitioning effects and transition controls have been disabled by default and are 
-   deprecated for version 2.1.0 onward.
+ + Transitioning effects and transition controls have been disabled for version 2.6.5 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
 There are also some things you can do to further minimise NVRAM writes:
 
  + Drag sliders to target values with no in-between pauses greater than 0.5 seconds.
  + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
- + Leave `protect-nvram` enabled which disables transitions for presets.
  + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
  + If using a light-meter, disengage automatic adjustment when ambient light levels
    are  fluctuating (under conditions such as intermittent cloud cover).
