@@ -171,25 +171,22 @@ class MBox(QMessageBox):
 
     def __init__(self,
                  icon: QMessageBox.Icon,
-                 msg: str | None = None,
-                 info: str | None = None,
-                 details: str | None = None,
+                 msg: str = '',
+                 info: str = '',
+                 details: str = '',
                  buttons: int = MBtn.NoButton,
-                 default: QMessageBox.StandardButton | None = None) -> None:
-        super().__init__(icon, APPNAME, '', buttons=buttons)  # type: ignore
+                 default: QMessageBox.StandardButton = MBtn.NoButton) -> None:
+        super().__init__(icon, APPNAME, '', buttons=buttons | MBtn.NoButton)  # type: ignore
         if RESIZABLE_MESSAGEBOX_HACK:
             self.setMouseTracking(True)
             self.setSizeGripEnabled(True)
-        self.setDefaultButton(default) if default is not None else None
+        self.setDefaultButton(default)
         # Force a reasonable width by creating an unbreakable string of spaces - bit yucky
         msg = f'<span/>{msg}'  # Prefix a span to force Qt to consider this text to be html.
         msg += '<br/>' + '&nbsp;' * min(max(len(msg) + MBox.PAD_ICON, MBox.PAD_MIN), MBox.PAD_MAX)
-        if msg is not None:
-            self.setText(msg)
-        if info is not None:
-            self.setInformativeText(info)
-        if details is not None:
-            self.setDetailedText(details)
+        self.setText(msg)
+        self.setInformativeText(info)
+        self.setDetailedText(details)
 
     def event(self, event: QEvent | None):
         # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312

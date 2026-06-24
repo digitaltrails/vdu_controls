@@ -1000,7 +1000,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if isinstance(exception.cause, subprocess.CalledProcessError):
                     details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
                 else:
-                    details = str(exception.cause)
+                    details = str(exception.cause if exception.cause else '')
         else:
             msg = str(exception)
             info = repr(exception)

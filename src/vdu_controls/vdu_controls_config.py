@@ -250,8 +250,9 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('weather'),
         sub_group=SubGroup.FEATURES,
         requires=[SCHEDULE_ENABLED],
-        help=QT_TR_NOOP('Enable weather lookups for vetoing preset scheduling. '
-                        'In practice, weather lookups have not proven to be very useful or timely.'))
+        help=QT_TR_NOOP('Enable weather lookups for vetoing scheduling.<br/> '
+                        'For some locations weather-lookups are not accurate or timely. '
+                        'The network lookups can also be a source of delay.'))
 
     TICK_MARKS = ConfOptDef(
         conf_name='tick-marks', default_value="yes",

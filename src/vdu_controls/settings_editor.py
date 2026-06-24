@@ -386,6 +386,7 @@ class SettingsEditorFieldBase(QWidget):
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
+        self.performing_reset = False
         self.setLayout(widget_layout := QHBoxLayout())
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
         checkbox = QCheckBox(self.ui_label_text)
@@ -393,39 +394,40 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[self.conf_section][self.conf_name] = 'yes' if is_checked else 'no'
+            if self.performing_reset:
+                return
             if self.related:
                 if is_checked:
                     for related_field in self.related:
                         if not related_field.checkbox.isChecked():
                             if isinstance(related_field, SettingsEditorBooleanWidget):
                                 if MBox(MIcon.Information,
-                                        msg=tr("Also set related option: {}?").format(related_field.ui_label_text),
-                                        info=related_field.toolTip(),
+                                        msg=tr("Enabling <b>{0}</b>.  Would you also like to enable <b>{1}</b>?").format(
+                                            self.ui_label_text, related_field.ui_label_text),
+                                        info=tr("<b>{0}</b>: {1}").format(related_field.ui_label_text, related_field.toolTip()),
                                         buttons=MBtn.Yes|MBtn.No).exec() == MBtn.Yes:
                                     related_field.checkbox.setChecked(True)
                             else:
                                 MBox(MIcon.Information,
-                                     msg=tr("Consider also setting: {}").format(related_field.ui_label_text),
-                                     info=related_field.toolTip(),
+                                     msg=tr("Consider also setting <b>{}</b>").format(related_field.ui_label_text),
+                                     info=tr("<b>{0}</b>: {1}").format(related_field.ui_label_text, related_field.toolTip()),
                                      buttons=MBtn.Ok).exec()
                 else:
                     for related_field in self.related:
                         if related_field.checkbox.isChecked():
                             if isinstance(related_field, SettingsEditorBooleanWidget):
                                 MBox(MIcon.Information,
-                                     msg=tr("Unsetting related option: {}").format(related_field.ui_label_text),
-                                     info = related_field.toolTip()).exec()
+                                     msg=tr("Unsetting related option <b>{}</b>").format(related_field.ui_label_text)).exec()
                                 related_field.checkbox.setChecked(False)
                             else:
-                                MBox(MIcon.Information, msg=tr("Consider also unsetting: {}").format(related_field.ui_label_text),
+                                MBox(MIcon.Information, msg=tr("Consider also unsetting <b>{}</b>").format(related_field.ui_label_text),
                                      info=related_field.toolTip(),
                                      buttons=MBtn.Ok).exec()
             if is_checked and option_def.requires:
                 for required_field in self.requires:
                     if isinstance(required_field, SettingsEditorBooleanWidget) and not required_field.checkbox.isChecked():
                         MBox(MIcon.Information,
-                             msg=tr("Also setting required option: {}").format(required_field.ui_label_text),
-                             info=required_field.toolTip()).exec()
+                             msg=tr("Enabling <b>{0}</b> will also turn on <b>{1}</b>").format(self.ui_label_text, required_field.ui_label_text)).exec()
                         required_field.checkbox.setChecked(True)
                     else:
                         assert "Requires non-boolean field not yet supported"
@@ -441,8 +443,11 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         self.checkbox = checkbox
 
     def reset(self) -> None:
-        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.conf_section, self.conf_name))
-
+        self.performing_reset = True
+        try:
+            self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.conf_section, self.conf_name))
+        finally:
+            self.performing_reset = False
 
 class SettingsEditorLineBase(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
