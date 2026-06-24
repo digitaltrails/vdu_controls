@@ -522,17 +522,17 @@ This chart is resizable. </source>
 </context><context>
     <name>LatitudeLongitudeValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="545" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="548" />
         <source>The supplied longitude is {0} from the center of your {1} timezone.</source>
         <translation>提供的经度是距您的 {1} 时区中心的 {0}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="548" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="551" />
         <source>Charts showing solar elevation will render solar-noon off-center.</source>
         <translation>显示太阳高度角的图表将使太阳正午偏离中心。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="549" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="552" />
         <source>This isn't a serious issue, but you may wish to check you longitude or timezone.</source>
         <translation>这不是一个严重的问题，但您可能希望检查您的经度或时区。</translation>
     </message>
@@ -1588,126 +1588,126 @@ and restore {1} to application defaults</source>
 </context><context>
     <name>SettingsEditorBooleanWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="405" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="408" />
         <source>Enabling &lt;b&gt;{0}&lt;/b&gt;.  Would you also like to enable &lt;b&gt;{1}&lt;/b&gt;?</source>
         <translation>启用&lt;b&gt;{0}&lt;/b&gt;。  您还想启用&lt;b&gt;{1}&lt;/b&gt;吗？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="413" />
-        <location filename="../src/vdu_controls/settings_editor.py" line="407" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="416" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="410" />
         <source>&lt;b&gt;{0}&lt;/b&gt;: {1}</source>
         <translation>&lt;b&gt;{0}&lt;/b&gt;：{1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="412" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="415" />
         <source>Consider also setting &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>还可以考虑设置&lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="420" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="423" />
         <source>Unsetting related option &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>取消设置相关选项&lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="423" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="426" />
         <source>Consider also unsetting &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>还可以考虑取消设置&lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="430" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="433" />
         <source>Enabling &lt;b&gt;{0}&lt;/b&gt; will also turn on &lt;b&gt;{1}&lt;/b&gt;</source>
         <translation>启用 &lt;b&gt;{0}&lt;/b&gt; 也会开启 &lt;b&gt;{1}&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>SettingsEditorLocationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="572" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="575" />
         <source>Detect</source>
         <translation>检测</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="573" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="576" />
         <source>Detect location by querying this desktop's external IP address.</source>
         <translation>通过查询此桌面的外部 IP 地址来检测位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="585" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="588" />
         <source>Query {} to obtain information based on your IP-address?</source>
         <translation>查询 {} 以获取基于您 IP 地址的信息？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="589" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="592" />
         <source>Use the following info?</source>
         <translation>使用以下信息？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="601" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="604" />
         <source>Failed to obtain info from {0}: {1}</source>
         <translation>无法从 {0} 获取信息：{1}</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="663" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="666" />
         <source>The selected file does not exist or is not an ordinary file.</source>
         <translation>所选文件不存在或不是普通文件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="666" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="669" />
         <source>The selected file lacks execute permission.</source>
         <translation>所选文件缺少执行权限。</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="680" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="683" />
         <source>Select: {}</source>
         <translation>选择：{}</translation>
     </message>
 </context><context>
     <name>SettingsEditorTab</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="314" />
         <source>Update existing {}?</source>
         <translation>更新现有的 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="314" />
         <source>Create new {}?</source>
         <translation>创建新的 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="315" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="318" />
         <source>Saving {} ...</source>
         <translation>正在保存 {} ...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="326" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="329" />
         <source>Saved {}</source>
         <translation>已保存 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="334" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="337" />
         <source>No unsaved changes for {}.</source>
         <translation>{} 没有未保存的更改。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="343" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="346" />
         <source>Discarded changes to {}</source>
         <translation>已丢弃对 {} 的更改</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="346" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="349" />
         <source>Nothing to discard</source>
         <translation>没有可丢弃的内容</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="351" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="354" />
         <source>Are you sure you want to restore {} to application defaults?</source>
         <translation>您确定要将 {} 恢复到应用程序默认值吗？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="352" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="355" />
         <source>The file {0} will be renamed to {1}.old</source>
         <translation>文件 {0} 将重命名为 {1}.old</translation>
     </message>
@@ -1841,84 +1841,89 @@ and restore {1} to application defaults</source>
         <translation>显示设置更改过于频繁。作为预防措施，已暂停设置进一步的值，直到关闭此对话框。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="995" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="991" />
+        <source>This could be an indication of an application, driver, or hardware issue. Your system logs or dmesg output might help diagnose the situation. If this error repeats, try restarting vdu_controls or rebooting to reset drivers.</source>
+        <translation>这可能表明存在应用程序、驱动程序或硬件问题。您的系统日志或 dmesg 输出可能有助于诊断情况。如果此错误重复出现，请尝试重新启动 vdu_controls 或重新启动以重置驱动程序。</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="996" />
         <source>Set value: Failed to communicate with display {}</source>
         <translation>设置值：无法与显示器{}通信</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="997" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="998" />
         <source>Monitor appears to be switched off or disconnected.</source>
         <translation>监视器似乎已关闭或已断开连接。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1000" />
         <source>Is the monitor switched off?</source>
         <translation>显示器是否已关闭？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1000" />
         <source>Is the sleep-multiplier setting too low?</source>
         <translation>睡眠倍增器设置是否太低？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1021" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1022" />
         <source>When this message is dismissed, vdu_controls will restart.</source>
         <translation>当此消息被关闭时，vdu_controls 将重新启动。</translation>
     </message>
 </context><context>
     <name>VduAppWindow</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1143" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1144" />
         <source>Looking for DDC monitors...</source>
         <translation>正在寻找 DDC 显示器...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1172" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1173" />
         <source>Laptop {} missing.</source>
         <translation>笔记本电脑 {} 丢失。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1252" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1253" />
         <source>Refresh settings from monitors</source>
         <translation>从显示器刷新设置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1296" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1297" />
         <source>Checking Presets</source>
         <translation>正在检查预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1345" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1346" />
         <source>Auto</source>
         <translation>自动</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1353" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1354" />
         <source>Lighting: {}</source>
         <translation>照明：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1474" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
         <source>No controllable monitors found.</source>
         <translation>未找到可控制的显示器。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>ddcutil 或 ddcutil-service 是否已安装并正常工作？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
         <source>Most recent error: {}</source>
         <translation>最近错误：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1479" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>无法获取监视器 {0} {1} {2} 的功能。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1481" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1942,37 +1947,37 @@ Possibly just a timing error, maybe a retry will work
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1489" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1490" />
         <source>Discarding {} monitor.</source>
         <translation>正在丢弃 {} 显示器。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1490" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1491" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>从 {1} 功能覆盖中删除“{0}”以撤销此决定。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1494" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1495" />
         <source>Ignoring {} monitor for now.</source>
         <translation>暂时忽略 {} 显示器。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1495" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1496" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>将在下次启动 vdu_controls 时重试</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1498" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1499" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>假定 {} 具有亮度和对比度控制。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1499" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1500" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>已将 {0} 个配置文件写入 {1}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1500" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1501" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>

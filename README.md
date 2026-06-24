@@ -511,18 +511,17 @@ Version History
   * vdu_controls now defaults to a new  _single-instance_ mode. Subsequent launches 
     focus the existing window. Uncheck the _single-instance_ option to override. 
     Contributed by Mohammed Elsayed Ahmed.
-  * The ambient-light-level slider now works even if location is not set.
+  * The ambient-light-level slider works even if location is not set.
   * The DDC-options laptop-panel option now defaults to enabled.
-  * The Light-Metering-Dialog now offers two profile starter-templates
+  * The Light-Metering-Dialog offers two profile starter-templates
     for older and newer monitors.
-  * The Settings-Dialog global-options are now grouped under subheadings.
+  * The Settings-Dialog global-options are grouped under subheadings.
   * The Settings-Dialog now offers more popup-guidence
     on dependencies between major options.
   * The layout of the Preset and Light-Metering dialogs better reflect the
     the new style of the main panel.
-  * The system tray default icon is now primarily monochrome to reflect 
-    prevailing desktop aesthetics. It's been designed to visible for both 
-    dark and light tray backgrounds (as far as is possible).
+  * Changed the system-tray to be primarily monochrome.  It's been designed 
+    to be visible for both dark and light tray backgrounds (as far as is possible).
   * The program-icon and splash-screen icons have been replaced with
     SVG versions. The new program-icon responds to light/dark theme changes.
   * Tick marks on control-sliders are now optional (see the Settings-Dialog).
@@ -538,6 +537,9 @@ Version History
     and any attached 'Value:' metadata that implies otherwise will be ignored
     (with a warning logged).  Contributed by Mohammed Elsayed Ahmed.
     This allows some monitors with incorrect metadata to work out-of-the-box.
+  * A cascade-guard has been added to protect NVRAM from cascading writes 
+    due to application, driver, hardware or cats on keyboards errors.
+  * The protect NVRAM option has been made mandatory.
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 

@@ -522,17 +522,17 @@ Ka taea te rahi o tēnei tuātohi te whakarerekē.</translation>
 </context><context>
     <name>LatitudeLongitudeValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="545" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="548" />
         <source>The supplied longitude is {0} from the center of your {1} timezone.</source>
         <translation>Ko te ahopou kua tukuna ko {0} mai i waenganui o to rohe waahi {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="548" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="551" />
         <source>Charts showing solar elevation will render solar-noon off-center.</source>
         <translation>Ko nga tūtohi e whakaatu ana i te teitei o te ra ka huri te awatea ki waho o te pokapu.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="549" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="552" />
         <source>This isn't a serious issue, but you may wish to check you longitude or timezone.</source>
         <translation>Ehara tenei i te take nui, engari ka hiahia pea koe ki te tirotiro i to ahopou, rohe waahi ranei.</translation>
     </message>
@@ -1590,126 +1590,126 @@ ka whakahokia {1} ki nga taunoa tono</translation>
 </context><context>
     <name>SettingsEditorBooleanWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="405" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="408" />
         <source>Enabling &lt;b&gt;{0}&lt;/b&gt;.  Would you also like to enable &lt;b&gt;{1}&lt;/b&gt;?</source>
         <translation>Whakahohe ana &lt;b&gt;{0}&lt;/b&gt;.  Kei te pirangi ano koe ki te whakahohe &lt;b&gt;{1}&lt;/b&gt;?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="413" />
-        <location filename="../src/vdu_controls/settings_editor.py" line="407" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="416" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="410" />
         <source>&lt;b&gt;{0}&lt;/b&gt;: {1}</source>
         <translation>&lt;b&gt;{0}&lt;/b&gt;: {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="412" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="415" />
         <source>Consider also setting &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>Whakaarohia hoki te whakatakoto &lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="420" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="423" />
         <source>Unsetting related option &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>Te wetewete i te kōwhiringa e pā ana &lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="423" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="426" />
         <source>Consider also unsetting &lt;b&gt;{}&lt;/b&gt;</source>
         <translation>Whakaarohia hoki te wetewete i &lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="430" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="433" />
         <source>Enabling &lt;b&gt;{0}&lt;/b&gt; will also turn on &lt;b&gt;{1}&lt;/b&gt;</source>
         <translation>Ko te whakaahei &lt;b&gt;{0}&lt;/b&gt; ka whakakā hoki &lt;b&gt;{1}&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>SettingsEditorLocationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="572" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="575" />
         <source>Detect</source>
         <translation>Rapu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="573" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="576" />
         <source>Detect location by querying this desktop's external IP address.</source>
         <translation>Rapu i te wāhi mā te ui i te wāhitau IP waho o tēnei papamahi.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="585" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="588" />
         <source>Query {} to obtain information based on your IP-address?</source>
         <translation>Ui ki {} kia whiwhi kōrero e hāngai ana ki tō wāhitau IP?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="589" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="592" />
         <source>Use the following info?</source>
         <translation>Whakamahia ngā kōrero e whai ake nei?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="601" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="604" />
         <source>Failed to obtain info from {0}: {1}</source>
         <translation>I rahua te tiki korero mai i {0}: {1}</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="663" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="666" />
         <source>The selected file does not exist or is not an ordinary file.</source>
         <translation>Kāore te kōnae kua kōwhiria i te noho, ehara rānei i te kōnae noa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="666" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="669" />
         <source>The selected file lacks execute permission.</source>
         <translation>Kāore te kōnae kua kōwhiria i te whakaaetanga whakahaere.</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="680" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="683" />
         <source>Select: {}</source>
         <translation>Kōwhiri: {}</translation>
     </message>
 </context><context>
     <name>SettingsEditorTab</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="314" />
         <source>Update existing {}?</source>
         <translation>Whakahou i te {} o nāianei?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="311" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="314" />
         <source>Create new {}?</source>
         <translation>Waihanga {} hou?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="315" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="318" />
         <source>Saving {} ...</source>
         <translation>Te tiaki {} ...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="326" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="329" />
         <source>Saved {}</source>
         <translation>Kua tiakina {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="334" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="337" />
         <source>No unsaved changes for {}.</source>
         <translation>Kāore he huringa kāore anō kia tiakina mō {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="343" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="346" />
         <source>Discarded changes to {}</source>
         <translation>Kua whakarerea ngā huringa ki {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="346" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="349" />
         <source>Nothing to discard</source>
         <translation>Kāore he mea hei whakarere</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="351" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="354" />
         <source>Are you sure you want to restore {} to application defaults?</source>
         <translation>Kei te tino hiahia koe ki te whakaora {} ki ngā taunoa taupānga?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="352" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="355" />
         <source>The file {0} will be renamed to {1}.old</source>
         <translation>Ka whakaingoatia te kōnae {0} ki {1}.old</translation>
     </message>
@@ -1843,84 +1843,89 @@ ka whakahokia {1} ki nga taunoa tono</translation>
         <translation>He nui rawa te huri i tetahi tautuhinga whakaatu. Hei tikanga whakatupato, kua whakatarewahia te whakatakoto i etahi atu uara tae noa ki te whakakore i tenei korero.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="995" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="991" />
+        <source>This could be an indication of an application, driver, or hardware issue. Your system logs or dmesg output might help diagnose the situation. If this error repeats, try restarting vdu_controls or rebooting to reset drivers.</source>
+        <translation>He tohu pea tenei mo tetahi tono, taraiwa, he take taputapu ranei. Ka awhina pea to raarangi punaha, putanga dmesg ranei ki te tirotiro i te ahuatanga. Ki te hoki ano tenei hapa, ngana ki te whakaara ano i te vdu_controls ki te whakaara ano ranei ki te tautuhi i nga taraiwa.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="996" />
         <source>Set value: Failed to communicate with display {}</source>
         <translation>Tautuhi uara: I rahua te korero ki te whakaaturanga {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="997" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="998" />
         <source>Monitor appears to be switched off or disconnected.</source>
         <translation>Te ahua nei kua wetohia, kua momotuhia ranei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1000" />
         <source>Is the monitor switched off?</source>
         <translation>Kua weto te aroturuki?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1000" />
         <source>Is the sleep-multiplier setting too low?</source>
         <translation>He iti rawa te tautuhinga moe-whakarea?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1021" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1022" />
         <source>When this message is dismissed, vdu_controls will restart.</source>
         <translation>Ina whakakorehia tēnei karere, ka whakaara anō te vdu_controls.</translation>
     </message>
 </context><context>
     <name>VduAppWindow</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1143" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1144" />
         <source>Looking for DDC monitors...</source>
         <translation>Kei te rapu mātiti DDC...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1172" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1173" />
         <source>Laptop {} missing.</source>
         <translation>Pona {} ngaro.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1252" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1253" />
         <source>Refresh settings from monitors</source>
         <translation>Whakahou i ngā tautuhinga mai i ngā mātiti</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1296" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1297" />
         <source>Checking Presets</source>
         <translation>Kei te arowhai Tautapanga</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1345" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1346" />
         <source>Auto</source>
         <translation>Aunoa</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1353" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1354" />
         <source>Lighting: {}</source>
         <translation>Rama: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1474" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
         <source>No controllable monitors found.</source>
         <translation>Kāore i kitea he mātiti e taea ana te whakahaere.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>Kua tāutahia a ddcutil, ddcutil-service rānei, ā, kei te mahi?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
         <source>Most recent error: {}</source>
         <translation>Hapa o nā tata nei: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1479" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>I rahua te whiwhi kaha mo te aroturuki {0} {1} {2}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1481" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1944,37 +1949,37 @@ Tērā pea he hapa wā noa, ka taea pea e te whakamātau anō
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1489" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1490" />
         <source>Discarding {} monitor.</source>
         <translation>Te whakakore i te mātiti {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1490" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1491" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>Tango "{0}" mai i te {1} kaha whakahuri ki te huri i tenei whakatau.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1494" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1495" />
         <source>Ignoring {} monitor for now.</source>
         <translation>Te waiho i te mātiti {} mō nāianei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1495" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1496" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>Ka whakamātau anō ka whakaara ake a vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1498" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1499" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>E whakaaro ana kei a {} ngā mana whakahaere kanapa me te rerekētanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1499" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1500" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>I tuhia e {0} nga konae whirihora ki a {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1500" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1501" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>
