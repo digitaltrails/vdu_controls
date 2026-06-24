@@ -171,10 +171,6 @@ also available via the hamburger-menu, and also via the right-mouse button in ei
 main-window or the system-tray icon.  The *main-menu* has `ALT-key` shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 
-The main-toolbar includes a stealthy-drag-handle at extreme-left.  The toolbar
-can be dragged and docked at either the top or bottom top of the main-window.
-The toolbar's position persists across restarts.
-
 For further information, including screenshots, see https://github.com/digitaltrails/vdu_controls .
 
 The long-term effects of repeatably rewriting a VDUs setting are not well understood, but some
@@ -300,17 +296,18 @@ DBUS ddcutil-service
 --------------------
 
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
-service rather than the ``ddcutil`` command. The service should be both faster and more
-reliable (especially when multiple VDUs need to be controlled). Whether to use the service
-can be controlled by the ``DBUS client`` checkbox in the *Settings-Dialog*.
+service rather than the ``ddcutil`` command.  With some older monitors, the ``ddcutil`` command 
+can take a couple of seconds to handshake a connection each time it is run.  The service caches 
+connections and should be both faster and more reliable than the command.  
+Whether to use the service can be controlled by the ``DBUS client`` checkbox in the *Settings-Dialog*.
 
-When using the service, you may optionally enable service detection of DPMS events and
-VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
-is controlled by the ``DBUS events`` checkbox in the *Settings-Dialog*.  The reliability
-and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
-and VDU connector-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
+``vdu_controls`` can use the service to monitor for DPMS events and VDU connectivity 
+events, including power-cycling VDUs or hot-plugging cable connections.  The reliability
+and timeliness of event detection can vary depending on the hardware involved (GPU model, 
+GPU driver, VDU model, and type of connector-cable).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
-options for finer control over which events are detected and how.
+options for finer control over which events are detected and how.  Whether to enable events
+in ``vdu_controls`` is controlled by the ``DBUS events`` checkbox in the *Settings-Dialog*.  
 
 Laptop-Panel brightness control
 -------------------------------
@@ -695,15 +692,17 @@ cycles, stressing the VDU power-supply, or increasing panel burn-in.
 That said, ``vdu_controls`` does include a number of features that can be used
 to reduce the overall frequency of adjustments to acceptable levels.
 
-+ Inbuilt mitigations:
++ Application safeguards:
   + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
-  + Preset restoration only updates the VDU values that differ from its current values.
-  + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
+  + Where possible, the application only updates VDU values that differ from its current cached values.
   + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
+  + The application includes a setter cascade-guard as a defense against application, driver, or hardware errors (and
+    cats on keyboards).  If the application or user attempts to set a VDU feature more than 20 times in 65 seconds
+    the application prompts the user for confirmation before allowing any more setter activity.
 
-+ Electable mitigations:
-  + Choose to restore pre-prepared 'presets' instead of dragging sliders.
-  + Refrain from adding transitions to `presets`.
++ Usage guidelines:
+  + When dragging sliders, don't take lengthy pauses while dragging.
+  + Choose to restore pre-prepared 'presets' instead of frequently fiddling with sliders.
   + If using the ambient-light brightness response curves, tune the settings and curves to minimize frequent small changes.
   + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
   + Consider adjusting the ambient lighting instead of the VDU.

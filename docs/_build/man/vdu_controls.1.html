@@ -168,9 +168,6 @@ button in either the main-window or the system-tray icon. The
 <em>main-menu</em> has <code>ALT-key</code> shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user
 defined presets).</p>
-<p>The main-toolbar includes a stealthy-drag-handle at extreme-left. The
-toolbar can be dragged and docked at either the top or bottom top of the
-main-window. The toolbar’s position persists across restarts.</p>
 <p>For further information, including screenshots, see
 https://github.com/digitaltrails/vdu_controls .</p>
 <p>The long-term effects of repeatably rewriting a VDUs setting are not
@@ -294,20 +291,23 @@ values from the VDUs.</p>
 <h2 id="dbus-ddcutil-service">DBUS ddcutil-service</h2>
 <p>When available, <code>vdu_controls</code> defaults to interacting
 with VDUs via the DBUS <code>ddcutil-service</code> service rather than
-the <code>ddcutil</code> command. The service should be both faster and
-more reliable (especially when multiple VDUs need to be controlled).
+the <code>ddcutil</code> command. With some older monitors, the
+<code>ddcutil</code> command can take a couple of seconds to handshake a
+connection each time it is run. The service caches connections and
+should be both faster and more reliable than the command.<br />
 Whether to use the service can be controlled by the
 <code>DBUS client</code> checkbox in the <em>Settings-Dialog</em>.</p>
-<p>When using the service, you may optionally enable service detection
-of DPMS events and VDU connectivity events (hot-plugging cables or
-power-cycling VDUs). Whether to enable events is controlled by the
-<code>DBUS events</code> checkbox in the <em>Settings-Dialog</em>. The
-reliability and timeliness of events may vary depending on the GPU
-model, GPU driver, VDU model, and VDU connector-cable (DP, HDMI, …). In
-some cases, the service polling for DPMS or connection status may wake
-some VDU models. Both <code>ddcutil-service</code> or
-<code>libddcutil</code> offer options for finer control over which
-events are detected and how.</p>
+<p><code>vdu_controls</code> can use the service to monitor for DPMS
+events and VDU connectivity events, including power-cycling VDUs or
+hot-plugging cable connections. The reliability and timeliness of event
+detection can vary depending on the hardware involved (GPU model, GPU
+driver, VDU model, and type of connector-cable). In some cases, the
+service polling for DPMS or connection status may wake some VDU models.
+Both <code>ddcutil-service</code> or <code>libddcutil</code> offer
+options for finer control over which events are detected and how.
+Whether to enable events in <code>vdu_controls</code> is controlled by
+the <code>DBUS events</code> checkbox in the
+<em>Settings-Dialog</em>.</p>
 <h2 id="laptop-panel-brightness-control">Laptop-Panel brightness
 control</h2>
 <p>Starting with version 2.6, laptop panels are supported for
@@ -705,23 +705,27 @@ increasing panel burn-in.</p>
 features that can be used to reduce the overall frequency of adjustments
 to acceptable levels.</p>
 <ul>
-<li>Inbuilt mitigations:
+<li>Application safeguards:
 <ul>
 <li>Slider and spin-box controls only update the VDU when adjustments
 become slow or stop (when no change occurs in 0.5 seconds).</li>
-<li>Preset restoration only updates the VDU values that differ from its
-current values.</li>
-<li>Transitioning smoothly has been disabled by default and deprecated
-for version 2.1.0 onward.</li>
+<li>Where possible, the application only updates VDU values that differ
+from its current cached values.</li>
 <li>Automatic ambient brightness adjustment only triggers a change when
 the proposed brightness differs from the current brightness by at least
 10%.</li>
+<li>The application includes a setter cascade-guard as a defense against
+application, driver, or hardware errors (and cats on keyboards). If the
+application or user attempts to set a VDU feature more than 20 times in
+65 seconds the application prompts the user for confirmation before
+allowing any more setter activity.</li>
 </ul></li>
-<li>Electable mitigations:
+<li>Usage guidelines:
 <ul>
-<li>Choose to restore pre-prepared ‘presets’ instead of dragging
-sliders.</li>
-<li>Refrain from adding transitions to <code>presets</code>.</li>
+<li>When dragging sliders, don’t take lengthy pauses while
+dragging.</li>
+<li>Choose to restore pre-prepared ‘presets’ instead of frequently
+fiddling with sliders.</li>
 <li>If using the ambient-light brightness response curves, tune the
 settings and curves to minimize frequent small changes.</li>
 <li>If using a light-meter, disengage metered automatic adjustment when
