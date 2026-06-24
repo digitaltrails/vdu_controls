@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -189,207 +189,207 @@ Colocación y geometría al inicio.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="253" />
-        <source>Enable weather lookups for vetoing preset scheduling. In practice, weather lookups have not proven to be very useful or timely.</source>
-        <translation>Habilite las búsquedas meteorológicas para vetar la programación preestablecida. En la práctica, las búsquedas meteorológicas no han demostrado ser muy útiles ni oportunas.</translation>
+        <source>Enable weather lookups for vetoing scheduling.&lt;br/&gt; For some locations weather-lookups are not accurate or timely. The network lookups can also be a source of delay.</source>
+        <translation>Habilite las búsquedas meteorológicas para vetar la programación.&lt;br/&gt; Para algunas ubicaciones, las búsquedas meteorológicas no son precisas ni oportunas. Las búsquedas de red también pueden ser una fuente de retraso.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="258" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="259" />
         <source>tick marks</source>
         <translation>marcas de verificación</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="261" />
         <source>Show tick marks on control-sliders.</source>
         <translation>Mostrar marcas de verificación en los controles deslizantes.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="264" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="265" />
         <source>dbus client</source>
         <translation>cliente dbus</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="267" />
         <source>Use the d-bus ddcutil-server if available.</source>
         <translation>Utilice el servidor d-bus ddcutil si está disponible.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="271" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="272" />
         <source>dbus events</source>
         <translation>eventos dbus</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
         <source>Enable D-bus ddcutil-server events for detecting display hotplug and power events.</source>
         <translation>Habilite los eventos del servidor ddcutil-D-bus para detectar eventos de conexión en caliente y de energía de la pantalla.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
         <source>Display hotplug and power events will no longer be detected.</source>
         <translation>Ya no se detectarán eventos de conexión en caliente y de energía en la pantalla.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="279" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="280" />
         <source>laptop panel</source>
         <translation>panel de computadora portátil</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="282" />
         <source>Use brightnessctl utility for laptop panel control.</source>
         <translation>Utilice la utilidad Brightnessctl para controlar el panel de la computadora portátil.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="285" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="286" />
         <source>syslog</source>
         <translation>registro del sistema</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="288" />
         <source>Divert diagnostic output from stdout to the syslog.</source>
         <translation>Desvía la salida de diagnóstico de stdout al syslog.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="291" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="292" />
         <source>debug</source>
         <translation>depurar</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="294" />
         <source>Output extra debug information.</source>
         <translation>Genera información de depuración adicional.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="297" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="298" />
         <source>single instance</source>
         <translation>instancia única</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="300" />
         <source>Only allow one running vdu_controls. Running another raises the existing instance.</source>
         <translation>Solo permita uno ejecutando vdu_controls. Al ejecutar otro, se genera la instancia existente.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="304" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="305" />
         <source>Invalid control warnings</source>
         <translation>Advertencias de control no válidas</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="307" />
         <source>Popup warnings if a VDU lacks an enabled control.</source>
         <translation>Advertencias emergentes si una VDU carece de un control habilitado.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="310" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="311" />
         <source>translations</source>
         <translation>traducciones</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="313" />
         <source>Enable language translations. Translations have been AI-generated without any human oversight.</source>
         <translation>Habilitar traducciones de idiomas. Las traducciones han sido generadas por IA sin ninguna supervisión humana.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="315" />
         <source>Your locale {} will be translated.</source>
         <translation>Se traducirá su configuración regional {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
         <source>Your locale {} lacks a translation.</source>
         <translation>Su configuración regional {} carece de traducción.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
         <source>Installed translations: {}.</source>
         <translation>Traducciones instaladas: {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="319" />
         <source>These translations are AI-generated without any human oversight.</source>
         <translation>Estas traducciones se generan mediante IA sin ninguna supervisión humana.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="322" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
         <source>location</source>
         <translation>ubicación</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="324" />
         <source>Latitude, Longitude for solar elevation calculations.</source>
         <translation>Latitud, longitud para cálculos de elevación solar.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="327" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="328" />
         <source>ddcutil emulator</source>
         <translation>emulador ddcutil</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="328" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="329" />
         <source>User supplied command-line ddcutil-emulator for handling special cases. This emulator is consulted in addition to the normal DDC. It provides a way for non-DDC devices to be incorporated into vdu_controls.  For example, you might add the ability to control keyboard-backlight brightness.</source>
         <translation>Emulador ddcutil de línea de comandos proporcionado por el usuario para manejar casos especiales. Este emulador se consulta además del DDC normal. Proporciona una forma de incorporar dispositivos que no son DDC a vdu_controls.  Por ejemplo, podría agregar la capacidad de controlar el brillo de la retroiluminación del teclado.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="335" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="336" />
         <source>sleep multiplier</source>
         <translation>multiplicador de sueño</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="338" />
         <source>Ddcutil --sleep-multiplier (0.1 .. 2.0, default none).</source>
         <translation>Ddcutil --sleep-multiplier (0.1 .. 2.0, ninguno predeterminado).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="341" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="342" />
         <source>ddcutil extra args</source>
         <translation>argumentos adicionales de ddcutil</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="344" />
         <source>Ddcutil extra arguments (default none).</source>
         <translation>Argumentos adicionales de Ddcutil (ninguno predeterminado).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="347" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="348" />
         <source>vdu name</source>
         <translation>nombre del vdu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="350" />
         <source>Name to display for this VDU</source>
         <translation>Nombre a mostrar para esta VDU</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="353" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="354" />
         <source>enable vcp codes</source>
         <translation>habilitar códigos vcp</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="356" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="357" />
         <source>CSV list of VCP-code Features to enable (in hex). See capabilities-override for VCP Features.</source>
         <translation>Lista CSV de funciones de código VCP para habilitar (en hexadecimal). Consulte anulación de capacidades para funciones de VCP.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="359" />
         <source>While enabling well understood VCP Features should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>Si bien habilitar funciones VCP bien comprendidas debería estar bien, experimentar con funciones de proveedores no documentadas o mal comprendidas puede tener consecuencias irreversibles, incluido dañar o bloquear el hardware.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="364" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="365" />
         <source>capabilities override</source>
         <translation>anulación de capacidades</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="367" />
         <source>Cached capabilities text. Edit this text to correct any inaccuracies in the vendor metadata extracted from the device. </source>
         <translation>Texto de capacidades en caché. Edite este texto para corregir cualquier imprecisión en los metadatos del proveedor extraídos del dispositivo.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="369" />
         <source>While correcting well understood metadata should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>Si bien corregir metadatos bien comprendidos debería estar bien, experimentar con características de proveedores no documentadas o mal comprendidas puede tener consecuencias irreversibles, incluido dañar o bloquear el hardware.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="397" />
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="395" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="398" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="396" />
         <source>(default)</source>
         <translation>(por defecto)</translation>
     </message>
@@ -522,17 +522,17 @@ Este gráfico es redimensionable.</translation>
 </context><context>
     <name>LatitudeLongitudeValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="540" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="545" />
         <source>The supplied longitude is {0} from the center of your {1} timezone.</source>
         <translation>La longitud proporcionada es {0} desde el centro de su zona horaria {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="543" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="548" />
         <source>Charts showing solar elevation will render solar-noon off-center.</source>
         <translation>Los gráficos que muestran la elevación solar mostrarán el mediodía solar descentrado.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="544" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="549" />
         <source>This isn't a serious issue, but you may wish to check you longitude or timezone.</source>
         <translation>Este no es un problema grave, pero es posible que desees verificar tu longitud o zona horaria.</translation>
     </message>
@@ -594,32 +594,32 @@ Este gráfico es redimensionable.</translation>
 </context><context>
     <name>LuxAutoController</name>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="325" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="328" />
         <source>Toggle automatic light metered brightness adjustment</source>
         <translation>Alternar el ajuste automático del brillo medido con luz</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="330" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="333" />
         <source>Perform ambient lighting check now</source>
         <translation>Realice una verificación de iluminación ambiental ahora</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="402" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
         <source>Error setting up lux meter: {}</source>
         <translation>Error al configurar el luxómetro: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="431" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
         <source>Auto disabled, no location defined.</source>
         <translation>Auto deshabilitado, no hay ubicación definida.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
         <source>Starting automatic light metering.</source>
         <translation>Iniciar la medición automática de la luz.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>Cambio a entrada manual de lux ambiental.</translation>
     </message>
@@ -631,12 +631,12 @@ Este gráfico es redimensionable.</translation>
         <translation>Error desconocido</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="219" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="222" />
         <source>Task waiting for {} to finish.</source>
         <translation>Tarea esperando a que finalice {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="301" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="304" />
         <source>(smoothed)</source>
         <translation>(suavizado)</translation>
     </message>
@@ -1036,7 +1036,7 @@ Las estimaciones de Ei se utilizan mediante la opción de medición semiautomát
         <translation>{0} hoy a las {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="188" />
+        <location filename="../src/vdu_controls/preset.py" line="189" />
         <source>{0} suspended for {1}</source>
         <translation>{0} suspendido por {1}</translation>
     </message>
@@ -1241,32 +1241,32 @@ Las estimaciones de Ei se utilizan mediante la opción de medición semiautomát
 </context><context>
     <name>PresetScheduleStatus</name>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="264" />
+        <location filename="../src/vdu_controls/preset.py" line="265" />
         <source>unscheduled</source>
         <translation>no programado</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="266" />
+        <location filename="../src/vdu_controls/preset.py" line="267" />
         <source>scheduled</source>
         <translation>programado</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="267" />
+        <location filename="../src/vdu_controls/preset.py" line="268" />
         <source>suspended</source>
         <translation>suspendido</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="268" />
+        <location filename="../src/vdu_controls/preset.py" line="269" />
         <source>succeeded</source>
         <translation>tuvo éxito</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="269" />
+        <location filename="../src/vdu_controls/preset.py" line="270" />
         <source>skipped, superseded</source>
         <translation>omitido, reemplazado</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset.py" line="270" />
+        <location filename="../src/vdu_controls/preset.py" line="271" />
         <source>weather cancellation</source>
         <translation>cancelación del clima</translation>
     </message>
@@ -1590,73 +1590,79 @@ y restaurar {1} a los valores predeterminados de la aplicación</translation>
 </context><context>
     <name>SettingsEditorBooleanWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="402" />
-        <source>Also set related option: {}?</source>
-        <translation>Establecer también la opción relacionada: {}?</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="405" />
+        <source>Enabling &lt;b&gt;{0}&lt;/b&gt;.  Would you also like to enable &lt;b&gt;{1}&lt;/b&gt;?</source>
+        <translation>Habilitando &lt;b&gt;{0}&lt;/b&gt;.  ¿También te gustaría habilitar &lt;b&gt;{1}&lt;/b&gt;?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="408" />
-        <source>Consider also setting: {}</source>
-        <translation>Considere también configurar: {}</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="413" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="407" />
+        <source>&lt;b&gt;{0}&lt;/b&gt;: {1}</source>
+        <translation>&lt;b&gt;{0}&lt;/b&gt;: {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="416" />
-        <source>Unsetting related option: {}</source>
-        <translation>Opción relacionada para desarmar: {}</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="412" />
+        <source>Consider also setting &lt;b&gt;{}&lt;/b&gt;</source>
+        <translation>Considere también configurar &lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="420" />
-        <source>Consider also unsetting: {}</source>
-        <translation>Considere también desarmar: {}</translation>
+        <source>Unsetting related option &lt;b&gt;{}&lt;/b&gt;</source>
+        <translation>Desarmar la opción relacionada &lt;b&gt;{}&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="427" />
-        <source>Also setting required option: {}</source>
-        <translation>También configurando la opción requerida: {}</translation>
+        <location filename="../src/vdu_controls/settings_editor.py" line="423" />
+        <source>Consider also unsetting &lt;b&gt;{}&lt;/b&gt;</source>
+        <translation>Considere también desarmar &lt;b&gt;{}&lt;/b&gt;</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/settings_editor.py" line="430" />
+        <source>Enabling &lt;b&gt;{0}&lt;/b&gt; will also turn on &lt;b&gt;{1}&lt;/b&gt;</source>
+        <translation>Al habilitar &lt;b&gt;{0}&lt;/b&gt; también se activará &lt;b&gt;{1}&lt;/b&gt;.</translation>
     </message>
 </context><context>
     <name>SettingsEditorLocationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="567" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="572" />
         <source>Detect</source>
         <translation>Detectar</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="568" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="573" />
         <source>Detect location by querying this desktop's external IP address.</source>
         <translation>Detecte la ubicación consultando la dirección IP externa de este escritorio.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="580" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="585" />
         <source>Query {} to obtain information based on your IP-address?</source>
         <translation>¿Consulta {} para obtener información basada en su dirección IP?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="584" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="589" />
         <source>Use the following info?</source>
         <translation>¿Usar la siguiente información?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="596" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="601" />
         <source>Failed to obtain info from {0}: {1}</source>
         <translation>No se pudo obtener información de {0}: {1}</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathValidator</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="658" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="663" />
         <source>The selected file does not exist or is not an ordinary file.</source>
         <translation>El archivo seleccionado no existe o no es un archivo normal.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="661" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="666" />
         <source>The selected file lacks execute permission.</source>
         <translation>El archivo seleccionado carece de permiso de ejecución.</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathWidget</name>
     <message>
-        <location filename="../src/vdu_controls/settings_editor.py" line="675" />
+        <location filename="../src/vdu_controls/settings_editor.py" line="680" />
         <source>Select: {}</source>
         <translation>Seleccionar: {}</translation>
     </message>
@@ -1737,154 +1743,184 @@ y restaurar {1} a los valores predeterminados de la aplicación</translation>
 </context><context>
     <name>VduAppController</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="497" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="468" />
         <source>A settings reset requires vdu_controls to restart.</source>
         <translation>Un restablecimiento de la configuración requiere que vdu_controls se reinicie.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="502" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="473" />
         <source>The change to the {} option requires vdu_controls to restart.</source>
         <translation>El cambio a la opción {} requiere que vdu_controls se reinicie.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="508" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="479" />
         <source>Laptop panel {} command unavailable</source>
         <translation>El comando {} del panel de la computadora portátil no está disponible</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="509" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="480" />
         <source>Check that {} is installed and is working or disable laptop support to silence this warning</source>
         <translation>Verifique que {} esté instalado y funcionando o deshabilite la compatibilidad con computadoras portátiles para silenciar esta advertencia</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="632" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="602" />
         <source>Transitioning to preset {0} (elapsed time {1} seconds)...</source>
         <translation>Transición al valor predeterminado {0} (tiempo transcurrido {1} segundos)...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="653" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="621" />
         <source>Restored {0} (elapsed time {1} seconds)</source>
         <translation>Restaurado {0} (tiempo transcurrido {1} segundos)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="659" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="627" />
         <source>Already on Preset {} (no changes)</source>
         <translation>Ya en Preset {} (sin cambios)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="666" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="634" />
         <source>Interrupted restoration of {}</source>
         <translation>Restauración interrumpida de {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="672" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="640" />
         <source>Transitioning to preset {}</source>
         <translation>Transición a preestablecido {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="708" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="676" />
         <source>Error during restoration preset {}</source>
         <translation>Error durante la restauración preestablecida {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="711" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="679" />
         <source>Restored I-Preset {}</source>
         <translation>I-Preset restaurado {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="800" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="768" />
         <source>Preset {0} activating at {1}</source>
         <translation>Preestablecido {0} activándose en {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="817" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="785" />
         <source>Skipped, superseded</source>
         <translation>Omitido, reemplazado</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="819" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="787" />
         <source>Error, trying again in {} seconds</source>
         <translation>Error, intentándolo de nuevo en {} segundos</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="827" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="795" />
         <source>Restored {}</source>
         <translation>Restaurado {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="845" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="813" />
         <source>Preset {0} activation was cancelled due to weather at {1}</source>
         <translation>La activación preestablecida de {0} se canceló debido al clima en {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="875" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="843" />
         <source>Ignoring weather requirements, unable to query local weather: {}</source>
         <translation>Se ignoran los requisitos meteorológicos y no se puede consultar el clima local: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="997" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="965" />
         <source>Preset editing</source>
         <translation>Edición preestablecida</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1015" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="988" />
+        <source>Set display value: setter rate exceeded {}</source>
+        <translation>Establecer valor de visualización: la tasa de colocación excedió {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="989" />
+        <source>A display setting is being changed too frequently. As a precautionary measure, setting further values has been suspended until this dialog is dismissed.</source>
+        <translation>Se cambia una configuración de pantalla con demasiada frecuencia. Como medida de precaución, se ha suspendido la configuración de más valores hasta que se cierre este cuadro de diálogo.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="995" />
+        <source>Set value: Failed to communicate with display {}</source>
+        <translation>Valor establecido: No se pudo comunicar con la pantalla {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="997" />
+        <source>Monitor appears to be switched off or disconnected.</source>
+        <translation>El monitor parece estar apagado o desconectado.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <source>Is the monitor switched off?</source>
+        <translation>¿Está el monitor apagado?</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="999" />
+        <source>Is the sleep-multiplier setting too low?</source>
+        <translation>¿La configuración del multiplicador de sueño es demasiado baja?</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1021" />
         <source>When this message is dismissed, vdu_controls will restart.</source>
         <translation>Cuando se descarte este mensaje, vdu_controls se reiniciará.</translation>
     </message>
 </context><context>
     <name>VduAppWindow</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1137" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1143" />
         <source>Looking for DDC monitors...</source>
         <translation>Buscando monitores DDC...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1166" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1172" />
         <source>Laptop {} missing.</source>
         <translation>Falta la computadora portátil {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1246" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1252" />
         <source>Refresh settings from monitors</source>
         <translation>Actualizar la configuración de los monitores</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1290" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1296" />
         <source>Checking Presets</source>
         <translation>Comprobación de ajustes preestablecidos</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1339" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1345" />
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1347" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1353" />
         <source>Lighting: {}</source>
         <translation>Iluminación: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1468" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1474" />
         <source>No controllable monitors found.</source>
         <translation>No se encontraron monitores controlables.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1469" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>¿Está instalado y funcionando ddcutil o ddcutil-service?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1470" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
         <source>Most recent error: {}</source>
         <translation>Error más reciente: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1473" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1479" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>No se pudieron obtener capacidades para el monitor {0} {1} {2}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1474" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1907,37 +1943,37 @@ Posiblemente sea solo un error de tiempo, tal vez un reintento funcione
 (ver Configuración: multiplicador de sueño)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1483" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1489" />
         <source>Discarding {} monitor.</source>
         <translation>Descartando {} monitor.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1484" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1490" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>Elimine "{0}" de la anulación de capacidades de {1} para revertir esta decisión.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1488" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1494" />
         <source>Ignoring {} monitor for now.</source>
         <translation>Ignorando el monitor {} por ahora.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1489" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1495" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>Lo volveré a intentar la próxima vez que se inicie vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1492" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1498" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>Suponiendo que {} tiene controles de brillo y contraste.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1493" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1499" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>Escribí {0} archivos de configuración en {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1494" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1500" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>Verifique estos archivos y edítelos o elimínelos si causan más problemas.</translation>
@@ -1945,28 +1981,28 @@ Please check these files and edit or remove them if they cause further issues.</
 </context><context>
     <name>VduControlComboBox</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="311" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="312" />
         <source>Display {vnum} {vdesc} feature {code:02X} '({cdesc})' has an undefined value '{value}'.</source>
         <translation>Mostrar {vnum} {vdesc} la característica {code:02X} '({cdesc})' tiene un valor indefinido '{value}'.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="318" />
         <source>The metadata for {vdu_name} defines the valid values to be {valid}.</source>
         <translation>Los metadatos de {vdu_name} definen que los valores válidos son {valid}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="320" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="321" />
         <source>The metadata for {vdu_name} does not define any allowed values.</source>
         <translation>Los metadatos de {vdu_name} no definen ningún valor permitido.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="322" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="323" />
         <source>Added {temp} to silence the error for now.
 </source>
         <translation>Se agregó {temp} para silenciar el error por ahora.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="324" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="325" />
         <source>If you want to extend the set of permitted values, you can edit the metadata for {vdu_name} in the settings panel.
 </source>
         <translation>Si desea ampliar el conjunto de valores permitidos, puede editar los metadatos de {vdu_name} en el panel de configuración.</translation>
@@ -1974,29 +2010,29 @@ Please check these files and edit or remove them if they cause further issues.</
 </context><context>
     <name>VduControlPanel</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="132" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="36" />
         <source>Panel {}</source>
         <translation>Grupo {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="130" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="131" />
         <location filename="../src/vdu_controls/vdu_control_panel.py" line="41" />
         <source>Monitor {}</source>
         <translation>Monitor {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="60" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="59" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files.</source>
         <translation>Si desea ampliar el conjunto de valores permitidos, consulte la página de manual sobre los archivos de configuración del modelo VDU/VDU.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="128" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="129" />
         <source>Set-VCP writes: {}</source>
         <translation>Set-VCP escribe: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_control_panel.py" line="133" />
+        <location filename="../src/vdu_controls/vdu_control_panel.py" line="134" />
         <source>(Click for Settings)</source>
         <translation>(Haga clic para configurar)</translation>
     </message>
@@ -2022,28 +2058,8 @@ Utilice el botón de actualización si hay alguno disponible.
 Verifique que ddcutil e i2c estén instalados y configurados.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="257" />
-        <source>Set value: Failed to communicate with display {}</source>
-        <translation>Valor establecido: No se pudo comunicar con la pantalla {}</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="259" />
-        <source>Monitor appears to be switched off or disconnected.</source>
-        <translation>El monitor parece estar apagado o desconectado.</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="261" />
-        <source>Is the monitor switched off?</source>
-        <translation>¿Está el monitor apagado?</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="261" />
-        <source>Is the sleep-multiplier setting too low?</source>
-        <translation>¿La configuración del multiplicador de sueño es demasiado baja?</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="292" />
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="289" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="263" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="260" />
         <source>Message history:</source>
         <translation>Historial de mensajes:</translation>
     </message>
