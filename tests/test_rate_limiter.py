@@ -1,9 +1,8 @@
+# tests/test_rate_limiter.py
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 import sys
-import time
-from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
-from collections import deque
 
 import pytest
 
@@ -14,7 +13,6 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 from unittest.mock import patch
 
-# Import your actual module – adjust the import path as needed
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.ddcutil_abstract import DdcutilSetterRateExceeded
 
