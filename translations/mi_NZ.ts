@@ -133,54 +133,54 @@ te whakanohonga me te ahuahanga i te tiimatanga.</translation>
         <translation>tiaki NVRAM</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="214" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
         <source>NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes.</source>
         <translation>Ko te whakamarumaru NVRAM ka whakaiti i te kakahu ki te NVRAM o to kaitirotiro ma te whakaiti i nga tuhi.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="216" />
         <source>Alter options and defaults to minimize VDU NVRAM writes. This setting mainly affects whether transitions are gradual, using several writes, or instant, with as few writes as possible.&lt;p&gt;&lt;b&gt;This option is now permanently enabled. If this is an issue for you, please contact the author.&lt;/b&gt;</source>
         <translation>Hurihia nga whiringa me nga taunoa hei whakaiti i nga tuhi VDU NVRAM. Ka pa te nuinga o tenei tautuhinga ki te ngawari te whakawhiti, ma te whakamahi i nga tuhi maha, inamata ranei, me te iti o nga tuhi ka taea.&lt;p&gt;&lt;b&gt;Kei te whakahohea tenei whiringa inaianei. Mēnā he take tēnei māu, whakapā atu ki te kaituhi.&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="224" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
         <source>order by name</source>
         <translation>ota ma te ingoa</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="226" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="227" />
         <source>Order lists and tabs by vdu-name.</source>
         <translation>Rarangi raupapa me nga ripa ma te ingoa-vdu.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="230" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="231" />
         <source>lux options</source>
         <translation>kōwhiringa lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="232" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="233" />
         <source>Enable light metering options.</source>
         <translation>Whakahohehia nga whiringa inenga marama.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="236" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="237" />
         <source>lux tray icon</source>
         <translation>tohu paepae lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="240" />
         <source>Show the current light-level icon in the system-tray icon.</source>
         <translation>Whakaatuhia te ata taumata-maama o naianei ki te ata-paepae punaha.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="243" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="244" />
         <source>schedule</source>
         <translation>hōtaka</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="246" />
-        <source>Enable the solar-elevation and time based scheduling of presets.</source>
-        <translation>Whakahohehia te whakamaaramatanga-a-ra me te wa i runga i te waa o nga tatūkē.</translation>
+        <source>Enable scheduling of presets by solar-elevation or time-of-day.</source>
+        <translation>Whakahohehia te whakarite tatūkē ma te teitei o te ra, te wa-a-ra ranei.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="250" />

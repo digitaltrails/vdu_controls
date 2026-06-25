@@ -243,8 +243,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='schedule-enabled', default_value='yes',
         ui_label=QT_TR_NOOP('schedule'),
         sub_group=SubGroup.FEATURES,
-        related=['WEATHER_ENABLED'],
-        help=QT_TR_NOOP('Enable the solar-elevation and time based scheduling of presets.'))
+        help=QT_TR_NOOP('Enable scheduling of presets by solar-elevation or time-of-day.'))
 
     WEATHER_ENABLED = ConfOptDef(
         conf_name='weather-enabled', default_value='no',

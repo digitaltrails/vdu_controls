@@ -133,54 +133,54 @@ placering og geometri ved opstart.</translation>
         <translation>beskytte NVRAM</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="214" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
         <source>NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes.</source>
         <translation>NVRAM-beskyttelse reducerer slid på din skærms NVRAM ved at minimere skrivninger.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="216" />
         <source>Alter options and defaults to minimize VDU NVRAM writes. This setting mainly affects whether transitions are gradual, using several writes, or instant, with as few writes as possible.&lt;p&gt;&lt;b&gt;This option is now permanently enabled. If this is an issue for you, please contact the author.&lt;/b&gt;</source>
         <translation>Ændre muligheder og standardindstillinger for at minimere VDU NVRAM-skrivning. Denne indstilling påvirker hovedsageligt, om overgange er gradvise, bruger flere skrivninger eller øjeblikkelige, med så få skrivninger som muligt.&lt;p&gt;&lt;b&gt;Denne mulighed er nu permanent aktiveret. Hvis dette er et problem for dig, bedes du kontakte forfatteren.&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="224" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
         <source>order by name</source>
         <translation>rækkefølge efter navn</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="226" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="227" />
         <source>Order lists and tabs by vdu-name.</source>
         <translation>Bestil lister og faner efter vdu-navn.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="230" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="231" />
         <source>lux options</source>
         <translation>lux muligheder</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="232" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="233" />
         <source>Enable light metering options.</source>
         <translation>Aktiver lysmålingsmuligheder.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="236" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="237" />
         <source>lux tray icon</source>
         <translation>lux bakkeikon</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="240" />
         <source>Show the current light-level icon in the system-tray icon.</source>
         <translation>Vis det aktuelle lysniveauikon i systembakkeikonet.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="243" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="244" />
         <source>schedule</source>
         <translation>skema</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="246" />
-        <source>Enable the solar-elevation and time based scheduling of presets.</source>
-        <translation>Aktiver solhøjde og tidsbaseret planlægning af forudindstillinger.</translation>
+        <source>Enable scheduling of presets by solar-elevation or time-of-day.</source>
+        <translation>Aktiver planlægning af forudindstillinger efter solhøjde eller tidspunkt på dagen.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="250" />

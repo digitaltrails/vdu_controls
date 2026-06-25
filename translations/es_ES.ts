@@ -133,54 +133,54 @@ Colocación y geometría al inicio.</translation>
         <translation>proteger NVRAM</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="214" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
         <source>NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes.</source>
         <translation>La protección NVRAM reduce el desgaste de la NVRAM de su monitor al minimizar las escrituras.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="216" />
         <source>Alter options and defaults to minimize VDU NVRAM writes. This setting mainly affects whether transitions are gradual, using several writes, or instant, with as few writes as possible.&lt;p&gt;&lt;b&gt;This option is now permanently enabled. If this is an issue for you, please contact the author.&lt;/b&gt;</source>
         <translation>Modifique las opciones y los valores predeterminados para minimizar las escrituras en VDU NVRAM. Esta configuración afecta principalmente si las transiciones son graduales, usando varias escrituras, o instantáneas, con la menor cantidad de escrituras posible.&lt;p&gt;&lt;b&gt;Esta opción ahora está habilitada permanentemente. Si esto es un problema para usted, comuníquese con el autor.&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="224" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
         <source>order by name</source>
         <translation>ordenar por nombre</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="226" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="227" />
         <source>Order lists and tabs by vdu-name.</source>
         <translation>Ordene listas y pestañas por nombre de vdu.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="230" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="231" />
         <source>lux options</source>
         <translation>opciones de lujo</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="232" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="233" />
         <source>Enable light metering options.</source>
         <translation>Habilite las opciones de medición de luz.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="236" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="237" />
         <source>lux tray icon</source>
         <translation>icono de bandeja lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="240" />
         <source>Show the current light-level icon in the system-tray icon.</source>
         <translation>Muestra el ícono de nivel de luz actual en el ícono de la bandeja del sistema.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="243" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="244" />
         <source>schedule</source>
         <translation>cronograma</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="246" />
-        <source>Enable the solar-elevation and time based scheduling of presets.</source>
-        <translation>Habilite la programación de ajustes preestablecidos basada en la elevación solar y el tiempo.</translation>
+        <source>Enable scheduling of presets by solar-elevation or time-of-day.</source>
+        <translation>Habilite la programación de ajustes preestablecidos por elevación solar o hora del día.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="250" />

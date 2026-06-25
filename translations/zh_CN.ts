@@ -133,54 +133,54 @@ placement and geometry at start up.</source>
         <translation>保护NVRAM</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="214" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
         <source>NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes.</source>
         <translation>NVRAM 保护通过最大限度地减少写入来减少显示器 NVRAM 的磨损。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="215" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="216" />
         <source>Alter options and defaults to minimize VDU NVRAM writes. This setting mainly affects whether transitions are gradual, using several writes, or instant, with as few writes as possible.&lt;p&gt;&lt;b&gt;This option is now permanently enabled. If this is an issue for you, please contact the author.&lt;/b&gt;</source>
         <translation>更改选项和默认值以最大程度地减少 VDU NVRAM 写入。此设置主要影响过渡是渐进式（使用多次写入）还是即时（使用尽可能少的写入）。&lt;p&gt;&lt;b&gt;此选项现已永久启用。如果这对您来说是个问题，请联系作者。&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="224" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="225" />
         <source>order by name</source>
         <translation>按名称排序</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="226" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="227" />
         <source>Order lists and tabs by vdu-name.</source>
         <translation>按 vdu 名称对列表和选项卡进行排序。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="230" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="231" />
         <source>lux options</source>
         <translation>勒克斯选项</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="232" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="233" />
         <source>Enable light metering options.</source>
         <translation>启用测光选项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="236" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="237" />
         <source>lux tray icon</source>
         <translation>勒克斯托盘图标</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="239" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="240" />
         <source>Show the current light-level icon in the system-tray icon.</source>
         <translation>在系统托盘图标中显示当前的亮度图标。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="243" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="244" />
         <source>schedule</source>
         <translation>日程</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="246" />
-        <source>Enable the solar-elevation and time based scheduling of presets.</source>
-        <translation>启用基于太阳高度角和时间的预设调度。</translation>
+        <source>Enable scheduling of presets by solar-elevation or time-of-day.</source>
+        <translation>启用按太阳高度角或一天中的时间安排预设。</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="250" />
