@@ -514,7 +514,7 @@ Version History
   * The Light-Metering-Dialog offers two profile starter-templates
     for older and newer monitors.
   * The Settings-Dialog global-options are grouped under subheadings.
-  * The Settings-Dialog now offers more popup-guidence
+  * The Settings-Dialog now offers more popup-guidance
     on dependencies between major options.
   * The layout of the Preset and Light-Metering dialogs better reflect the
     the new style of the main panel.
