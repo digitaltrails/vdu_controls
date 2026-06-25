@@ -346,12 +346,6 @@ is included in <code>/usr/share/vdu_controls/icons/</code>.</p>
 <p>Any time the current VDUs settings match those of a preset, the
 preset’s name and icon will automatically show in the window-title, tray
 tooltip, tray icon.</p>
-<p>Presets may be set to transition immediately (the default); gradually
-on schedule (solar elevation); or gradually always (when triggered by
-schedule, <em>main-menu</em>, or UNIX signal). The speed of transition
-is determined by how quickly each VDU can respond to adjustment. During
-a transition, the transition will be abandoned if the controls involved
-in the transition are altered by any other activity.</p>
 <p>Each preset is stored in config directory as:
 <code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
 <p>Preset files are saved in INI-file format for ease of editing. Each
@@ -359,8 +353,7 @@ preset file contains a section for each connected VDU, for example::</p>
 <pre><code>[preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 solar-elevation = eastern-sky 40
-transition-type = scheduled
-transition-step-interval-seconds = 5
+transition-type = none
 
 [HP_ZR24w_CNT008]
 brightness = 50
@@ -371,13 +364,9 @@ brightness = 13
 audio-speaker-volume = 16</code></pre>
 <p>When creating a preset file, you may select which controls to save
 for each VDU. For example, you might create a preset that includes the
-brightness, but not the contrast or audio-volume. Keeping the included
-controls to a minimum speeds up the transition and reduces the chances
-of the VDU failing to keep up with the associated stream of DDC
-commands.</p>
-<p>While using the GUI to create or edit a preset, activation of
-scheduled presets and adjustments due to light-metering are blocked
-until editing is complete.</p>
+brightness, but not the contrast or audio-volume.</p>
+<p>While using the GUI to create or edit a preset, other automated
+adjustments are blocked until editing is complete.</p>
 <h2 id="presets---vdu-initialization-presets">Presets - VDU
 initialization-presets</h2>
 <p>For a VDU named <code>abc</code> with a serial number
@@ -428,37 +417,9 @@ suspended until the following day. Similarly, at startup, the most
 recent preset that would have been triggered for this day will be
 restored.</p>
 <h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
-<p><strong>To minimize writes to VDU NVRAM, smooth-transitions have been
-deprecated and are disabled by default. To re-enable smooth transitions,
-uncheck the</strong> <em>protect-nvram</em> <strong>option in</strong>
-<em>Settings</em>.</p>
-<p>A preset may be set to <em>Smoothly Transition</em>, in which case
-changes to controls continuous-value slider controls such as brightness
-and contrast will be stepped by one until the final values are reached.
-Any non-continuous values will be set after all continuous values have
-reached their final values, for example, if input-source is included in
-a preset, it will be restored at the end.</p>
-<p>The <em>Presets-Dialog</em> includes a combo-box for defining when to
-apply transitions to a preset:</p>
-<ul>
-<li><strong>None</strong> - change immediately;</li>
-<li><strong>On schedule</strong> - slowly change according to a solar
-elevation trigger;</li>
-<li><strong>On signal</strong> - slowly change on the appropriate UNIX
-signal;</li>
-<li><strong>On menu</strong> - slowly change when selected in the
-<em>main-menu</em>;</li>
-</ul>
-<p>Normally a transition single-steps the controls as quickly as
-possible. In practice, this means each step takes one or more seconds
-and increases linearly depending on the number of VDUs and number of
-controls being altered. The <em>Presets-Dialog</em> includes a
-<em>Transition Step seconds</em> control that can be used to increase
-the step interval and extend a transition over a longer period of
-time.</p>
-<p>If any transitioning controls change independently of the transition,
-the transition will cease. In that manner, a transition can be abandoned
-by dragging a slider or choosing a different preset.</p>
+<p><strong>To minimize writes to VDU NVRAM, stepped smooth-transitions
+have been deprecated and are disabled for version 2.6.5
+onward.</strong></p>
 <h2 id="presets---supplementary-weather-requirements">Presets -
 supplementary weather requirements</h2>
 <p>A solar elevation trigger can have a weather requirement which will
@@ -574,12 +535,8 @@ conditions.</p>
 <p>If ambient light level controls are not required, the
 <em>Settings-Dialog</em> includes an option to disable and hide
 them.</p>
-<h2 id="lux-metering-and-brightness-transitions">Lux Metering and
-brightness transitions</h2>
-<p>Due to VDU hardware and DDC protocol limitations, gradual transitions
-from one brightness level to another are likely to be noticeable and
-potentially annoying. As well as being annoying, excessive stepping may
-eat into VDU NVRAM lifespan.</p>
+<h2 id="lux-metering-and-brightness-adjustments">Lux Metering and
+brightness adjustments</h2>
 <p>The auto-brightness adjustment feature includes several measures to
 reduce the number of changes passed to the VDU:</p>
 <ul>
@@ -652,9 +609,7 @@ metering and auto-adjustment heuristics::</p>
   # be to trigger an actual VDU change in brightness? Also determines how close
   # an interpolated value needs to be to an attached preset&#39;s brightness in order
   # to prefer triggering the preset over applying the interpolated value.
-  interpolation-sensitivity-percent=10
-  # Jump brightness in one step up to this maximum, after which transition in steps.
-  max-brightness-jump=100</code></pre>
+  interpolation-sensitivity-percent=10</code></pre>
 <h2
 id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
