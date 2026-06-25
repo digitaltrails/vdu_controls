@@ -21,7 +21,6 @@ Synopsis:
                      [--separate-status-bar|--separate-status-bar]
                      [--tick-marks | --no-tick-marks ]
                      [--laptop-panel|--no-laptop-panel]
-                     [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather] 
                      [--tick-marks|--no-tick-marks]
@@ -85,17 +84,16 @@ Arguments supplied on the command line override config file equivalent settings.
       --laptop-panel|--no-laptop-panel
                             allow laptop panels to be controlled
                             ``--laptop-panel`` is the default
-      --protect-nvram|--no-protect-nvram
-                            alter options and defaults to minimize VDU NVRAM writes.
       --order-by-name|--no-order-by-name
                             order tabs, lists, and dropdowns by VDU name.
+                            ``--no-order-by-name`` is the default.
       --lux-options|--no-lux-options
                             enable/disable ambient light metering options.
                             ``--lux-options`` is the default.
       --schedule|--no-schedule
                             enable/disable preset scheduling. ``--schedule`` is the default.
       --weather|--no-weather
-                            enable/disable weather lookups. ``--weather`` is the default.
+                            enable/disable weather lookups. ``--no-weather`` is the default.
       --tick-marks|--no-tick-marks
                             Show tick marks on control sliders. ``--tick-marks`` is the default.
       --dbus-client|--no-dbus-client
