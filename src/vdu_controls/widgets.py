@@ -12,7 +12,8 @@ from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING, QPlainTextEdit, pyqtSignal,
-                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen, QFocusEvent)
+                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen, QFocusEvent,
+                                     QCoreApplication)
 from vdu_controls.scaling import desktop_font_height, dpx
 
 
@@ -169,6 +170,10 @@ class MBox(QMessageBox):
     BOX_MAX_HEIGHT = 600
     TEXT_MAX_HEIGHT = 300
 
+    translating = False
+
+    _translation_cache: dict[str, str] = {}
+
     def __init__(self,
                  icon: QMessageBox.Icon,
                  msg: str = '',
@@ -187,6 +192,9 @@ class MBox(QMessageBox):
         self.setText(msg)
         self.setInformativeText(info)
         self.setDetailedText(details)
+        self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
+        if MBox.translating:
+            self._translate_buttons_kludge()
 
     def event(self, event: QEvent | None):
         # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
@@ -198,6 +206,28 @@ class MBox(QMessageBox):
                 if text_edit_field := self.findChild(QTextEdit):
                     text_edit_field.setMaximumHeight(dpx(MBox.TEXT_MAX_HEIGHT))
         return result
+
+    def _translate_buttons_kludge(self):
+        # Seems to be necessary to manually translate the buttons, maybe because my desktop is
+        # not natively in the locale.
+        for button in self.buttons():
+            text = button.text()
+            if text in MBox._translation_cache:
+                button.setText(MBox._translation_cache[text])
+            else:
+                raw_text = text.replace('&', '')
+                # Generate all possible keys
+                possible_keys = [text] + [raw_text] + [raw_text[:i] + '&' + raw_text[i:] for i in range(len(raw_text))]
+                log.debug(f"{possible_keys=}")
+                for key in possible_keys:
+                    log.debug(f"{key=}")
+                    for context in ['QPlatformTheme', 'QDialogButtonBox']:
+                        translated_text = QCoreApplication.translate(context, key)
+                        # If we found a valid translation different from the English text, apply it
+                        if translated_text and translated_text != key:
+                            button.setText(translated_text)
+                            MBox._translation_cache[text] = translated_text
+                            break  # Successfully found; break out of the context loop for this button
 
 
 class ChoiceBox(QDialog):
