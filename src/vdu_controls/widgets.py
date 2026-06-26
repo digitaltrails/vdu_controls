@@ -218,9 +218,7 @@ class MBox(QMessageBox):
                 raw_text = text.replace('&', '')
                 # Generate all possible keys
                 possible_keys = [text] + [raw_text] + [raw_text[:i] + '&' + raw_text[i:] for i in range(len(raw_text))]
-                log.debug(f"{possible_keys=}")
                 for key in possible_keys:
-                    log.debug(f"{key=}")
                     for context in ['QPlatformTheme', 'QDialogButtonBox']:
                         translated_text = QCoreApplication.translate(context, key)
                         # If we found a valid translation different from the English text, apply it
