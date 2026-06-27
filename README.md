@@ -544,7 +544,7 @@ Version History
   * A cascade-guard has been added to protect NVRAM from cascading writes  
     due to application, driver, or hardware bugs (or _cats on keyboards_).
     If the application or user sets a VDU feature more than 20 times in 65 
-    seconds an error popup blocks further attempts until dismissed.
+    seconds an error-popup blocks further attempts until dismissed.
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
