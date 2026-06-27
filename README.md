@@ -512,24 +512,23 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5 
-  * vdu_controls now defaults to a new  _single-instance_ mode. Subsequent launches 
+  * vdu_controls now defaults to a _single-instance_ mode. Subsequent launches 
     focus the existing window. Uncheck the _single-instance_ option to override. 
     Contributed by Mohammed Elsayed Ahmed.
   * The ambient-light-level slider works even if location is not set.
-  * The DDC-options laptop-panel option now defaults to enabled.
-  * The Light-Metering-Dialog offers two profile starter-templates
-    for older and newer monitors.
-  * The Settings-Dialog global-options are grouped under subheadings.
-  * The Settings-Dialog now offers more popup-guidance
-    on dependencies between major options.
+  * The laptop-panel option now defaults to enabled.
+  * The Settings-Dialog global-options have been grouped under subheadings.
+  * The Settings-Dialog offers more popup-guidance on dependencies 
+    between options.
+  * The Light-Metering-Dialog includes two profile starter-templates.
+  One for older monitors and one for newer monitors.
   * The layout of the Preset and Light-Metering dialogs better reflect the
     the new style of the main panel.
-  * Changed the system-tray to be primarily monochrome.  It's been designed 
-    to be visible for both dark and light tray backgrounds (as far as is possible).
-  * The program-icon and splash-screen icons have been replaced with
-    SVG versions. The new program-icon responds to light/dark theme changes.
-  * Tick marks on control-sliders are now optional (see the Settings-Dialog).
-  * The right-mouse action that could hide the toolbar irretrievably has been
+  * The system-tray icon is now primarily monochrome.
+  * The program-icon and splash-screen icons have been redesigned and 
+    reimplemented as scalable vector graphices. The new program-icon is theme aware.
+  * Tick marks on control-sliders are now optional, see Settings-Dialog -> tick-marks.
+  * The right-mouse action that could irretrievably hide the toolbar has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
     defined multiple times, the first definition is kept and any following 
@@ -537,13 +536,13 @@ Version History
     This allows some monitors with incorrect metadata to work out-of-the-box.
     Contributed by Mohammed Elsayed Ahmed.
   * When parsing monitor metadata, well known "Continuous" VCP-feature 
-    definitions, such as brightness, will always be regarded as "Continuous"
-    and any attached 'Value:' metadata that implies otherwise will be ignored
+    definitions, such as brightness, will always be regarded as "Continuous".
+    Any attached 'Value:' metadata that implies otherwise will be ignored
     (with a warning logged).  Contributed by Mohammed Elsayed Ahmed.
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * The protect NVRAM option has been made mandatory.
   * A cascade-guard has been added to protect NVRAM from cascading writes  
-    due to _cats  on keyboards_ (or application, driver, or hardware bugs)..
+    due to application, driver, or hardware bugs (or _cats on keyboards_)
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
