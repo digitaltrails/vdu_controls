@@ -225,28 +225,34 @@ package for arch-based systems:
 > follow the instructions in the README.md included in the release tar or zip.
 
 If vdu_controls isn't already available for your distribution, you can
-download or git-clone the latest from GitHub.  The source can be used 
-to install the application into `$HOME/.local/` as runnable python-zipapp:
+download a release python-zipapp (.pyz), zip, or git-clone the latest from GitHub.  
 
-   ``` 
-   % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
-   % unzip vdu_controls.zip
-   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py --install
-   
-   ...
-   9:19:56 INFO: Creating zipapp /home/foo/.local/bin/vdu_controls
-   09:19:56 INFO: chmod u+rwx /home/foo/.local/bin/vdu_controls
-   09:19:56 INFO: Creating /home/foo/.local/share/applications/vdu_controls.desktop
-   09:19:56 INFO: Creating /home/foo/.local/share/vdu_controls/vdu_controls.png
-   09:19:56 INFO: Installation complete. Your desktop->applications->settings should now contain VDU Controls
-   ```
-If you prefer to use a release version, you can download
-the vdu_controls.pyz (or tar or zip) from one of the GitHub release pages.
-The release page pyz file is directly runnable:
+If you want to use a release version, you can download the runnable python-zipapp
+`vdu_controls.pyz` from one of the GitHub release pages.
+
+The release page `vdu_controls.pyz` is directly runnable:
 
    ```
    % python3 vdu_controls.pyz              # run the actual GUI
    % python3 vdu_controls.pyz --install    # install into $HOME/.local
+      
+   # Or manually install it:
+   % mv vdu_controls.pyz vdu_controls      # give it a better name.
+   % chmod u+x vdu_controls                # make it directly runnable.
+   ```
+
+If you want to use the latest source from master, it can be run directly, or it can 
+install itself into `$HOME/.local/` as runnable python-zipapp:
+
+   ``` 
+   % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
+   % unzip vdu_controls.zip
+   
+   # Directly run the app from the source:
+   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py
+   
+   # Use the source to install itself as python zipapp:
+   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py --install
    ```
 
 Although it's easily runnable, you'll still need to ensure you have the 
@@ -505,7 +511,7 @@ Michael Hamilton
 
 Version History
 ---------------
-* 2.6.5
+* 2.6.5 
   * vdu_controls now defaults to a new  _single-instance_ mode. Subsequent launches 
     focus the existing window. Uncheck the _single-instance_ option to override. 
     Contributed by Mohammed Elsayed Ahmed.
