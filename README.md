@@ -490,7 +490,7 @@ Acknowledgements
 * Matthew Coleman ([crashmatt](https://github.com/crashmatt)), Mark Lowne ([lowne](https://github.com/lowne)), [usr3](https://github.com/usr3),
   Mateo Bohorquez G. ([Milor123](https://github.com/Milor123)), Andrew Sun ([apsun](https://github.com/apsun)), 
   Extent ([Extent421](https://github.com/Extent421)), Niklas Hambüchen ([nh2](https://github.com/nh2)), Doron Behar ([doronbehar](https://github.com/doronbehar)),
-  Mohammed Elsayed Ahmed([MohammedEl-sayedAhmed](https://github.com/MohammedEl-sayedAhmed))
+  Mohammed Elsayed Ahmed ([MohammedEl-sayedAhmed](https://github.com/MohammedEl-sayedAhmed))
   for contributing enhancements and fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), Mateo Bohorquez ([Milor123](https://github.com/Milor123)), Johan Grande ([nahoj](https://github.com/nahoj)), 
   [0xCUBE](https://github.com/0xCUB3), [RokeJulianLockhart](https://github.com/RokeJulianLockhart), [abil76](https://github.com/abil76), Andrew Sun ([apsun](https://github.com/apsun))
