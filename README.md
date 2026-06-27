@@ -537,7 +537,7 @@ Version History
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * The protect NVRAM option has been made mandatory.
   * A cascade-guard has been added to protect NVRAM from cascading writes  
-    due to cats walking on keyboards or other application, driver, or hardware errors.
+    due to _cats  on keyboards_ (or application, driver, or hardware bugs)..
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
