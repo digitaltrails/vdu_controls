@@ -522,11 +522,11 @@ Version History
     between options.
   * The Light-Metering-Dialog includes two profile starter-templates.
   One for older monitors and one for newer monitors.
-  * The layout of the Preset and Light-Metering dialogs better reflect the
+  * The layout of the Preset and Light-Metering dialogs better reflect
     the new style of the main panel.
   * The system-tray icon is now primarily monochrome.
   * The program-icon and splash-screen icons have been redesigned and 
-    reimplemented as scalable vector graphices. The new program-icon is theme aware.
+    reimplemented as scalable vector graphics. The new program-icon is theme aware.
   * Tick marks on control-sliders are now optional, see Settings-Dialog -> tick-marks.
   * The right-mouse action that could irretrievably hide the toolbar has been
     disabled.
@@ -544,7 +544,7 @@ Version History
   * A cascade-guard has been added to protect NVRAM from cascading writes  
     due to application, driver, or hardware bugs (or _cats on keyboards_).
     If the application or user sets a VDU feature more than 20 times in 65 
-    seconds an error popup blocks further attempts until dismissed.
+    seconds, an error-popup blocks further attempts until dismissed.
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
@@ -742,7 +742,7 @@ Version History
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
   * Optional $HOME/.config/vdu_controls/tray_icon.svg overrides the normal tray icon.
   * Improved the adjustment of icon/window dimensions by scaling them in respect to the user's default-font height.
-  * Remove adjust-for-dpi in favour of the the above which automatically accounts for DPI.
+  * Remove adjust-for-dpi in favour of the above which automatically accounts for DPI.
   * When a Preset is transitioning slowly (i.e. not immediately), the UI controls can be used to stop the transition.
   * Considerable internal refactoring of option handling.
 
