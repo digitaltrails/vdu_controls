@@ -56,6 +56,7 @@ from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.misc import LocalStrEnum
 from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
 import vdu_controls.logging as log
+from vdu_controls.widgets import MBox
 
 # Places in the filesystem:
 DEVELOPER_TRANSLATIONS_PATH = Path.cwd() / 'translations'  # Developers current working folder - top of project
@@ -161,7 +162,7 @@ def get_translating_locale():
 
 
 def initialise_locale_translations(app: QApplication) -> None:
-
+    """Alters configuration of app and MBox if translations are possible."""
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
@@ -198,10 +199,13 @@ def initialise_locale_translations(app: QApplication) -> None:
             app.installTranslator(translator)
             log.info(tr("Using {0} translations from {1}").format(locale_name, qm_path.as_posix()))
             translating_locale = locale_name
-    if translating_locale and QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
-        log.info(f"Locale {locale_name} language is right-to-left - setting layout direction to right-to-left.")
-        app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-    if not translating_locale:
+    if translating_locale:
+        if QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
+            log.info(f"Locale {locale_name} language is right-to-left - setting layout direction to right-to-left.")
+            app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        log.debug("Turing on the workaround for QMessageBox translations.")
+        MBox.translating = True
+    else:
         log.warning(f"Cannot translate locale {locale_name}, could not find any translations.")
 
 

@@ -1696,9 +1696,9 @@ def main() -> None:
 
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
-        MBox.translating = True  # Turn on translation workaround
     else:
         log.info(f"Language translations disabled by setting: {ConfOpt.TRANSLATIONS_ENABLED.conf_id}")
+        app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)  # Make very sure we stay in left to right.
 
     main_controller = VduAppController(main_config)
     assert gui_misc.is_running_in_gui_thread()
