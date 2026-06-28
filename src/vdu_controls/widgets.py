@@ -192,7 +192,8 @@ class MBox(QMessageBox):
         self.setText(msg)
         self.setInformativeText(info)
         self.setDetailedText(details)
-        self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
+        # setOption() not available on deepin - and not needed anyway.
+        #self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
         if MBox.translating:
             self._translate_buttons_kludge()
 
