@@ -461,7 +461,7 @@ class EnhancedSplashScreen(QSplashScreen):
         """Call this method to append text lines underneath the static title."""
         if message:
             self.message_list.append(message[:29])
-        msg_items_html = ''.join(['<li>&bull; {}</li>'.format(msg) for msg in self.message_list][-5:])  # Last 5 messages
+        msg_items_html = ''.join(['<li>&#9679; {}</li>'.format(msg) for msg in self.message_list][-5:])  # Last 5 messages
         msg_list_html = f'<ul dir="{self.dir_html}" style="-qt-list-indent: 0;">' + msg_items_html + '</ul>'
         combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_list_html}</span>"
         self.text_overlay_label.setText(combined_html)
