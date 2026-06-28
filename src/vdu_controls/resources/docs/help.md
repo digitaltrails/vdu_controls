@@ -151,7 +151,7 @@ Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back t
 
 The UI look-and-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
-For desktops that don't integrate with Qt/KDE themeing, the `qt5ct` and `qt6ct` utilities may
+For desktops that don't integrate with Qt/KDE theming, the `qt5ct` and `qt6ct` utilities may
 be used to alter the overall Qt theme.
 
 The UI provides an optional *ambient-light slider* for simultaneously adjusting
@@ -259,7 +259,7 @@ reports it supports a brightness range of 0 to 100, but in fact only practically
 This can be corrected by bringing up the VDU's settings tab and editing the text in
 the **capabilities override**:
 
- 1. Open the *Settings* tab for the VDU, navigate to the "capabilities override* field
+ 1. Open the *Settings* tab for the VDU, navigate to the *capabilities override* field
  2. locate the feature, in this example, the brightness,
  3. add a **Values:** **min..max** specification to the line following the feature definition,
  4. save the changes.
@@ -584,8 +584,8 @@ values from presets if you don't want to permanently attach them.
 If you use light-metered auto-brightness and preset-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light-metering might increase it.  If you wish to use the two together, design your lux/brightness
-profile steps to match the brightness levels of specific presets - for example, a full-sun preset
-and the matching step in a lux/brightness Profile might both be assigned the same brightness level.
+profile steps to match the brightness levels of specific presets. For example, give 
+a full-sun preset and a corresponding step in a lux/brightness Profile the same brightness value.
 
 Lux Metering Internal Parameters
 --------------------------------
@@ -683,7 +683,7 @@ the UI on each may not be exactly the same.
 
 Depending on which desktop or system-tray-extension you are using, a
 left-mouse-click on the app-icon in the system-tray may restore
-the application's main-widow or it may bring up the application's
+the application's main-window, or it may bring up the application's
 *main-menu*.  To support both kinds of desktop, the *main-menu* includes a 
 *Control Panel*  menu option that toggles visibility of the main window.
 
@@ -725,7 +725,7 @@ reconfigured appropriately.
 
 Locale is determined by the Linux and Qt environment variables,
 `LC_ALL` and `LANGUAGE`, which should preferably be in agreement.
-These two enviroment variables can be manually set to force
+These two environment variables can be manually set to force
 a locale, for example:
 
 The following locations are searched for localized translations:
@@ -733,6 +733,13 @@ The following locations are searched for localized translations:
   1. `$HOME/.local/share/vdu_controls/translations/`
   2. `/usr/share/vdu_controls/translations/`
   3. `zipapp-root/vdu_controls/resources/translations/`
+
+In some cases, Qt internal buttons seem to lack translations in
+Qt's own translation files, either because there isn't a 
+translation or &-shortcut specifiers cause mismatches.  
+The `vdu_controls` code attempts to cope with &-shortcut specifier
+mismatches, but doesn't include any solutions for translations
+that are simply missing.
 
 To date, there hasn't been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
@@ -795,19 +802,19 @@ duality of "display" and "monitor"
 Prerequisites
 =============
 
-Packaged versions of ``vdu_control`` are likely to include all of the following
+Packaged versions of ``vdu_control`` are likely to include all the following
 automatically.
 
  * `python3`, `python3-qt6` or `python-qt5`, `noto-sans-math-fonts`, `noto-sans-symbols2-fonts`.
  * `ddcutil`, the command line DDC interface. 
- * `libddcutil` and `ddcutil-service`, obtional, but recommended for increased reliability.
+ * `libddcutil` and `ddcutil-service`, optional, but recommended for increased reliability.
    more features, and increased speed.
 
 The following need not be present to run ``vdu_controls``, library imports
 are only attempted when settings require them:
 
  * `brightnessctl`,  optional, needed for controlling laptop-panels.
- * `python3-pyudev`, optional, needed for detecting brighntess changes on laptop-panels.
+ * `python3-pyudev`, optional, needed for detecting brightness changes on laptop-panels.
  * `pyserial`, optional, required to use a serial-port light-metering device (only
    loaded if needed).
 
@@ -816,7 +823,7 @@ detect command detects your VDUs without issuing any errors:
 
         ddcutil detect
 
-Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
+Read ddcutil documentation concerning config of i2c_dev with Nvidia GPUs. Detailed ddcutil info
 at https://www.ddcutil.com/
 
 Environment
