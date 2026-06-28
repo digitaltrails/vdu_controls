@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
 # Note: for legal reasons, the license should never be translated.
 _ABOUT_TEMPLATE = '''
-<b>{data.title}</b>
+<span dir="{data.dir_html}">
+<h4>{data.title}</h4>
 <p>
 {data.intro}
 <p>
@@ -68,6 +69,7 @@ _ABOUT_TEMPLATE = '''
 {data.tech_info}
 </small>
 </quote>
+</span>
 '''
 
 
@@ -77,17 +79,22 @@ class _AboutTemplateData:
     def _link(url_str: str, text: str = '') -> str:
         return f'<a href="{url_str}">{text if text else url_str}</a>'
 
-    def __init__(self, counts_str, ddcutil_version_info_0, ddcutil_version_info_1) -> None:
+    def __init__(self, counts_str, ddcutil_version_info_0, ddcutil_version_info_1, direction) -> None:
         self.counts_str = counts_str
         self.ddcutil_version_info_0 = ddcutil_version_info_0
         self.ddcutil_version_info_1 = ddcutil_version_info_1
+        self.direction = direction
+
+    @property
+    def dir_html(self) -> str:
+        return self.direction
 
     @property
     def title(self) -> str:
         return tr('{0} version {1}').format(APPNAME, VDU_CONTROLS_VERSION)
 
     @property
-    def intro(self):
+    def intro(self) -> str:
         return tr('A virtual control panel for visual display units.')
 
     @property
@@ -154,6 +161,12 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
         self.main_controller = main_controller
+        self.setWindowTitle(tr('About'))
+        self.setTextFormat(Qt.TextFormat.AutoText)
+        self.setText(tr('About vdu_controls'))
+        icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)
+        self.setIconPixmap(icon.pixmap(dpx(125), dpx(125)))
+        self.dir_html = 'rtl' if self.layoutDirection() == Qt.LayoutDirection.RightToLeft else 'ltf'
         self.refresh_content()
         self.setModal(False)
         self.show()
@@ -161,10 +174,6 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.activateWindow()
 
     def refresh_content(self):
-
-        self.setWindowTitle(tr('About'))
-        self.setTextFormat(Qt.TextFormat.AutoText)
-        self.setText(tr('About vdu_controls'))
 
         ddcutil_version_info_0 = "unknown"
         ddcutil_version_info_1 = "unknown"
@@ -176,8 +185,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         log.info(f"Refreshing About Dialog {counts_str=}")
         # Has to be HTML, getting Qt Markdown to behave was too painful
 
-        template_data = _AboutTemplateData(counts_str, ddcutil_version_info_0, ddcutil_version_info_1)
+        template_data = _AboutTemplateData(counts_str, ddcutil_version_info_0, ddcutil_version_info_1, self.dir_html)
         about_html_text = _ABOUT_TEMPLATE.format(data=template_data)
         self.setInformativeText(about_html_text)
-        icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)
-        self.setIconPixmap(icon.pixmap(dpx(125), dpx(125)))
+        self.adjustSize()
