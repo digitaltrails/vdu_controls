@@ -133,13 +133,15 @@ def load_docs_text(filename: str) -> str:
     if locale_name := get_translating_locale():
         if translated_override := find_locale_specific_file(filename, locale_name):
             log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
-            return translated_override.read_text()
+            # specify the encoding in case the system default is something else, such as gb2312
+            return translated_override.read_text(encoding='utf-8')
 
     # Check inside the application resources/docs/
     file_path = APP_INTERNAL_DOCS_FOLDER / filename
     if file_path.is_file():
         log.info(f"Loading original resource from {file_path}")
-        return file_path.read_text()
+        # specify the encoding in case the system default is something else, such as gb2312
+        return file_path.read_text(encoding='utf-8')
     log.error(f"Could not find resource {filename} or a translation of it anywhere")
     return ''
 
