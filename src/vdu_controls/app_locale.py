@@ -69,8 +69,6 @@ APP_INTERNAL_DOCS_FOLDER = APP_INTERNAL_RESOURCE_ROOT / 'docs'
 LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEVELOPER else []) + [
     HOME_LOCAL_SHARE / 'translations',
     USR_LOCAL_SHARE / 'translations',
-    APP_INTERNAL_RESOURCE_ROOT / 'translations',
-    APP_INTERNAL_DOCS_FOLDER,
 ]
 
 
@@ -104,8 +102,6 @@ def find_locale_specific_file(filename: str, locale_name: str) -> Path | None:
       2. /usr/share/vdu_controls/translations
     """
     log.info(f"Looking for translation file {filename}")
-
-    blank_safe = 'dummy' + filename
     blank_safe_path = Path('blank' + filename)  # Add a dummy, so Path( 'blank' + '.ts').suffix returns a suffix of '.ts'
     stem = blank_safe_path.stem[5:]
     if stem:
