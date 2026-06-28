@@ -4,12 +4,12 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
         <source>About</source>
         <translation>关于</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
         <source>About vdu_controls</source>
         <translation>关于 vdu_controls</translation>
     </message>
@@ -1541,13 +1541,13 @@ Initialization-Preset</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="127" />
-        <source>{}: </source>
-        <translation>{}：</translation>
+        <source> {} </source>
+        <translation>{}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="128" />
-        <source>{0}: {1}</source>
-        <translation>{0}：{1}</translation>
+        <source>{0} | {1}</source>
+        <translation>{0} | {1}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="129" />
@@ -2112,37 +2112,37 @@ Check that ddcutil and i2c are installed and configured.</source>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="87" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
         <source>{0} version {1}</source>
         <translation>{0}版本{1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="91" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
         <source>A virtual control panel for visual display units.</source>
         <translation>用于视觉显示单元的虚拟控制面板。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
         <source>Visit {} for more details.</source>
         <translation>请访问 {} 了解更多详情。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
         <source>Release notes: {}</source>
         <translation>发行说明：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="104" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls 依赖于 {0}，它是支持 ddc 的 vdus 的强大接口； {1}，libddcutil 的快速 DBus 接口； {2}，笔记本电脑面板的亮度控制。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="114" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>根据您的请求，可以从 {} 检索您的地理位置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>根据您的请求，可以从 {} 检索您所在位置的天气情况。</translation>
     </message>

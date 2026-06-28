@@ -4,12 +4,12 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
         <source>About</source>
         <translation>Om</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
         <source>About vdu_controls</source>
         <translation>Om vdu_controls</translation>
     </message>
@@ -1544,13 +1544,13 @@ initialiserings-forudindstilling</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="127" />
-        <source>{}: </source>
-        <translation>{}: </translation>
+        <source> {} </source>
+        <translation>{}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="128" />
-        <source>{0}: {1}</source>
-        <translation>{0}: {1}</translation>
+        <source>{0} | {1}</source>
+        <translation>{0} | {1}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="129" />
@@ -2115,37 +2115,37 @@ Kontroller at ddcutil og i2c er installeret og konfigureret.</translation>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="87" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
         <source>{0} version {1}</source>
         <translation>{0} version {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="91" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
         <source>A virtual control panel for visual display units.</source>
         <translation>Et virtuelt kontrolpanel til visuelle displayenheder.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
         <source>Visit {} for more details.</source>
         <translation>Besøg {} for at få flere oplysninger.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
         <source>Release notes: {}</source>
         <translation>Udgivelsesbemærkninger: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="104" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls er afhængig af {0}, en robust grænseflade til ddc-kompatibel vdus; {1}, en hurtig DBus-grænseflade til libddcutil; og {2}, en lysstyrkekontrol til bærbare paneler.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="114" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>På din anmodning kan din geografiske placering hentes fra {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>På din anmodning kan vejret for din placering hentes fra {}.</translation>
     </message>

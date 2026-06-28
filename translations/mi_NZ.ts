@@ -4,12 +4,12 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
         <source>About</source>
         <translation>Mō</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
         <source>About vdu_controls</source>
         <translation>Mō vdu_controls</translation>
     </message>
@@ -1543,13 +1543,13 @@ mō te VDU</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="127" />
-        <source>{}: </source>
-        <translation>{}: </translation>
+        <source> {} </source>
+        <translation>{}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="128" />
-        <source>{0}: {1}</source>
-        <translation>{0}: {1}</translation>
+        <source>{0} | {1}</source>
+        <translation>{0} | {1}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="129" />
@@ -2114,37 +2114,37 @@ Tirohia kua tāutahia, kua whirihorahia rānei a ddcutil me i2c.</translation>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="87" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
         <source>{0} version {1}</source>
         <translation>{0} putanga {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="91" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
         <source>A virtual control panel for visual display units.</source>
         <translation>He paewhiri mana mariko mo nga waeine whakaatu ataata.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
         <source>Visit {} for more details.</source>
         <translation>Tirohia {} mo etahi atu taipitopito.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
         <source>Release notes: {}</source>
         <translation>Tuhinga o mua: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="104" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls e whakawhirinaki ana ki a {0}, he atanga pakari ki te vdus kaha ddc; {1}, he atanga DBus tere ki te libddcutil; me {2}, he mana wherikotanga mo nga papa-pona.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="114" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>I runga i to tono, ka tikina pea to waahi matawhenua mai i {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>I runga i to tono, ka tikina pea te huarere mo to waahi mai i {}.</translation>
     </message>

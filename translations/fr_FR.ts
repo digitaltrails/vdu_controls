@@ -4,12 +4,12 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
         <source>About</source>
         <translation>À propos</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
         <source>About vdu_controls</source>
         <translation>À propos de vdu_controls</translation>
     </message>
@@ -1543,13 +1543,13 @@ spécifique au VDU</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="127" />
-        <source>{}: </source>
-        <translation>{} : </translation>
+        <source> {} </source>
+        <translation>{}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="128" />
-        <source>{0}: {1}</source>
-        <translation>{0} : {1}</translation>
+        <source>{0} | {1}</source>
+        <translation>{0} | {1}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="129" />
@@ -2114,37 +2114,37 @@ Vérifiez que ddcutil et i2c sont installés et configurés.</translation>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="87" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
         <source>{0} version {1}</source>
         <translation>{0}version{1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="91" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
         <source>A virtual control panel for visual display units.</source>
         <translation>Un panneau de commande virtuel pour les unités d'affichage visuel.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
         <source>Visit {} for more details.</source>
         <translation>Visitez {} pour plus de détails.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
         <source>Release notes: {}</source>
         <translation>Notes de version : {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="104" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls s'appuie sur {0}, une interface robuste pour les vdus compatibles DDC ; {1}, une interface DBus rapide pour libddcutil ; et {2}, un contrôle de luminosité pour les panneaux d'ordinateurs portables.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="114" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>À votre demande, votre situation géographique peut être récupérée depuis {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>À votre demande, la météo de votre emplacement peut être récupérée à partir de {}.</translation>
     </message>
