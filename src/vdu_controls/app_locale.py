@@ -69,6 +69,8 @@ APP_INTERNAL_DOCS_FOLDER = APP_INTERNAL_RESOURCE_ROOT / 'docs'
 LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEVELOPER else []) + [
     HOME_LOCAL_SHARE / 'translations',
     USR_LOCAL_SHARE / 'translations',
+    APP_INTERNAL_RESOURCE_ROOT / 'translations',
+    APP_INTERNAL_DOCS_FOLDER,
 ]
 
 
@@ -79,21 +81,22 @@ def available_translations() -> List[str]:
     global cached_language_codes
     if cached_language_codes:
         return cached_language_codes
-    filename_stem_pattern = "??_??"  # two letters, underscore, two letters
+    filename_stem_patterns = [ "??_??", "??" ]  # for example da_DK or just da
     extensions = ["ts", "qm"]
     language_codes = set()
     for dir_path in LOCALE_TRANSLATIONS_PATHS:
         log.info(f"Looking for translation files in {dir_path}")
         for ext in extensions:
             # Glob pattern: e.g., "??_??.ts"
-            for file_path in dir_path.glob(f"{filename_stem_pattern}.{ext}"):
-                log.info(f"Found translation file: {file_path}")
-                language_codes.add(file_path.stem)  # stem is e.g., "fr_FR"
+            for glob_pattern in filename_stem_patterns:
+                for file_path in dir_path.glob(f"{glob_pattern}.{ext}"):
+                    log.info(f"Found translation file: {file_path}")
+                    language_codes.add(file_path.stem)  # stem is e.g., "fr_FR"
     cached_language_codes = sorted(language_codes)
     return cached_language_codes  # sorted for consistent order
 
 
-def find_locale_specific_file(filename: str) -> Path | None:
+def find_locale_specific_file(filename: str, locale_name: str) -> Path | None:
     """
     First look for a locale specific filename-??_??.suffix version in
       0. If env VDU_CONTROLS_DEVELOPER=yes first look in ./translations
@@ -101,13 +104,25 @@ def find_locale_specific_file(filename: str) -> Path | None:
       2. /usr/share/vdu_controls/translations
     """
     log.info(f"Looking for translation file {filename}")
-    for path in LOCALE_TRANSLATIONS_PATHS:
-        full_path = path.joinpath(filename)
-        log.info(f"Checking for translation: {full_path}")
-        if full_path.exists():
-            log.info(f"Found translation: {full_path}")
-            return full_path
-    log.info(f"Failed to find: {filename}")
+
+    blank_safe = 'dummy' + filename
+    blank_safe_path = Path('blank' + filename)  # Add a dummy, so Path( 'blank' + '.ts').suffix returns a suffix of '.ts'
+    stem = blank_safe_path.stem[5:]
+    if stem:
+        stem += '-'
+    suffix = blank_safe_path.suffix
+    if len(locale_name) > 2:
+        locale_list = [ locale_name, locale_name[:2] ]   # Also try language name only ar from ar_SA
+    else:
+        locale_list = [ locale_name ]
+    for try_locale in locale_list:
+        for path in LOCALE_TRANSLATIONS_PATHS:
+            full_path = path / f"{stem}{try_locale}{suffix}"
+            log.info(f"Checking for translation: {full_path}")
+            if full_path.exists():
+                log.info(f"Found translation: {full_path}")
+                return full_path
+    log.info(f"Failed to find locale specific: {filename}")
     return None
 
 
@@ -120,7 +135,7 @@ def load_docs_text(filename: str) -> str:
     # Check outside the application for something locale specific
     as_path = Path(filename)
     if locale_name := get_translating_locale():
-        if translated_override := find_locale_specific_file(f"{as_path.stem}-{locale_name}{as_path.suffix}"):
+        if translated_override := find_locale_specific_file(filename, locale_name):
             log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
             return translated_override.read_text()
 
@@ -158,8 +173,8 @@ def initialise_locale_translations(app: QApplication) -> None:
     translating_locale = ''
 
     locale_name = get_locale_name()
-    ts_path = find_locale_specific_file(f"{locale_name}.ts")
-    qm_path = find_locale_specific_file(f"{locale_name}.qm")  # don't use qm files for now.
+    ts_path = find_locale_specific_file(".ts", locale_name)
+    qm_path = find_locale_specific_file(".qm", locale_name)  # don't use qm files for now.
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
