@@ -187,7 +187,8 @@ class VduControlsMainPanel(QWidget):
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
-            splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")  # pyright: ignore
+            splash_message_qtsignal.emit(
+                tr("DDC ID {0} {1}").format(controller.vdu_number, controller.get_vdu_preferred_name()))  # pyright: ignore
             vdu_control_panel = VduControlPanel(controller)
             controller.ctlr_vcp_value_changed_qtsignal.connect(self.app_vcp_value_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
@@ -1094,6 +1095,7 @@ class VduAppWindow(QMainWindow):
         if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED):
             splash_pixmap = create_pixmap_from_svg_bytes(VDU_CONTROLS_SPLASH_SVG, dpx(256), dpx(180))
             splash_screen = EnhancedSplashScreen(splash_pixmap, f"{APPNAME} {VDU_CONTROLS_VERSION}")
+            splash_screen.setLayoutDirection(self.layoutDirection())
             splash_screen.show()
             splash_screen.raise_()  # Attempt to force it to the top with raise and activate
             splash_screen.activateWindow()
@@ -1136,8 +1138,7 @@ class VduAppWindow(QMainWindow):
         def _splash_message_action(message) -> None:
             if splash_screen is not None:
                 log.info(f"splash_message: {repr(message)}")
-                splash_screen.show_message(f"{message}")
-                                   #Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+                splash_screen.show_message(message)
                 QApplication.processEvents()
 
         self.splash_message_qtsignal.connect(_splash_message_action)

@@ -433,7 +433,8 @@ class EnhancedSplashScreen(QSplashScreen):
         super().__init__(pixmap, Qt.WindowType.WindowStaysOnTopHint)
 
         h = 4
-        self.title_html = f"<span style='color: #f0f0f0'><h{h}>{title_text}</h{h}></span>"
+        self.dir_html = 'rtl' if self.layoutDirection() == Qt.LayoutDirection.RightToLeft else 'ltf'
+        self.title_html = f"<span dir='{self.dir_html}' style='color: #f0f0f0'><h{h}>{title_text}</h{h}></span>"
         self.message_list: List[str] = []
 
         p_width = pixmap.width()
@@ -444,11 +445,12 @@ class EnhancedSplashScreen(QSplashScreen):
 
         layout = QVBoxLayout(self)  # Overlay onto the splash widget
         layout.setContentsMargins(left_margin, top_margin, right_margin, bottom_margin)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)  # type: ignore
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | (Qt.AlignmentFlag.AlignLeft))  # type: ignore
 
         self.text_overlay_label = QLabel(self)
         self.text_overlay_label.setTextFormat(Qt.TextFormat.AutoText)
         self.text_overlay_label.setWordWrap(True)
+        self.text_overlay_label.setMinimumWidth(p_width - 2)
         layout.addWidget(self.text_overlay_label)
         # Flags needed at least for deepin
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
@@ -456,14 +458,11 @@ class EnhancedSplashScreen(QSplashScreen):
 
     def show_message(self, message):
         """Call this method to append text lines underneath the static title."""
-
         if message:
-            self.message_list.append(message)
-
-        msg_html = '<br/>'.join([f"&bull; {msg}" for msg in self.message_list][-5:])  # Last 5 messages
-        combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_html}</span>"
-
+            self.message_list.append(message[:32])
+        msg_items_html = ''.join(['<li>&bull; {}</li>'.format(msg) for msg in self.message_list][-5:])  # Last 5 messages
+        msg_list_html = f'<ul dir="{self.dir_html}" style="-qt-list-indent: 0;">' + msg_items_html + '</ul>'
+        combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_list_html}</span>"
         self.text_overlay_label.setText(combined_html)
-
         # Forces Qt to immediately redraw the screen during heavy background loading
         QApplication.processEvents()
