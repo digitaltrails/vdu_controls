@@ -445,12 +445,12 @@ class EnhancedSplashScreen(QSplashScreen):
 
         layout = QVBoxLayout(self)  # Overlay onto the splash widget
         layout.setContentsMargins(left_margin, top_margin, right_margin, bottom_margin)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop | (Qt.AlignmentFlag.AlignLeft))  # type: ignore
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)  # type: ignore
 
         self.text_overlay_label = QLabel(self)
         self.text_overlay_label.setTextFormat(Qt.TextFormat.AutoText)
         self.text_overlay_label.setWordWrap(True)
-        self.text_overlay_label.setMinimumWidth(p_width - 2)
+        #self.text_overlay_label.setMinimumWidth(p_width - 2)
         layout.addWidget(self.text_overlay_label)
         # Flags needed at least for deepin
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
@@ -459,7 +459,7 @@ class EnhancedSplashScreen(QSplashScreen):
     def show_message(self, message):
         """Call this method to append text lines underneath the static title."""
         if message:
-            self.message_list.append(message[:32])
+            self.message_list.append(message[:29])
         msg_items_html = ''.join(['<li>&bull; {}</li>'.format(msg) for msg in self.message_list][-5:])  # Last 5 messages
         msg_list_html = f'<ul dir="{self.dir_html}" style="-qt-list-indent: 0;">' + msg_items_html + '</ul>'
         combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_list_html}</span>"
