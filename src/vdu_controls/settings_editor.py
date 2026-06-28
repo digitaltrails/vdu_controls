@@ -124,8 +124,8 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         return QSize(dpx(900), dpx(500))
 
     def update_tab_ops(self, tab: SettingsEditorTab) -> None:
-        self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
-        self.tab_ops.setToolTip(tr('{0}: {1}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_ops_label.setText(tr(' {} ').format(tab.preferred_name))
+        self.tab_ops.setToolTip(tr('{0} | {1}').format(tab.preferred_name, tab.config_path.as_posix()))
         self.tab_save_button.setToolTip(tr('Save {0} to \n{1}').format(tab.preferred_name, tab.config_path.as_posix()))
         self.tab_revert_button.setToolTip(tr('Revert {0} from \n{1}').format(tab.preferred_name, tab.config_path.as_posix()))
         self.tab_restore_defaults_button.setToolTip(
