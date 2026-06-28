@@ -521,7 +521,7 @@ Version History
   * The Settings-Dialog offers more popup-guidance on dependencies 
     between options.
   * The Light-Metering-Dialog includes two profile starter-templates.
-  One for older monitors and one for newer monitors.
+    One for older monitors and one for newer monitors.
   * The layout of the Preset and Light-Metering dialogs better reflect
     the new style of the main panel.
   * The system-tray icon is now primarily monochrome.
