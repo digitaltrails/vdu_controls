@@ -549,7 +549,7 @@ Version History
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
     the translations have been generated for testing purposes and may not 
-    be accurate.
+    be accurate.  Layouts now correctly handle right-to-left langauages.
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
