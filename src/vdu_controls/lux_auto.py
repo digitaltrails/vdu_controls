@@ -338,6 +338,7 @@ class LuxAutoController:
         if self.is_auto_enabled() and not self.lux_meter.has_semi_auto_capability:  # goto manual unless on semi-auto
             self.set_auto(False)
         self.lux_meter.set_current_value(value)
+        LuxMeterSemiAutoDevice.update_df_from_lux_value(value, True)
         self.adjust_brightness_now()
 
     def update_manual_slider(self, value: int):
@@ -400,6 +401,7 @@ class LuxAutoController:
                 log.info("Lux auto-brightness settings refresh - monitoring is off.")
                 self.stop_worker()
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
+            self.lux_slider.set_current_value(round(self.lux_meter.get_value()))
         except LuxDeviceException as lde:
             log.error(f"Error setting up lux meter {lde}", trace=True)
             MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
