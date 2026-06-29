@@ -293,7 +293,15 @@ class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/
 
     def mousePressEvent(self, event: QMouseEvent | None):  # On mouse click, set value to the value at the click position
         if event:
-            self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width()))
+            if self.orientation() == Qt.Orientation.Horizontal:
+                pos = event.pos().x()   # Get position from the left edge
+                if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+                    pos = self.width() - pos   # Mirror if layout is right‑to‑left
+                self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), pos, self.width()))
+            else:  # Vertical – not affected by RTL
+                pos = event.pos().y()
+                self.setValue(QStyle.sliderValueFromPosition(
+                    self.minimum(), self.maximum(), pos, self.height()))
         super().mousePressEvent(event)
 
 
