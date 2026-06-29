@@ -603,22 +603,22 @@ This chart is resizable. </source>
         <translation>إجراء فحص الإضاءة المحيطة الآن</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
         <source>Error setting up lux meter: {}</source>
         <translation>خطأ في إعداد مقياس اللوكس: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Auto disabled, no location defined.</source>
         <translation>التلقائي معطل، لم يتم تحديد موقع.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Starting automatic light metering.</source>
         <translation>بدء قياس الضوء التلقائي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>التبديل إلى الإدخال اليدوي للوكس المحيط.</translation>
     </message>
@@ -811,33 +811,8 @@ When designing brightness-response curves, consider minimizing brightness change
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
-        <source>Semi-automatic lux adjustment: quick start instructions.
-________________________________________________________________________________________
-
-Use the ambient-light-level slider to set the current light level.
-
-Starting from your chosen level, the application will adjust the light level
-according to a trajectory based on the estimated sunlight for your location.
-
-If conditions change, adjust the slider to alter the trajectory.
-
-The trajectory is shown in the Light Metering Dialog, along with the estimate
-of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to
-outdoor lux.
-</source>
-        <translation>ضبط اللوكس شبه التلقائي: تعليمات البدء السريع.
-________________________________________________________________________________________
-
-استخدم شريط تمرير مستوى الإضاءة المحيطة لتعيين مستوى الضوء الحالي.
-
-بدءاً من المستوى الذي اخترته، سيقوم التطبيق بضبط مستوى الضوء
-وفقاً لمسار يعتمد على ضوء الشمس المقدر لموقعك.
-
-إذا تغيرت الظروف، اضبط شريط التمرير لتغيير المسار.
-
-يظهر المسار في حوار قياس الضوء، بالإضافة إلى تقدير
-اللوكس الخارجي (Eo) وعامل ضوء النهار (DF)، وهي نسبة اللوكس الداخلي إلى الخارجي.
-</translation>
+        <source>&lt;h3&gt;Semi-automatic adjustment: quick start instructions.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Use the ambient-light-level slider to indicate your current lighting condition.&lt;/p&gt;&lt;p&gt;This establishes a baseline from which the application will periodically reestimate your ambient-light-level as a proportion of the estimated sunlight for your location.&lt;/p&gt;&lt;p&gt;If conditions change, adjust the slider to alter the baseline proportion.&lt;/p&gt;&lt;p&gt;The projected trajectory is shown in the &lt;i&gt;Light Metering Dialog&lt;/i&gt;, along with the &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor to outdoor lux.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;ضبط شبه تلقائي: تعليمات البدء السريع.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;استخدم شريط تمرير مستوى الإضاءة المحيطة للإشارة إلى حالة الإضاءة الحالية لديك.&lt;/p&gt;&lt;p&gt;يحدد هذا خطًا أساسيًا سيعيد التطبيق من خلاله تقدير مستوى الإضاءة المحيطة بشكل دوري كنسبة من ضوء الشمس المقدر لموقعك.&lt;/p&gt;&lt;p&gt;إذا تغيرت الظروف، فاضبط شريط التمرير لتغيير نسبة خط الأساس.&lt;/p&gt;&lt;p&gt;يتم عرض المسار المتوقع في &lt;i&gt;مربع حوار قياس الضوء&lt;/i&gt;، جنبًا إلى جنب مع &lt;i&gt;تقدير اللوكس الخارجي&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) و&lt;i&gt;عامل ضوء النهار&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;)، النسبة الأساسية لللوكس الداخلي إلى اللوكس الخارجي.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
@@ -930,24 +905,24 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
         <source>No location defined.</source>
         <translation>لم يتم تعريف موقع.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="256" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
         <source>Ignoring daylight-factor, Sun not bright enough.</source>
         <translation>بتجاهل عامل ضوء النهار، الشمس ليست مشرقة بما فيه الكفاية.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
         <source>Ignoring daylight-factor, out of viable range.</source>
         <translation>تجاهل عامل ضوء النهار، خارج النطاق القابل للتطبيق.</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>وحدة المنفذ التسلسلي pyserial المطلوبة غير مثبتة على هذا النظام.</translation>
     </message>

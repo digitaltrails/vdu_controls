@@ -604,22 +604,22 @@ Ka taea te rahi o tēnei tuātohi te whakarerekē.</translation>
         <translation>Mahia te arowhai rama huripoki ināianei</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
         <source>Error setting up lux meter: {}</source>
         <translation>Hapa i te whakarite mita lux: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Auto disabled, no location defined.</source>
         <translation>Kua whakaweto te Aunoa, kāore he wāhi i tautuhia.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Starting automatic light metering.</source>
         <translation>Ka timata te inenga rama aunoa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>Te huri ki te tāuru ā-ringa o te lux huripoki.</translation>
     </message>
@@ -812,33 +812,8 @@ I te wā e hoahoa ana i ngā ānau urupare kanapa, whakaarohia kia iti ngā huri
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
-        <source>Semi-automatic lux adjustment: quick start instructions.
-________________________________________________________________________________________
-
-Use the ambient-light-level slider to set the current light level.
-
-Starting from your chosen level, the application will adjust the light level
-according to a trajectory based on the estimated sunlight for your location.
-
-If conditions change, adjust the slider to alter the trajectory.
-
-The trajectory is shown in the Light Metering Dialog, along with the estimate
-of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to
-outdoor lux.
-</source>
-        <translation>Whakatikatika lux hāwhā-aunoa: ngā tohutohu tīmata tere.
-________________________________________________________________________________________
-
-Whakamahia te kaiwhakareri taumata rama huripoki hei tautuhi i te taumata rama o nāianei.
-
-Ka tīmata mai i tō taumata kua kōwhiria, ka whakatika te taupānga i te taumata rama
-kia rite ki tētahi huarahi e hāngai ana ki te rā e pīata ana mō tō wāhi.
-
-Ki te rerekē ngā āhuatanga, whakatikahia te kaiwhakareri kia panoni te huarahi.
-
-Ka whakaatuhia te huarahi i te Pārongo Inenga Rama, me te whakatau tata
-o te lux o waho (Eo) me te Tauwehe-Rā (DF), te ōwehenga o te lux o roto ki te lux o waho.
-</translation>
+        <source>&lt;h3&gt;Semi-automatic adjustment: quick start instructions.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Use the ambient-light-level slider to indicate your current lighting condition.&lt;/p&gt;&lt;p&gt;This establishes a baseline from which the application will periodically reestimate your ambient-light-level as a proportion of the estimated sunlight for your location.&lt;/p&gt;&lt;p&gt;If conditions change, adjust the slider to alter the baseline proportion.&lt;/p&gt;&lt;p&gt;The projected trajectory is shown in the &lt;i&gt;Light Metering Dialog&lt;/i&gt;, along with the &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor to outdoor lux.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;Whakatika-aunoa: nga tohutohu timata tere.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Whakamahia te rēreti taumata-rama-ambient hei tohu i to ahuatanga rama o naianei.&lt;/p&gt;&lt;p&gt;Ma tenei ka whakatauhia he rarangi turanga mai i te tono ka whakatau ano i to taumata-rama-ambient hei owehenga o te whakatau tata o te ra mo to waahi.&lt;/p&gt;&lt;p&gt; tauwehenga.&lt;/p&gt;&lt;p&gt;Ka whakaatuhia te huarahi matapae i roto i te &lt;i&gt;Right Metering Dialog&lt;/i&gt;, me te &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor and outdoor lux.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
@@ -931,24 +906,24 @@ Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</tr
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
         <source>No location defined.</source>
         <translation>Kāore he wāhi i tautuhia.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="256" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
         <source>Ignoring daylight-factor, Sun not bright enough.</source>
         <translation>Kare e aro ki te awatea, kare te ra e marama.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
         <source>Ignoring daylight-factor, out of viable range.</source>
         <translation>Ka warewarehia te take-a-ra, kei waho o te awhe whaihua.</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>Kāore te kōwae tauranga rangatū pyserial e hiahiatia ana i tāuta ki tēnei pūnaha.</translation>
     </message>

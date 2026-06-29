@@ -604,22 +604,22 @@ Este gráfico es redimensionable.</translation>
         <translation>Realice una verificación de iluminación ambiental ahora</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
         <source>Error setting up lux meter: {}</source>
         <translation>Error al configurar el luxómetro: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Auto disabled, no location defined.</source>
         <translation>Auto deshabilitado, no hay ubicación definida.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Starting automatic light metering.</source>
         <translation>Iniciar la medición automática de la luz.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>Cambio a entrada manual de lux ambiental.</translation>
     </message>
@@ -812,33 +812,8 @@ Al diseñar curvas de brillo-respuesta, considere minimizar los cambios de brill
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
-        <source>Semi-automatic lux adjustment: quick start instructions.
-________________________________________________________________________________________
-
-Use the ambient-light-level slider to set the current light level.
-
-Starting from your chosen level, the application will adjust the light level
-according to a trajectory based on the estimated sunlight for your location.
-
-If conditions change, adjust the slider to alter the trajectory.
-
-The trajectory is shown in the Light Metering Dialog, along with the estimate
-of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to
-outdoor lux.
-</source>
-        <translation>Ajuste de lux semiautomático: instrucciones de inicio rápido.
-______________________________________________________________________________________
-
-Utilice el control deslizante de nivel de luz ambiental para establecer el nivel de luz actual.
-
-A partir del nivel elegido, la aplicación ajustará el nivel de luz.
-según una trayectoria basada en la luz solar estimada para su ubicación.
-
-Si las condiciones cambian, ajuste el control deslizante para alterar la trayectoria.
-
-La trayectoria se muestra en el cuadro de diálogo Medición de luz, junto con la estimación.
-de lux exterior (Eo) y el factor de luz diurna (DF), la relación entre el interior y el
-lux exterior.</translation>
+        <source>&lt;h3&gt;Semi-automatic adjustment: quick start instructions.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Use the ambient-light-level slider to indicate your current lighting condition.&lt;/p&gt;&lt;p&gt;This establishes a baseline from which the application will periodically reestimate your ambient-light-level as a proportion of the estimated sunlight for your location.&lt;/p&gt;&lt;p&gt;If conditions change, adjust the slider to alter the baseline proportion.&lt;/p&gt;&lt;p&gt;The projected trajectory is shown in the &lt;i&gt;Light Metering Dialog&lt;/i&gt;, along with the &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor to outdoor lux.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;Ajuste semiautomático: instrucciones de inicio rápido.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Utilice el control deslizante de nivel de luz ambiental para indicar su condición de iluminación actual.&lt;/p&gt;&lt;p&gt;Esto establece una línea base a partir de la cual la aplicación reestimará periódicamente su nivel de luz ambiental como una proporción de la luz solar estimada para su ubicación.&lt;/p&gt;&lt;p&gt;Si las condiciones cambian, ajuste el control deslizante para alterar la proporción de la línea base.&lt;/p&gt;&lt;p&gt;La trayectoria proyectada se muestra en la &lt;i&gt;Luz Diálogo de medición&lt;/i&gt;, junto con la &lt;i&gt;Estimación de lux exterior&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) y el &lt;i&gt;Factor de luz diurna&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), la relación base entre lux interior y exterior.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
@@ -931,24 +906,24 @@ Las estimaciones de Ei se utilizan mediante la opción de medición semiautomát
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
         <source>No location defined.</source>
         <translation>No hay ubicación definida.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="256" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
         <source>Ignoring daylight-factor, Sun not bright enough.</source>
         <translation>Ignorando el factor de luz diurna, el Sol no brilla lo suficiente.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
         <source>Ignoring daylight-factor, out of viable range.</source>
         <translation>Ignorando el factor de luz natural, fuera de rango viable.</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>El módulo de puerto serie pyserial requerido no está instalado en este sistema.</translation>
     </message>

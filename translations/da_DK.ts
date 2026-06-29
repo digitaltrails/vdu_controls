@@ -604,22 +604,22 @@ Dette diagram kan ændres i størrelsen.</translation>
         <translation>Udfør kontrol af omgivende belysning nu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
         <source>Error setting up lux meter: {}</source>
         <translation>Fejl ved opsætning af luxmåler: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Auto disabled, no location defined.</source>
         <translation>Auto deaktiveret, ingen placering defineret.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Starting automatic light metering.</source>
         <translation>Starter automatisk lysmåling.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>Skifter til manuel indtastning af omgivende lux.</translation>
     </message>
@@ -812,34 +812,8 @@ Når du designer lysstyrke-responskurver, så overvej at minimere lysstyrkeændr
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
-        <source>Semi-automatic lux adjustment: quick start instructions.
-________________________________________________________________________________________
-
-Use the ambient-light-level slider to set the current light level.
-
-Starting from your chosen level, the application will adjust the light level
-according to a trajectory based on the estimated sunlight for your location.
-
-If conditions change, adjust the slider to alter the trajectory.
-
-The trajectory is shown in the Light Metering Dialog, along with the estimate
-of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to
-outdoor lux.
-</source>
-        <translation>Semi-automatisk lux-justering: hurtig start instruktioner.
-________________________________________________________________________________________
-
-Brug skyderen for omgivende lysstyrke til at indstille det aktuelle lysniveau.
-
-Startende fra dit valgte niveau vil programmet justere lysniveauet
-i henhold til en bane baseret på estimeret sollys for din placering.
-
-Hvis forholdene ændrer sig, juster skyderen for at ændre banen.
-
-Banen vises i dialogboksen Lysmåling sammen med estimatet
-af udendørs lux (Eo) og dagslysfaktoren (DF), forholdet mellem indendørs og
-udendørs lux.
-</translation>
+        <source>&lt;h3&gt;Semi-automatic adjustment: quick start instructions.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Use the ambient-light-level slider to indicate your current lighting condition.&lt;/p&gt;&lt;p&gt;This establishes a baseline from which the application will periodically reestimate your ambient-light-level as a proportion of the estimated sunlight for your location.&lt;/p&gt;&lt;p&gt;If conditions change, adjust the slider to alter the baseline proportion.&lt;/p&gt;&lt;p&gt;The projected trajectory is shown in the &lt;i&gt;Light Metering Dialog&lt;/i&gt;, along with the &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor to outdoor lux.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;Halvautomatisk justering: instruktioner til hurtig start.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Brug skyderen til omgivende lysniveau til at angive din aktuelle lystilstand.&lt;/p&gt;&lt;p&gt;Dette etablerer en basislinje, hvorfra applikationen med jævne mellemrum vil genvurdere dit omgivende lysniveau som en andel af det estimerede sollys for din placering.&lt;/p&gt;&lt;p&gt; juster basislinjen for at ændre grundlinjen. proportion.&lt;/p&gt;&lt;p&gt;Den projekterede bane er vist i &lt;i&gt;Lysmålingsdialogen&lt;/i&gt; sammen med &lt;i&gt;Estimat af udendørs lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) og &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), basisforholdet mellem indendørs og udendørs lux.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
@@ -932,24 +906,24 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
         <source>No location defined.</source>
         <translation>Ingen placering defineret.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="256" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
         <source>Ignoring daylight-factor, Sun not bright enough.</source>
         <translation>Ignorerer dagslysfaktoren, solen ikke lys nok.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
         <source>Ignoring daylight-factor, out of viable range.</source>
         <translation>Ignorerer dagslysfaktor, uden for levedygtigt område.</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>Det nødvendige pyserial seriel-port-modul er ikke installeret på dette system.</translation>
     </message>

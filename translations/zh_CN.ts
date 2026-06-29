@@ -604,22 +604,22 @@ This chart is resizable. </source>
         <translation>立即执行环境光检查</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="405" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
         <source>Error setting up lux meter: {}</source>
         <translation>设置勒克斯计出错：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="434" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Auto disabled, no location defined.</source>
         <translation>自动已禁用，未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="437" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Starting automatic light metering.</source>
         <translation>开始自动测光。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="440" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>切换到手动输入环境勒克斯。</translation>
     </message>
@@ -812,33 +812,8 @@ When designing brightness-response curves, consider minimizing brightness change
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
-        <source>Semi-automatic lux adjustment: quick start instructions.
-________________________________________________________________________________________
-
-Use the ambient-light-level slider to set the current light level.
-
-Starting from your chosen level, the application will adjust the light level
-according to a trajectory based on the estimated sunlight for your location.
-
-If conditions change, adjust the slider to alter the trajectory.
-
-The trajectory is shown in the Light Metering Dialog, along with the estimate
-of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to
-outdoor lux.
-</source>
-        <translation>半自动勒克斯调节：快速入门指南。
-________________________________________________________________________________________
-
-使用环境光水平滑块设置当前光照水平。
-
-从您选择的水平开始，应用程序将根据基于您所在位置估计的阳光轨迹
-来调整光照水平。
-
-如果条件变化，请调整滑块以改变轨迹。
-
-轨迹显示在测光对话框中，同时显示室外勒克斯（Eo）的估算值
-和日光因子（DF），即室内外勒克斯的比值。
-</translation>
+        <source>&lt;h3&gt;Semi-automatic adjustment: quick start instructions.&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;Use the ambient-light-level slider to indicate your current lighting condition.&lt;/p&gt;&lt;p&gt;This establishes a baseline from which the application will periodically reestimate your ambient-light-level as a proportion of the estimated sunlight for your location.&lt;/p&gt;&lt;p&gt;If conditions change, adjust the slider to alter the baseline proportion.&lt;/p&gt;&lt;p&gt;The projected trajectory is shown in the &lt;i&gt;Light Metering Dialog&lt;/i&gt;, along with the &lt;i&gt;Estimate of outdoor lux&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) and the &lt;i&gt;Daylight Factor&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;), the baseline ratio of indoor to outdoor lux.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;半自动调整：快速启动说明。&lt;/h3&gt;&lt;hr/&gt;&lt;p&gt;使用环境光级别滑块指示您当前的照明条件。&lt;/p&gt;&lt;p&gt;这会建立一个基线，应用程序将根据该基线定期重新估计您的环境光级别，作为您所在位置的估计阳光的比例。&lt;/p&gt;&lt;p&gt;如果情况发生变化，请调整滑块以更改基线比例。&lt;/p&gt;&lt;p&gt;投影轨迹显示在&lt;i&gt;测光中Dialog&lt;/i&gt;，以及&lt;i&gt;室外勒克斯估计&lt;/i&gt; (&lt;b&gt;Eo&lt;/b&gt;) 和&lt;i&gt;日光系数&lt;/i&gt; (&lt;b&gt;DF&lt;/b&gt;)，即室内与室外勒克斯的基线比率。&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
@@ -930,24 +905,24 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
         <source>No location defined.</source>
         <translation>未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="256" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
         <source>Ignoring daylight-factor, Sun not bright enough.</source>
         <translation>忽略日光因素，太阳不够亮。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
         <source>Ignoring daylight-factor, out of viable range.</source>
         <translation>忽略日光因素，超出可行范围。</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>此系统上未安装所需的 pyserial 串口模块。</translation>
     </message>
