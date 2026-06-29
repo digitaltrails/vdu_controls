@@ -254,7 +254,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def update_df_from_lux_value(new_lux_value: float, semi_auto_source: bool):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux < 100 and not semi_auto_source:  # only for reasonable daylight lux levels.
+            if solar_lux < 10:  # only for reasonable daylight lux levels.
                 log.debug(f"LuxSemiAuto: update daylight-factor: ignored " 
                           f"{new_lux_value=}, associated {solar_lux=} too small.") if log.debug_enabled else None
                 LuxMeterSemiAutoDevice.status_message = tr('Ignoring daylight-factor, Sun not bright enough.')
