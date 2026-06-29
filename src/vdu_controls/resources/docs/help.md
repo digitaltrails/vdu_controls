@@ -492,12 +492,14 @@ intervals, and per-VDU lux/brightness profiles.  The metering dialog additionall
 rolling display of current metered light level and VDU brightness levels.
 
 ``Semi-automatic ambient-light level adjustment`` periodically adjusts the light-level in
-proportion to the estimated sunlight for your geolocation. Set the
-current light level by adjusting the ambient-light-level slider.  Starting from your chosen level,
-the application will adjust the light-level following a trajectory based on the estimated sunlight.
-If conditions change, adjust the slider to alter the trajectory.  The trajectory is plotted in
-the Light-Metering dialog, along with the estimate of outdoor lux (Eo) and the Daylight-Factor
-(DF) - the ratio of indoor to outdoor lux.
+proportion to the estimated sunlight for your geolocation. 
+Use the ambient-light-level slider to indicate your current lighting condition. This 
+establishes a baseline from which the application will periodically reestimate 
+your ambient-light-level in proportion to the estimated sunlight for your location.
+If conditions change, adjust the slider to alter the baseline proportion.
+The estimated trajectory is plotted in the *Light-Metering dialog*, along with the 
+*Estimate of outdoor lux* (**Eo**) and the *Daylight-Factor* (**DF**) - the 
+baseline ratio of indoor to outdoor lux.
 
 ``Fully-automatic ambient-light level adjustment`` requires setting up a hardware lux metering device.
 A metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable (script or

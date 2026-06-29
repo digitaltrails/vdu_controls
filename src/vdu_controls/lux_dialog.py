@@ -393,15 +393,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.main_controller.edit_config(self.main_controller.main_config.config_name)
                 return False
             MBox(MIcon.Information,
-                 msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"
-                        "________________________________________________________________________________________\n\n"
-                        "Use the ambient-light-level slider to set the current light level.\n\n"
-                        "Starting from your chosen level, the application will adjust the light level\n"
-                        "according to a trajectory based on the estimated sunlight for your location.\n\n"
-                        "If conditions change, adjust the slider to alter the trajectory.\n\n"
-                        "The trajectory is shown in the Light Metering Dialog, along with the estimate\n"
-                        "of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to\n"
-                        "outdoor lux.\n"),
+                 msg=tr("<h3>Semi-automatic adjustment: quick start instructions.</h3>"
+                        "<hr/>"
+                        "<p>Use the ambient-light-level slider to indicate your current lighting condition.</p>"
+                        "<p>This establishes a baseline from which the application will periodically reestimate "
+                        "your ambient-light-level as a proportion of the estimated sunlight for your location.</p>"
+                        "<p>If conditions change, adjust the slider to alter the baseline proportion.</p>"
+                        "<p>The projected trajectory is shown in the <i>Light Metering Dialog</i>, along with "
+                        "the <i>Estimate of outdoor lux</i> (<b>Eo</b>) and the <i>Daylight Factor</i> (<b>DF</b>), "
+                        "the baseline ratio of indoor to outdoor lux.</p>"),
                  details=tr("Estimation of indoor illumination (Ei) from solar illumination (Eo):\n"
                             "    Ei = DF * Eo\n"
                             "    DF = Ei / Eo\n"
