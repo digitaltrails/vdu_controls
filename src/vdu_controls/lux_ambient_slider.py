@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from functools import partial
+
 from typing import Dict, TYPE_CHECKING
 
+from vdu_controls.misc import format_number
 from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
 from vdu_controls.qt_imports import QFont
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
@@ -66,6 +68,7 @@ class LuxAmbientSlider(QWidget):
                             clicked=self.title_button_pressed_qtsignal)   # type: ignore
         label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
         top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
+        self.label = label
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
@@ -188,3 +191,6 @@ class LuxAmbientSlider(QWidget):
                     self.blockSignals(False)
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
+                daylight_factor = 1.0 if LuxMeterSemiAutoDevice.daylight_factor is None else LuxMeterSemiAutoDevice.daylight_factor
+                self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(format_number(daylight_factor, 4)))
+

@@ -6,6 +6,7 @@ import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 from enum import Enum
 
 from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA
@@ -71,3 +72,12 @@ class GeoLocation:
             return NotImplemented  # don't attempt to compare against unrelated types
         return self.latitude == other.latitude and self.longitude == other.longitude and \
             self.place_name == other.place_name
+
+def format_number(value: float| Decimal, max_decimal_places: int) -> str:
+    """
+    Formats a number to max_decimal_places decimal places,
+    removing unnecessary trailing zeros, without scientific notation.
+    """
+    # Round to max_decimal_places first, then strip trailing zeros
+    formatted = f"{value:.{max_decimal_places}f}"
+    return formatted.rstrip('0').rstrip('.')

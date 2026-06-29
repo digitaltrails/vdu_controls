@@ -122,8 +122,10 @@ class TitleButton(StdButton):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.svg_icon = ThemedSvgWidget(icon_source, desktop_font_height(scaled=1.8), desktop_font_height(scaled=1.8), parent=self)
         layout.addWidget(self.svg_icon)
-        self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
-                            f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
+        self.main_text = main_text
+        self.sub_text = sub_text
+        self.label = QLabel()
+        self.update_text()
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swallowing clicks
@@ -134,6 +136,16 @@ class TitleButton(StdButton):
         self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +  # Avoids size issues if embedded in a layout
                               my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
                               my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
+
+    def update_text(self, main_text: str | None = None, sub_text: str | None = None):
+        if main_text is not None:
+            self.main_text = main_text
+        if sub_text is not None:
+            self.sub_text = sub_text
+        self.label.setText(
+            f"<span style='font-weight:bold;'>{self.main_text}<br/>"
+            f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{self.sub_text}</span>")
+
 
 
 class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.
