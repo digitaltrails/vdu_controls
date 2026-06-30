@@ -516,6 +516,8 @@ Version History
     focus the existing window. Uncheck the _single-instance_ option to override. 
     Contributed by Mohammed Elsayed Ahmed.
   * The ambient-light-level slider works even if location is not set.
+  * The ambient-light-level slider behaves better when dragged after sunset 
+    and when dragged beyond the estimated solor lux level.
   * The laptop-panel option now defaults to enabled.
   * The Settings-Dialog global-options have been grouped under subheadings.
   * The Settings-Dialog offers more popup-guidance on dependencies 
