@@ -538,57 +538,62 @@ This chart is resizable. </source>
 </context><context>
     <name>LuxAmbientSlider</name>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="48" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
         <source>Sunlight</source>
         <translation>ضوء الشمس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="49" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
         <source>Daylight</source>
         <translation>ضوء النهار</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
         <source>Overcast</source>
         <translation>غائم</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
         <source>Twilight</source>
         <translation>الشفق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="54" />
         <source>Subdued</source>
         <translation>خافت</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="55" />
         <source>Dark</source>
         <translation>مظلم</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="65" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
         <source>Ambient Light Level</source>
         <translation>مستوى الإضاءة المحيطة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="65" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
         <source>lux</source>
         <translation>لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="69" />
         <source>Ambient light level control for adjusting all monitors.
 (Click for Light-Meter Dialog)</source>
         <translation>التحكم بمستوى الإضاءة المحيطة لضبط جميع الشاشات.
 (انقر لفتح حوار قياس الضوء)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="108" />
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="84" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="111" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="87" />
         <source>Ambient light level input (lux value)</source>
         <translation>إدخال مستوى الإضاءة المحيطة (قيمة اللوكس)</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="195" />
+        <source>lux &amp;nbsp;&amp;nbsp; (DF={})</source>
+        <translation>لوكس    (DF={})</translation>
     </message>
 </context><context>
     <name>LuxAutoController</name>
@@ -905,24 +910,24 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="217" />
         <source>No location defined.</source>
         <translation>لم يتم تعريف موقع.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
-        <source>Ignoring daylight-factor, Sun not bright enough.</source>
-        <translation>بتجاهل عامل ضوء النهار، الشمس ليست مشرقة بما فيه الكفاية.</translation>
+        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <source>DF unchanged - low sunlight.</source>
+        <translation>DF دون تغيير - ضوء الشمس المنخفض.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
-        <source>Ignoring daylight-factor, out of viable range.</source>
-        <translation>تجاهل عامل ضوء النهار، خارج النطاق القابل للتطبيق.</translation>
+        <location filename="../src/vdu_controls/lux_meters.py" line="270" />
+        <source>DF unchanged - too low (&lt;=0.0)</source>
+        <translation>DF لم يتغير - منخفض جدًا (&lt;=0.0)</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="152" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>وحدة المنفذ التسلسلي pyserial المطلوبة غير مثبتة على هذا النظام.</translation>
     </message>

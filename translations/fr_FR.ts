@@ -539,57 +539,62 @@ Ce diagramme est redimensionnable.</translation>
 </context><context>
     <name>LuxAmbientSlider</name>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="48" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
         <source>Sunlight</source>
         <translation>Lumière du soleil</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="49" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
         <source>Daylight</source>
         <translation>Lumière du jour</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
         <source>Overcast</source>
         <translation>Très nuageux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
         <source>Twilight</source>
         <translation>Crépuscule</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="54" />
         <source>Subdued</source>
         <translation>Tamisé</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="55" />
         <source>Dark</source>
         <translation>Sombre</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="65" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
         <source>Ambient Light Level</source>
         <translation>Niveau de lumière ambiante</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="65" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
         <source>lux</source>
         <translation>lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="69" />
         <source>Ambient light level control for adjusting all monitors.
 (Click for Light-Meter Dialog)</source>
         <translation>Contrôle du niveau de lumière ambiante pour ajuster tous les moniteurs.
 (Cliquez pour ouvrir la boîte de dialogue de mesure de la lumière)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="108" />
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="84" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="111" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="87" />
         <source>Ambient light level input (lux value)</source>
         <translation>Saisie du niveau de lumière ambiante (valeur en lux)</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="195" />
+        <source>lux &amp;nbsp;&amp;nbsp; (DF={})</source>
+        <translation>lux    (DF={})</translation>
     </message>
 </context><context>
     <name>LuxAutoController</name>
@@ -906,24 +911,24 @@ Les estimations de Ei sont utilisées par l'option de mesure semi-automatique.</
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="213" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="217" />
         <source>No location defined.</source>
         <translation>Aucun emplacement défini.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="260" />
-        <source>Ignoring daylight-factor, Sun not bright enough.</source>
-        <translation>En ignorant le facteur de lumière du jour, le soleil n'est pas assez brillant.</translation>
+        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <source>DF unchanged - low sunlight.</source>
+        <translation>DF inchangé - faible ensoleillement.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="269" />
-        <source>Ignoring daylight-factor, out of viable range.</source>
-        <translation>Ignorant le facteur de lumière du jour, hors de portée viable.</translation>
+        <location filename="../src/vdu_controls/lux_meters.py" line="270" />
+        <source>DF unchanged - too low (&lt;=0.0)</source>
+        <translation>DF inchangé - trop faible (&lt;=0,0)</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="150" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="152" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>Le module pyserial requis pour le port série n'est pas installé sur ce système.</translation>
     </message>
