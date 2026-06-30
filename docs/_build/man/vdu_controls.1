@@ -28,9 +28,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 25, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 30, 2026" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.6.5rc3
+vdu_controls \- vdu_controls 2.6.5rc4
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
@@ -54,7 +54,6 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-separate\-status\-bar|\-\-separate\-status\-bar]
 [\-\-tick\-marks | \-\-no\-tick\-marks ]
 [\-\-laptop\-panel|\-\-no\-laptop\-panel]
-[\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
 [\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather] 
 [\-\-tick\-marks|\-\-no\-tick\-marks]
@@ -146,11 +145,9 @@ show tick marks on control\-sliders.
 allow laptop panels to be controlled
 \fB\-\-laptop\-panel\fP is the default
 .TP
-.B \-\-protect\-nvram|\-\-no\-protect\-nvram
-alter options and defaults to minimize VDU NVRAM writes.
-.TP
 .B \-\-order\-by\-name|\-\-no\-order\-by\-name
 order tabs, lists, and dropdowns by VDU name.
+\fB\-\-no\-order\-by\-name\fP is the default.
 .TP
 .B \-\-lux\-options|\-\-no\-lux\-options
 enable/disable ambient light metering options.
@@ -160,7 +157,7 @@ enable/disable ambient light metering options.
 enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 .TP
 .B \-\-weather|\-\-no\-weather
-enable/disable weather lookups. \fB\-\-weather\fP is the default.
+enable/disable weather lookups. \fB\-\-no\-weather\fP is the default.
 .TP
 .B \-\-tick\-marks|\-\-no\-tick\-marks
 Show tick marks on control sliders. \fB\-\-tick\-marks\fP is the default.
@@ -242,7 +239,7 @@ Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall b
 .sp
 The UI look\-and\-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
-For desktops that don\(aqt integrate with Qt/KDE themeing, the \fIqt5ct\fP and \fIqt6ct\fP utilities may
+For desktops that don\(aqt integrate with Qt/KDE theming, the \fIqt5ct\fP and \fIqt6ct\fP utilities may
 be used to alter the overall Qt theme.
 .sp
 The UI provides an optional \fIambient\-light slider\fP for simultaneously adjusting
@@ -376,7 +373,7 @@ the \fBcapabilities override\fP:
 .INDENT 3.5
 .INDENT 0.0
 .IP 1. 3
-Open the \fISettings\fP tab for the VDU, navigate to the \(dqcapabilities override* field
+Open the \fISettings\fP tab for the VDU, navigate to the \fIcapabilities override\fP field
 .IP 2. 3
 locate the feature, in this example, the brightness,
 .IP 3. 3
@@ -634,12 +631,14 @@ intervals, and per\-VDU lux/brightness profiles.  The metering dialog additional
 rolling display of current metered light level and VDU brightness levels.
 .sp
 \fBSemi\-automatic ambient\-light level adjustment\fP periodically adjusts the light\-level in
-proportion to the estimated sunlight for your geolocation. Set the
-current light level by adjusting the ambient\-light\-level slider.  Starting from your chosen level,
-the application will adjust the light\-level following a trajectory based on the estimated sunlight.
-If conditions change, adjust the slider to alter the trajectory.  The trajectory is plotted in
-the Light\-Metering dialog, along with the estimate of outdoor lux (Eo) and the Daylight\-Factor
-(DF) \- the ratio of indoor to outdoor lux.
+proportion to the estimated sunlight for your geolocation. 
+Use the ambient\-light\-level slider to indicate your current lighting condition. This 
+establishes a baseline from which the application will periodically reestimate 
+your ambient\-light\-level in proportion to the estimated sunlight for your location.
+If conditions change, adjust the slider to alter the baseline proportion.
+The estimated trajectory is plotted in the \fILight\-Metering dialog\fP, along with the 
+\fIEstimate of outdoor lux\fP (\fBEo\fP) and the \fIDaylight\-Factor\fP (\fBDF\fP) \- the 
+baseline ratio of indoor to outdoor lux.
 .sp
 \fBFully\-automatic ambient\-light level adjustment\fP requires setting up a hardware lux metering device.
 A metering device may be a serial\-device, a UNIX FIFO (named\-pipe), or an executable (script or
@@ -753,8 +752,8 @@ values from presets if you don\(aqt want to permanently attach them.
 If you use light\-metered auto\-brightness and preset\-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light\-metering might increase it.  If you wish to use the two together, design your lux/brightness
-profile steps to match the brightness levels of specific presets \- for example, a full\-sun preset
-and the matching step in a lux/brightness Profile might both be assigned the same brightness level.
+profile steps to match the brightness levels of specific presets. For example, give 
+a full\-sun preset and a corresponding step in a lux/brightness Profile the same brightness value.
 .SS Lux Metering Internal Parameters
 .sp
 The following internal constants can be altered by manually editing
@@ -851,7 +850,7 @@ the UI on each may not be exactly the same.
 .sp
 Depending on which desktop or system\-tray\-extension you are using, a
 left\-mouse\-click on the app\-icon in the system\-tray may restore
-the application\(aqs main\-widow or it may bring up the application\(aqs
+the application\(aqs main\-window, or it may bring up the application\(aqs
 \fImain\-menu\fP\&.  To support both kinds of desktop, the \fImain\-menu\fP includes a 
 \fIControl Panel\fP  menu option that toggles visibility of the main window.
 .sp
@@ -889,7 +888,7 @@ reconfigured appropriately.
 .sp
 Locale is determined by the Linux and Qt environment variables,
 \fILC_ALL\fP and \fILANGUAGE\fP, which should preferably be in agreement.
-These two enviroment variables can be manually set to force
+These two environment variables can be manually set to force
 a locale, for example:
 .sp
 The following locations are searched for localized translations:
@@ -905,6 +904,13 @@ The following locations are searched for localized translations:
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.sp
+In some cases, Qt internal buttons seem to lack translations in
+Qt\(aqs own translation files, either because there isn\(aqt a 
+translation or &\-shortcut specifiers cause mismatches.  
+The \fIvdu_controls\fP code attempts to cope with &\-shortcut specifier
+mismatches, but doesn\(aqt include any solutions for translations
+that are simply missing.
 .sp
 To date, there hasn\(aqt been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
@@ -965,7 +971,7 @@ This script often refers to displays and monitors as VDUs in order to disambigua
 duality of \(dqdisplay\(dq and \(dqmonitor\(dq
 .SH PREREQUISITES
 .sp
-Packaged versions of \fBvdu_control\fP are likely to include all of the following
+Packaged versions of \fBvdu_control\fP are likely to include all the following
 automatically.
 .INDENT 0.0
 .INDENT 3.5
@@ -975,7 +981,7 @@ automatically.
 .IP \(bu 2
 \fIddcutil\fP, the command line DDC interface.
 .IP \(bu 2
-\fIlibddcutil\fP and \fIddcutil\-service\fP, obtional, but recommended for increased reliability.
+\fIlibddcutil\fP and \fIddcutil\-service\fP, optional, but recommended for increased reliability.
 more features, and increased speed.
 .UNINDENT
 .UNINDENT
@@ -989,7 +995,7 @@ are only attempted when settings require them:
 .IP \(bu 2
 \fIbrightnessctl\fP,  optional, needed for controlling laptop\-panels.
 .IP \(bu 2
-\fIpython3\-pyudev\fP, optional, needed for detecting brighntess changes on laptop\-panels.
+\fIpython3\-pyudev\fP, optional, needed for detecting brightness changes on laptop\-panels.
 .IP \(bu 2
 \fIpyserial\fP, optional, required to use a serial\-port light\-metering device (only
 loaded if needed).
@@ -1005,7 +1011,7 @@ ddcutil detect
 .UNINDENT
 .UNINDENT
 .sp
-Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
+Read ddcutil documentation concerning config of i2c_dev with Nvidia GPUs. Detailed ddcutil info
 at \%<https://\:www\:.ddcutil\:.com/>
 .SH ENVIRONMENT
 .INDENT 0.0

@@ -18,7 +18,6 @@ a DDC control panel for monitors</h1>
                  [--separate-status-bar|--separate-status-bar]
                  [--tick-marks | --no-tick-marks ]
                  [--laptop-panel|--no-laptop-panel]
-                 [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
                  [--schedule|--no-schedule] [--weather|--no-weather] 
                  [--tick-marks|--no-tick-marks]
@@ -79,17 +78,16 @@ equivalent settings.</p>
   --laptop-panel|--no-laptop-panel
                         allow laptop panels to be controlled
                         ``--laptop-panel`` is the default
-  --protect-nvram|--no-protect-nvram
-                        alter options and defaults to minimize VDU NVRAM writes.
   --order-by-name|--no-order-by-name
                         order tabs, lists, and dropdowns by VDU name.
+                        ``--no-order-by-name`` is the default.
   --lux-options|--no-lux-options
                         enable/disable ambient light metering options.
                         ``--lux-options`` is the default.
   --schedule|--no-schedule
                         enable/disable preset scheduling. ``--schedule`` is the default.
   --weather|--no-weather
-                        enable/disable weather lookups. ``--weather`` is the default.
+                        enable/disable weather lookups. ``--no-weather`` is the default.
   --tick-marks|--no-tick-marks
                         Show tick marks on control sliders. ``--tick-marks`` is the default.
   --dbus-client|--no-dbus-client
@@ -148,7 +146,7 @@ each request.</p>
 <p>The UI look-and-feel dynamically adjusts to dark and light themes.
 The application may optionally run in the system tray of KDE, Deepin,
 GNOME, and Xfce (and possibly others). For desktops that don’t integrate
-with Qt/KDE themeing, the <code>qt5ct</code> and <code>qt6ct</code>
+with Qt/KDE theming, the <code>qt5ct</code> and <code>qt6ct</code>
 utilities may be used to alter the overall Qt theme.</p>
 <p>The UI provides an optional <em>ambient-light slider</em> for
 simultaneously adjusting all VDUs according to custom per-VDU ambient
@@ -260,7 +258,7 @@ settings tab and editing the text in the <strong>capabilities
 override</strong>:</p>
 <ol type="1">
 <li>Open the <em>Settings</em> tab for the VDU, navigate to the
-“capabilities override* field</li>
+<em>capabilities override</em> field</li>
 <li>locate the feature, in this example, the brightness,</li>
 <li>add a <strong>Values:</strong> <strong>min..max</strong>
 specification to the line following the feature definition,</li>
@@ -487,13 +485,15 @@ profiles. The metering dialog additionally provides a rolling display of
 current metered light level and VDU brightness levels.</p>
 <p><code>Semi-automatic ambient-light level adjustment</code>
 periodically adjusts the light-level in proportion to the estimated
-sunlight for your geolocation. Set the current light level by adjusting
-the ambient-light-level slider. Starting from your chosen level, the
-application will adjust the light-level following a trajectory based on
-the estimated sunlight. If conditions change, adjust the slider to alter
-the trajectory. The trajectory is plotted in the Light-Metering dialog,
-along with the estimate of outdoor lux (Eo) and the Daylight-Factor (DF)
-- the ratio of indoor to outdoor lux.</p>
+sunlight for your geolocation. Use the ambient-light-level slider to
+indicate your current lighting condition. This establishes a baseline
+from which the application will periodically reestimate your
+ambient-light-level in proportion to the estimated sunlight for your
+location. If conditions change, adjust the slider to alter the baseline
+proportion. The estimated trajectory is plotted in the
+<em>Light-Metering dialog</em>, along with the <em>Estimate of outdoor
+lux</em> (<strong>Eo</strong>) and the <em>Daylight-Factor</em>
+(<strong>DF</strong>) - the baseline ratio of indoor to outdoor lux.</p>
 <p><code>Fully-automatic ambient-light level adjustment</code> requires
 setting up a hardware lux metering device. A metering device may be a
 serial-device, a UNIX FIFO (named-pipe), or an executable (script or
@@ -589,9 +589,8 @@ together, their combined effects may conflict. For example, a scheduled
 preset may set a reduced brightness, but soon after, light-metering
 might increase it. If you wish to use the two together, design your
 lux/brightness profile steps to match the brightness levels of specific
-presets - for example, a full-sun preset and the matching step in a
-lux/brightness Profile might both be assigned the same brightness
-level.</p>
+presets. For example, give a full-sun preset and a corresponding step in
+a lux/brightness Profile the same brightness value.</p>
 <h2 id="lux-metering-internal-parameters">Lux Metering Internal
 Parameters</h2>
 <p>The following internal constants can be altered by manually editing
@@ -700,7 +699,7 @@ update dynamically.</li>
 and the rest, the UI on each may not be exactly the same.</p>
 <p>Depending on which desktop or system-tray-extension you are using, a
 left-mouse-click on the app-icon in the system-tray may restore the
-application’s main-widow or it may bring up the application’s
+application’s main-window, or it may bring up the application’s
 <em>main-menu</em>. To support both kinds of desktop, the
 <em>main-menu</em> includes a <em>Control Panel</em> menu option that
 toggles visibility of the main window.</p>
@@ -734,7 +733,7 @@ regarded as samples that may be incorrect.</strong></p>
 reconfigured appropriately.</p>
 <p>Locale is determined by the Linux and Qt environment variables,
 <code>LC_ALL</code> and <code>LANGUAGE</code>, which should preferably
-be in agreement. These two enviroment variables can be manually set to
+be in agreement. These two environment variables can be manually set to
 force a locale, for example:</p>
 <p>The following locations are searched for localized translations:</p>
 <ol type="1">
@@ -742,6 +741,12 @@ force a locale, for example:</p>
 <li><code>/usr/share/vdu_controls/translations/</code></li>
 <li><code>zipapp-root/vdu_controls/resources/translations/</code></li>
 </ol>
+<p>In some cases, Qt internal buttons seem to lack translations in Qt’s
+own translation files, either because there isn’t a translation or
+&amp;-shortcut specifiers cause mismatches.<br />
+The <code>vdu_controls</code> code attempts to cope with &amp;-shortcut
+specifier mismatches, but doesn’t include any solutions for translations
+that are simply missing.</p>
 <p>To date, there hasn’t been any expression of interest in the
 localization features. The provided translations are all testing samples
 which may not be supported over the long term.</p>
@@ -796,13 +801,13 @@ vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
 disambiguate the noun/verb duality of “display” and “monitor”</p>
 <h1 id="prerequisites">Prerequisites</h1>
 <p>Packaged versions of <code>vdu_control</code> are likely to include
-all of the following automatically.</p>
+all the following automatically.</p>
 <ul>
 <li><code>python3</code>, <code>python3-qt6</code> or
 <code>python-qt5</code>, <code>noto-sans-math-fonts</code>,
 <code>noto-sans-symbols2-fonts</code>.</li>
 <li><code>ddcutil</code>, the command line DDC interface.</li>
-<li><code>libddcutil</code> and <code>ddcutil-service</code>, obtional,
+<li><code>libddcutil</code> and <code>ddcutil-service</code>, optional,
 but recommended for increased reliability. more features, and increased
 speed.</li>
 </ul>
@@ -812,7 +817,7 @@ library imports are only attempted when settings require them:</p>
 <li><code>brightnessctl</code>, optional, needed for controlling
 laptop-panels.</li>
 <li><code>python3-pyudev</code>, optional, needed for detecting
-brighntess changes on laptop-panels.</li>
+brightness changes on laptop-panels.</li>
 <li><code>pyserial</code>, optional, required to use a serial-port
 light-metering device (only loaded if needed).</li>
 </ul>
@@ -820,7 +825,7 @@ light-metering device (only loaded if needed).</li>
 that the detect command detects your VDUs without issuing any
 errors:</p>
 <pre><code>    ddcutil detect</code></pre>
-<p>Read ddcutil documentation concerning config of i2c_dev with nvidia
+<p>Read ddcutil documentation concerning config of i2c_dev with Nvidia
 GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
 <h1 id="environment">Environment</h1>
 <pre><code>LC_ALL, LANG, LANGUAGE
