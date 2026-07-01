@@ -219,6 +219,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             current_dev = self.lux_config.get('lux-meter', "lux-device", fallback=LuxMeterSemiAutoDevice.device_name)
             current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback=LuxDeviceType.SEMI_AUTO.name)
             new_dev_type = self.meter_device_selector.itemData(index)
+            new_dev_path = ''  # No sure if this could escape the following if - so initialize just in case.
             if new_dev_type == LuxDeviceType.SEMI_AUTO:
                 new_dev_path = LuxMeterSemiAutoDevice.device_name
             elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
