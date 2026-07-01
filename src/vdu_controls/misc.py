@@ -72,12 +72,3 @@ class GeoLocation:
             return NotImplemented  # don't attempt to compare against unrelated types
         return self.latitude == other.latitude and self.longitude == other.longitude and \
             self.place_name == other.place_name
-
-def format_number(value: float| Decimal, max_decimal_places: int) -> str:
-    """
-    Formats a number to max_decimal_places decimal places,
-    removing unnecessary trailing zeros, without scientific notation.
-    """
-    # Round to max_decimal_places first, then strip trailing zeros
-    formatted = f"{value:.{max_decimal_places}f}"
-    return formatted.rstrip('0').rstrip('.')

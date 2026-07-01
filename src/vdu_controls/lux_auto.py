@@ -401,7 +401,10 @@ class LuxAutoController:
                 log.info("Lux auto-brightness settings refresh - monitoring is off.")
                 self.stop_worker()
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
-            self.lux_slider.set_current_value(round(self.lux_meter.get_value()))
+            if self.lux_slider is not None:
+                metered_value = self.lux_meter.get_value()
+                if metered_value is not None:
+                    self.lux_slider.set_current_value(round(metered_value))
         except LuxDeviceException as lde:
             log.error(f"Error setting up lux meter {lde}", trace=True)
             MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),

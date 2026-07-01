@@ -9,24 +9,18 @@ import select
 import subprocess
 import termios
 import time
-from decimal import Decimal
 from importlib import import_module
 from typing import Tuple
 
 from vdu_controls.qt_imports import QObject, pyqtSignal
 
-from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged
+from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged, MIN_DF_ADJUSTED_LUX, DF_MIN
 
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
-from vdu_controls.misc import zoned_now, GeoLocation, format_number
+from vdu_controls.misc import zoned_now, GeoLocation
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread
-
-MIN_DF_ADJUSTED_LUX = 100
-
-DAYLIGHT_FACTOR_MINIMUM = Decimal(0.00001)
-DAYLIGHT_FACTOR_PLACES = abs(DAYLIGHT_FACTOR_MINIMUM.as_tuple().exponent)
 
 
 class LuxMeterDevice(QObject):
@@ -270,13 +264,13 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                     LuxMeterSemiAutoDevice.status_message = tr('DF unchanged - too low (<=0.0)')
                 else:
                     log.debug(f"LuxSemiAuto: update {daylight_factor=:0.6f} {semi_auto_source=}")
-                    LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
+                    LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, persist=semi_auto_source)
 
     @staticmethod
-    def set_daylight_factor(daylight_factor: float, internal: bool = False, persist: bool = False):
-        daylight_factor = round(daylight_factor, DAYLIGHT_FACTOR_PLACES)
-        daylight_factor = max(daylight_factor, DAYLIGHT_FACTOR_MINIMUM)
-        if LuxMeterSemiAutoDevice.daylight_factor is None or abs(LuxMeterSemiAutoDevice.daylight_factor - daylight_factor) >= DAYLIGHT_FACTOR_MINIMUM:
+    def set_daylight_factor(daylight_factor: float, persist: bool = False):
+        #daylight_factor = round(daylight_factor, DF_PLACES)
+        daylight_factor = max(daylight_factor, DF_MIN)
+        if LuxMeterSemiAutoDevice.daylight_factor is None or abs(LuxMeterSemiAutoDevice.daylight_factor - daylight_factor) >= DF_MIN:
             if persist:
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")

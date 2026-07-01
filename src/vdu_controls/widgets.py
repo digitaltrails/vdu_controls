@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from decimal import Decimal
 from typing import Callable, Any, Tuple, Dict, Type, TypeVar, List
 
 import vdu_controls.logging as log
@@ -13,7 +14,7 @@ from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING, QPlainTextEdit, pyqtSignal,
                                      QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen, QFocusEvent,
-                                     QCoreApplication)
+                                     QCoreApplication, QLocale)
 from vdu_controls.scaling import desktop_font_height, dpx
 
 
@@ -30,6 +31,30 @@ def alter_margins(target: QWidget | QLayout,
     if bottom is None:
         bottom = default.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin) if default else current.bottom()
     target.setContentsMargins(QMargins(left, top, right, bottom))
+
+
+class LocaleFormatterMixin:
+    """Injects a standardized, locale-aware numeric formatting method into any class."""
+
+    def format_number(self, value: float | int | Decimal, places=2) -> str:
+        if isinstance(value, float):
+            try:
+                val_as_float = float(value)
+                return QLocale.system().toString(val_as_float, 'f', places)
+            except (ValueError, TypeError):
+                text = str(value)
+        elif isinstance(value, int):
+            # Qt handles the thousands separator natively based on the active locale
+            text = QLocale.system().toString(value)
+        elif isinstance(value, Decimal):
+            text = QLocale.system().toString(int(value))
+
+        if len(text) < places:
+            if QLocale.system().textDirection() == Qt.LayoutDirection.LeftToRight:
+                text = text.rjust(places)
+            else:
+                text = text.ljust(places)
+        return text
 
 
 class ThemedSvgWidget(QSvgWidget):

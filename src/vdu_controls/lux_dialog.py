@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple, TYPE_CHECKING, cast
 import vdu_controls.logging as log
 from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import MsgDestination
+from vdu_controls.constants import MsgDestination, DF_PLACES
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes
@@ -34,7 +34,7 @@ from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SV
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox, \
-    TitleLabel
+    TitleLabel, LocaleFormatterMixin
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
@@ -415,7 +415,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 (required_type == LuxDeviceType.FIFO and path.is_fifo()) or
                 (required_type == LuxDeviceType.EXECUTABLE and path.exists() and os.access(device, os.X_OK))):
             if not os.access(device, os.R_OK):
-                info = None
+                info = ''
                 if path.is_char_device() and path.group() != "root":
                     info = tr("You might need to be a member of the {} group.").format(path.group())
                 MBox(MIcon.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
@@ -505,7 +505,7 @@ class LuxGaugeHistory:
     when: datetime
 
 
-class LuxGaugeWidget(QGroupBox):
+class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
     lux_changed_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent: LuxDialog) -> None:
@@ -550,7 +550,7 @@ class LuxGaugeWidget(QGroupBox):
         self.history = self.history[-self.max_history:]
         self.history.append(LuxGaugeHistory(lux, zoned_now()))
         if self.updates_enabled:
-            self.current_lux_display.setText(tr("Lux: {}".format(lux)))
+            self.current_lux_display.setText(tr("Lux: {}".format(self.format_number(lux))))
             self.update_plot()
             self.lux_changed_qtsignal.emit(lux)
 
@@ -666,7 +666,7 @@ class LuxGaugeWidget(QGroupBox):
         # Add some text to the bottom
         if location:
             eo = calc_solar_lux(zoned_now(), location, 1.0)
-            self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
+            self.stats_label.setText(tr("Eo={0} lux    DF={1}").format(self.format_number(eo, 5), self.format_number(df, DF_PLACES)))
         else:
             self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
 

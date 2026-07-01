@@ -8,12 +8,11 @@ from functools import partial
 
 from typing import Dict, TYPE_CHECKING
 
-from vdu_controls.misc import format_number
 from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
 from vdu_controls.qt_imports import QFont
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
 
-from vdu_controls.constants import TOOLTIP_DURATION_MSEC
+from vdu_controls.constants import TOOLTIP_DURATION_MSEC, DF_PLACES
 from vdu_controls.app_locale import tr
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 
@@ -21,7 +20,7 @@ from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import LUX_SUNLIGHT_SVG, LUX_DAYLIGHT_SVG, LUX_OVERCAST_SVG, LUX_TWILIGHT_SVG, LUX_SUBDUED_SVG, LUX_DARK_SVG, \
     AMBIENT_PANEL_ICON_SVG
 from vdu_controls.widgets import ThemedSvgWidget, alter_margins, TitleButton, ClickableSlider, LineEditAll, StdButton, \
-    ThemedSvgButton
+    ThemedSvgButton, LocaleFormatterMixin
 
 if TYPE_CHECKING:
     from vdu_controls.lux_auto import LuxAutoController
@@ -36,7 +35,7 @@ class LuxZone:
     column_span: int
 
 
-class LuxAmbientSlider(QWidget):
+class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
     new_lux_value_qtsignal = pyqtSignal(int)
     status_icon_changed_qtsignal = pyqtSignal()
     status_icon_pressed_qtsignal = pyqtSignal()
@@ -98,7 +97,7 @@ class LuxAmbientSlider(QWidget):
 
         # A hacky way to get custom labels without redefining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
-            log10_label = QLabel(f"{value:2d}")
+            log10_label = QLabel(self.format_number(value, 5))
             app_font = QApplication.font()
             log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
             slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span,
@@ -152,7 +151,7 @@ class LuxAmbientSlider(QWidget):
                                           alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)  # type: ignore
             self.label_map[zone_button] = zone.icon_svg
             col += zone.column_span
-        value = 1000
+        value = 1000   # TODO - at least explain this
         if controller.lux_meter is not None:
             metered_value = controller.lux_meter.get_value()
             if metered_value is not None:
@@ -192,5 +191,5 @@ class LuxAmbientSlider(QWidget):
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
                 daylight_factor = 1.0 if LuxMeterSemiAutoDevice.daylight_factor is None else LuxMeterSemiAutoDevice.daylight_factor
-                self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(format_number(daylight_factor, 4)))
+                self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(self.format_number(daylight_factor, DF_PLACES)))
 

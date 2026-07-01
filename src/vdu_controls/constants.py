@@ -10,8 +10,8 @@ from pathlib import Path
 import vdu_controls.logging as log
 
 
-def getenv_logged(key: str, default: str = None):
-    """Get an environment variable and log the result"""
+def getenv_logged(key: str, default: str = '') -> str:
+    """Get an environment variable and log the result, returns '' for None"""
     value = os.getenv(key, default=default)
     log.info(f"getenv_logged('{key}', default='{default}') -> '{value}'")
     return value
@@ -128,3 +128,11 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 10 (Brightness)\n'
                                 '	   Feature: 12 (Contrast)\n'
                                 '	   Feature: 60 (Input Source)')
+
+# Minimum DF-adjusted Lux-value, when lux is below this, DF will no longer be updated (not enough daylight).
+MIN_DF_ADJUSTED_LUX = 100
+
+# Lowest Daylight factor the user can dial in using the slider
+DF_MIN = 0.00001
+# How many places to show in the DF when presenting to the user - should have as many places as DF_MIN
+DF_PLACES = 5
