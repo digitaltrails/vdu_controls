@@ -6,7 +6,7 @@ import os
 from typing import TYPE_CHECKING
 
 import vdu_controls.logging as log
-from vdu_controls import icon_utils, scaling, app_locale
+from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
     DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL
