@@ -217,8 +217,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
                         'Alter options and defaults to minimize VDU NVRAM writes. This setting mainly '
                         'affects whether transitions are gradual, using several writes, or instant, with as '
                         'few writes as possible.<p>'
-                        '<b>This option is now permanently enabled. '
-                        'If this is an issue for you, please contact the author.</b>'))
+                        '<b>This option is now permanently enabled.</b>'))
 
     ORDER_BY_NAME = ConfOptDef(
         conf_name='order-by-name', default_value="no",
