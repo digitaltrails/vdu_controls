@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -539,60 +539,60 @@ This chart is resizable. </source>
 </context><context>
     <name>LuxAmbientSlider</name>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="49" />
         <source>Sunlight</source>
         <translation>阳光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="50" />
         <source>Daylight</source>
         <translation>日光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="51" />
         <source>Overcast</source>
         <translation>阴天</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="52" />
         <source>Twilight</source>
         <translation>黄昏</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="54" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="53" />
         <source>Subdued</source>
         <translation>柔和</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="55" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="54" />
         <source>Dark</source>
         <translation>黑暗</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="66" />
         <source>Ambient Light Level</source>
         <translation>环境光水平</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="67" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="66" />
         <source>lux</source>
         <translation>勒克斯</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="69" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="68" />
         <source>Ambient light level control for adjusting all monitors.
 (Click for Light-Meter Dialog)</source>
         <translation>用于调节所有显示器的环境光水平控制。
 （点击打开测光对话框）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="111" />
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="87" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="110" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="86" />
         <source>Ambient light level input (lux value)</source>
         <translation>环境光水平输入（勒克斯值）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="195" />
+        <location filename="../src/vdu_controls/lux_ambient_slider.py" line="194" />
         <source>lux &amp;nbsp;&amp;nbsp; (DF={})</source>
         <translation>勒克斯 (DF={})</translation>
     </message>
@@ -609,22 +609,22 @@ This chart is resizable. </source>
         <translation>立即执行环境光检查</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="407" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="410" />
         <source>Error setting up lux meter: {}</source>
         <translation>设置勒克斯计出错：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
         <source>Auto disabled, no location defined.</source>
         <translation>自动已禁用，未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="439" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
         <source>Starting automatic light metering.</source>
         <translation>开始自动测光。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="442" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="445" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>切换到手动输入环境勒克斯。</translation>
     </message>
@@ -899,8 +899,8 @@ Ei 的估算值由半自动测光选项使用。</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="669" />
-        <source>Eo={:,} lux    DF={:,.4f}</source>
-        <translation>Eo={:,} 勒克斯    DF={:,.4f}</translation>
+        <source>Eo={0} lux    DF={1}</source>
+        <translation>Eo={0} 勒克斯 DF={1}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="671" />
@@ -910,24 +910,24 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="217" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="211" />
         <source>No location defined.</source>
         <translation>未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="258" />
         <source>DF unchanged - low sunlight.</source>
         <translation>DF 不变 - 低日照。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="270" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="264" />
         <source>DF unchanged - too low (&lt;=0.0)</source>
         <translation>DF 不变 - 太低 (&lt;=0.0)</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="152" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="146" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
         <translation>此系统上未安装所需的 pyserial 串口模块。</translation>
     </message>
