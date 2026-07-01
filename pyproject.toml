@@ -31,3 +31,19 @@ exclude_lines = [
     "raise NotImplementedError",
 ]
 show_missing = true
+
+[tool.pyright]
+# Start with strict rules as the foundation
+#typeCheckingMode = "strict"
+#typeCheckingMode = "standard"
+typeCheckingMode = "basic"
+
+# Environment configuration
+pythonVersion = "3.9" # Set to your target version
+reportMissingImports = "warning" # Warn instead of error for missing stubs
+
+# Practical overrides for a smoother workflow
+reportUnknownMemberType = "none" # Disables errors when libraries lack type stubs
+reportUnknownArgumentType = "none" # Prevents cascade errors from untyped third-party code
+reportUnknownVariableType = "none" # Keeps focus on your code's explicit types
+reportUntypedFunctionDecorator = "warning" # Warns if a decorator strips your type hints

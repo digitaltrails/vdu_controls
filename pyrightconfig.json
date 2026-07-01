@@ -1,6 +1,0 @@
-{
-  "extraPaths": ["./src", "./src/vdu_controls"],
-  "exclude": [],
-  "pythonVersion": "3.10",
-  "typeCheckingMode": "basic"
-}
