@@ -287,7 +287,7 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 * **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDUs via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
-* **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
+* **python >=3.9**: ``vdu_controls`` is written in python and may depend on some features present only in 3.9 onward.
 * **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
 
 Optionally:
@@ -512,6 +512,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5 
+  * The required minimum python3 version has risen from 3.8 to 3.9.
   * vdu_controls now defaults to a _single-instance_ mode. Subsequent launches 
     focus the existing window. Uncheck the _single-instance_ option to override. 
     Contributed by Mohammed Elsayed Ahmed.
