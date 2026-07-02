@@ -96,7 +96,7 @@ class ThemedSvgButton(StdButton):
     def __init__(self, icon_source: bytes, title: str = '', clicked: Callable | None = None, auto_default=True,
                  tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None,
                  parent: QWidget | None = None) -> None:
-        super().__init__(icon := create_icon_from_svg_bytes(icon_source), title, clicked, auto_default, tip, flat, margins,
+        super().__init__(create_icon_from_svg_bytes(icon_source), title, clicked, auto_default, tip, flat, margins,
                          icon_size, parent)
         self.icon_source = icon_source
 
