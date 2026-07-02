@@ -31,7 +31,7 @@ class DdcutilAggregator(DdcutilInterface):
     _setter_history: dict[tuple[str, int], deque] = {}
     _setter_history_lock = threading.Lock()
     _setter_cascade_detected = False
-    _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))
+    _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))  # Set either to zero to disable checks.
     _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
@@ -205,7 +205,12 @@ class DdcutilAggregator(DdcutilInterface):
         Boilerplate.
 
         Once too many calls are made block further writes until reset
+
+        Returns True if all is OK, False if rate has been exceeded.
         """
+        if cls._RATE_MAX_CALLS == 0 or cls._RATE_WINDOW_SECONDS == 0:
+            return True
+
         with cls._setter_history_lock:
 
             if cls._setter_cascade_detected:
