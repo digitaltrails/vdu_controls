@@ -167,10 +167,10 @@ class TitleButton(StdButton):
             self.main_text = main_text
         if sub_text is not None:
             self.sub_text = sub_text
-        self.label.setText(
-            f"<span style='font-weight:bold;'>{self.main_text}<br/>"
-            f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{self.sub_text}</span>")
-
+        new_text = f"<span style='font-weight:bold;'>{self.main_text}<br/>" \
+                f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{self.sub_text}</span>"
+        if self.label.text() != new_text:
+            self.label.setText(new_text)
 
 
 class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.

@@ -291,6 +291,11 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def set_location(location: GeoLocation | None):
         LuxMeterSemiAutoDevice.location = location
 
+    @staticmethod
+    def get_solor_lux() -> int:
+        if location := LuxMeterSemiAutoDevice.get_location():
+            return calc_solar_lux(zoned_now(), location, 1.0)
+        return 0
 
 class LuxDeviceException(Exception):
     pass

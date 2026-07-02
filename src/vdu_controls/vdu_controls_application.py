@@ -637,10 +637,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                     f"restore-preset: protect-nvram prevents '{preset.name}' from stepping, changes are immediate.")
                         else:
                             self.get_main_window().show_preset_status(tr("Already on Preset {} (no changes)").format(preset.name))
-                        if df := preset.get_daylight_factor():
-                            log.info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
-                            LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
-                            LuxDialog.reconfigure_instance()
+                        if self.main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED):
+                            if df := preset.get_daylight_factor():
+                                log.info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
+                                LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
+                                if self.lux_auto_controller.lux_slider is not None:
+                                    self.lux_auto_controller.lux_slider.update_label_df(df)
+                                LuxDialog.reconfigure_instance()
                     else:  # Interrupted or exception:
                         self.get_main_window().update_status_indicators()
                         self.get_main_window().show_preset_status(tr("Interrupted restoration of {}").format(preset.name))

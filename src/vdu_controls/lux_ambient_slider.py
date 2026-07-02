@@ -191,5 +191,10 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
                 daylight_factor = 1.0 if LuxMeterSemiAutoDevice.daylight_factor is None else LuxMeterSemiAutoDevice.daylight_factor
-                self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(self.format_number(daylight_factor, DF_PLACES)))
+                self.update_label_df(daylight_factor)
 
+    def update_label_df(self, daylight_factor: float):
+        self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(
+            self.format_number(daylight_factor, DF_PLACES)))
+        # self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={} Eo={} lux)").format(
+        #     self.format_number(daylight_factor, DF_PLACES), self.format_number(LuxMeterSemiAutoDevice.get_solor_lux())))
