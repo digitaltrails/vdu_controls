@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import os
 import time as sys_time
 from threading import Lock
 from typing import Dict, Tuple, Callable, List

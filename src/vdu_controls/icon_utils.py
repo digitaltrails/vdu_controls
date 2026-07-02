@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from importlib.resources import files as resources_files
 from pathlib import Path
 from typing import Dict
 

@@ -6,7 +6,6 @@ import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from decimal import Decimal
 from enum import Enum
 
 from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA

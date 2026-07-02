@@ -12,6 +12,9 @@ from typing import Callable
 
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.qt_imports import QIcon
+from vdu_controls.unicode import SIGNAL_SYMBOL, TRANSITION_ALWAYS_SYMBOL, TIME_CLOCK_SYMBOL, MENU_SYMBOL, TRANSITION_SYMBOL, \
+    TOO_HIGH_SYMBOL, WEATHER_RESTRICTION_SYMBOL, SUN_SYMBOL, TIMER_RUNNING_SYMBOL, SUCCESS_SYMBOL, SKIPPED_SYMBOL, \
+    WEATHER_CANCELLATION_SYMBOL
 
 from vdu_controls.weather_util import WeatherQuery
 from vdu_controls.config_ini import ConfIni
@@ -22,7 +25,6 @@ import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.solar_calc import SolarElevationKey, format_solar_elevation_abbreviation, format_solar_elevation_description, \
     parse_solar_elevation_ini_text
-from vdu_controls.unicode import *
 from vdu_controls.work_scheduler import SchedulerJob, ScheduleWorker, SchedulerJobType
 
 

@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import os
-import re
-import sys
-from enum import Enum
-from pathlib import Path
-import vdu_controls.logging as log
+import os as _os
+import re as _re
+import sys as _sys
+from enum import Enum as _Enum
+from pathlib import Path as _Path
+import vdu_controls.logging as _log
 
 
 def getenv_logged(key: str, default: str = '') -> str:
     """Get an environment variable and log the result, returns '' for None"""
-    value = os.getenv(key, default=default)
-    log.info(f"getenv_logged('{key}', default='{default}') -> '{value}'")
+    value = _os.getenv(key, default=default)
+    _log.info(f"getenv_logged('{key}', default='{default}') -> '{value}'")
     return value
 
 
@@ -39,18 +39,18 @@ APPNAME = "VDU Controls"
 # doesn't require hacks to copy with rc/beta suffixes which we are
 # never going to appear in delivered distro releases.
 VDU_CONTROLS_VERSION = '2.6.5-rc.4'
-VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
+VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in _re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
 VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
 
-assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
+assert _sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {_sys.version}).'
 
 VDU_CONTROLS_WEBSITE_URL = 'https://github.com/digitaltrails/vdu_controls'
 DDCUTIL_WEBSITE_URL = 'https://www.ddcutil.com/'
 DDCUTIL_SERVICE_WEBSITE_URL = 'https://github.com/digitaltrails/ddcutil-service'
 BRIGHTNESSCTL_WEBSITE_URL = 'https://github.com/Hummer12007/brightnessctl'
 
-CONFIG_DIR_PATH = Path.home() / '.config/vdu_controls'
+CONFIG_DIR_PATH = _Path.home() / '.config/vdu_controls'
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH / '_prefer_qt5_'
 
 TOOLTIP_DURATION_MSEC = 750
@@ -70,7 +70,9 @@ VDU_CONTROLS_DEVELOPER = getenv_logged('VDU_CONTROLS_DEVELOPER', default="no") =
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH / 'current_preset.txt'
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH / 'tray_icon.svg'
 
-STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
+STANDARD_ICON_PATHS = (_Path("/usr/share/vdu_controls/icons"),
+                       _Path("/usr/share/icons/breeze/actions/24"),
+                       _Path("/usr/share/icons"),)
 
 # Use a slight hack to make MsgBox.resizable.
 RESIZABLE_MESSAGEBOX_HACK = True
@@ -99,7 +101,7 @@ RESIZABLE_MESSAGEBOX_HACK = True
 # scaled pixels, not actual pixels).
 DEVELOPERS_NATIVE_FONT_HEIGHT = 16
 
-class MsgDestination(Enum):
+class MsgDestination(_Enum):
     DEFAULT = 0
     COUNTDOWN = 1
 

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Callable, List, cast
+from typing import List, cast
 
 import vdu_controls.gui_misc as gui_misc
 import vdu_controls.logging as log

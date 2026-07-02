@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import locale
+import os
+import re
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time as sys_time
 import traceback
 from contextlib import contextmanager
 from datetime import timedelta, datetime
 from functools import partial
+from pathlib import Path
 from typing import List, Tuple, Dict, Callable, cast, Optional, Iterator
 
 import vdu_controls.gui_misc as gui_misc
@@ -22,7 +26,9 @@ from vdu_controls import weather_util as weather_utils, app_locale
 from vdu_controls.about_dialog import AboutDialog
 from vdu_controls.app_locale import tr, initialise_locale_translations
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import *
+from vdu_controls.constants import getenv_logged, PRESET_SIGNAL_MIN, PRESET_SIGNAL_MAX, CURRENT_PRESET_NAME_FILE, CONFIG_DIR_PATH, \
+    MsgDestination, EXIT_CODE_FOR_RESTART, SYSTEM_TRAY_WAIT_SECONDS, APPNAME, VDU_CONTROLS_VERSION_TUPLE, CUSTOM_TRAY_ICON_FILE, \
+    VDU_CONTROLS_VERSION, IGNORE_VDU_MARKER_STR, HELP_FILENAME
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
 from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     BRIGHTNESS_VCP_CODE, DdcEventType, \
@@ -43,13 +49,18 @@ from vdu_controls.misc import zoned_now, proper_name, GeoLocation
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.preset_controller import PresetController
 from vdu_controls.preset_dialog import PresetsDialog
-from vdu_controls.qt_imports import *
+from vdu_controls.qt_imports import QGuiApplication, QtCore, \
+    QSize, QVBoxLayout, QStatusBar, QHBoxLayout, QLabel, QWidget, QWidgetItem, QScrollArea, \
+    QApplication, QCoreApplication, QShortcut, QSystemTrayIcon, QCursor, QSettings, QKeySequence, \
+    QTimer, QEvent, QtNetwork, QLocale, QSizePolicy, QIcon, QToolBar, QToolButton, QMessageBox, \
+    QMainWindow, QProcess, QPoint, QObject, pyqtBoundSignal, QT5_USE_HIGH_DPI_PIXMAPS, sip
+from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.release import Release
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
 from vdu_controls.svg import VDU_CONTROLS_SPLASH_SVG
-from vdu_controls.unicode import *
+from vdu_controls.unicode import MESSAGE_SYMBOL, TIME_CLOCK_SYMBOL, PRESET_APP_SEPARATOR_SYMBOL, SET_VCP_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
 from vdu_controls.vdu_controller import VduController, VcpSetterOrigin

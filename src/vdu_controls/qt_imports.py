@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+# ruff: noqa
 import sys
 from vdu_controls.constants import CONFIG_FILE_PREFER_QT5
 

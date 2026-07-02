@@ -13,7 +13,7 @@ from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QSize, pyqtSignal, Qt, QRegularExpression, QDir
 from vdu_controls.qt_imports import QValidator, QPalette, QRegularExpressionValidator
 from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame, QHBoxLayout, QLabel, QWidget, QScrollArea, QGridLayout, \
-    QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QPlainTextEdit, QSizePolicy
+    QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QSizePolicy
 from vdu_controls.solar_calc import degrees_from_zone_center
 
 from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef, MAIN_CONFIG_NAME

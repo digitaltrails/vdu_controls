@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import locale
-import os
 import unicodedata
 import urllib.request
 import urllib.parse
