@@ -99,7 +99,7 @@ def reverse_force_xwayland():
         log.info(f"Restoring environment variable QT_QPA_PLATFORM={original_qt_qpa_platform}")
         os.environ['QT_QPA_PLATFORM'] = original_qt_qpa_platform  # restore original value
     elif original_qt_qpa_platform == '':  # Will be '' if force_xwayland() has been called, otherwise it will be None
-        log.info(f"Removing environment variable QT_QPA_PLATFORM")
+        log.info("Removing environment variable QT_QPA_PLATFORM")
         os.environ.pop('QT_QPA_PLATFORM')  # before the call to force_xwayland() it did not previously exist, remove it.
 
 
@@ -532,7 +532,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if self.ddcutil is not None:
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # If acquired_lock is not None, then we have successfully acquired the lock.
-                        log.debug(f"_update_from_vdu: holding application_lock") if log.debug_enabled else None
+                        log.debug("_update_from_vdu: holding application_lock") if log.debug_enabled else None
                         try:
                             log.info(f"Refresh commences: {external_event=} {values_only=}") if log.debug_enabled else None
                             if values_only:
@@ -552,7 +552,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         log.info(f"Application is already busy, can't do a refresh ({external_event=})")
                         worker.stop()  # Stop the thread - which also indicates we did not acquire the lock.
                         return  # Prevents logging unlock (because we don't have the lock if we reach here).
-                log.debug(f"_update_from_vdu: released application_lock") if log.debug_enabled else None
+                log.debug("_update_from_vdu: released application_lock") if log.debug_enabled else None
 
         def _update_ui_view(worker: WorkerThread) -> None:
             assert self.refresh_data_task is not None
@@ -847,7 +847,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.weather_query.run_query()
                     if not self.weather_query.proximity_ok:
                         log.error(f"Preset '{preset.name}' weather location is {self.weather_query.proximity_km} km from "
-                                  f"Settings Location, check settings.")
+                                  "Settings Location, check settings.")
                         weather_util.weather_bad_location_dialog(self.weather_query)
             if not preset.check_weather(self.weather_query):
                 return False
@@ -1414,7 +1414,7 @@ class VduAppWindow(QMainWindow):
 
     def app_restore_window_state(self) -> bool:
         try:
-            log.debug(f"app_restore_window_state")
+            log.debug("app_restore_window_state")
             if len(self.qt_settings.allKeys()) == 0:  # No previous state
                 return False
             save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
@@ -1429,7 +1429,7 @@ class VduAppWindow(QMainWindow):
                     log.debug(f"app_restore_window_state: restoring {self.pos()=} {self.geometry()=}") if log.debug_enabled else None
             if window_state := self.qt_settings.value(self.qt_state_key, None):
                 self.restoreState(window_state)  # Restore component positions, such as toolbar location
-                log.debug(f"app_restore_window_state: restoring internal layout state") if log.debug_enabled else None
+                log.debug("app_restore_window_state: restoring internal layout state") if log.debug_enabled else None
             return smart_window
         finally:
             if self.main_panel and self.main_panel.main_toolbar:
@@ -1637,7 +1637,7 @@ def main() -> None:
     try:
         locale.setlocale(locale.LC_ALL, '')
     except locale.Error:
-        log.warning(f"Could not set the default locale - may not be an issue...", trace=True)
+        log.warning("Could not set the default locale - may not be an issue...", trace=True)
 
     main_config = VduControlsConfig(MAIN_CONFIG_NAME, main_config=True)
     default_config_path = ConfIni.get_path(MAIN_CONFIG_NAME)
