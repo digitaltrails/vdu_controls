@@ -681,6 +681,7 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
                 if lux := new_lux_meter.get_value():
                     self.append_new_value(round(lux))
             self.enable_gauge(True)
+        self.append_new_value(self.current_meter.get_value())  # Initialize displayed value from new meter.
 
     def enable_gauge(self, enable: bool = True) -> None:
         if enable:

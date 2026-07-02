@@ -156,7 +156,12 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                 buffer = self.serial_device.read_until()
                 decoded = buffer.decode('utf-8', errors='surrogateescape')
                 if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
-                    self.set_current_value(float(match.group(1)))
+                    new_value = float(match.group(1))
+                    diff = abs(new_value - self.current_value) if self.current_value else new_value
+                    if accept := diff >= 1.0:  # If < 1.0, filter out possible jittering.
+                        self.set_current_value(new_value)
+                    log.debug(
+                        f"LuxMeterFifoDevice: {self.current_value=:.2f} {new_value=:.2f} {diff=:.2f} {accept=}") if log.debug_enabled else None
                     self.backoff_secs = self.initial_backoff_secs
                 else:
                     problem = f"value that failed to parse: {decoded.encode('unicode_escape')}"
