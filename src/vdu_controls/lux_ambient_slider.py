@@ -99,7 +99,7 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
             log10_label = QLabel(self.format_number(value, 5))
             app_font = QApplication.font()
-            log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
+            log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .5), QFont.Weight.Normal))
             slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span,
                                           alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)   # type: ignore
 
