@@ -158,10 +158,8 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                 if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
                     new_value = float(match.group(1))
                     diff = abs(new_value - self.current_value) if self.current_value else new_value
-                    if accept := diff >= 1.0:  # If < 1.0, filter out possible jittering.
+                    if diff >= 1.0:  # If < 1.0, filter out possible jittering.
                         self.set_current_value(new_value)
-                    log.debug(
-                        f"LuxMeterFifoDevice: {self.current_value=:.2f} {new_value=:.2f} {diff=:.2f} {accept=}") if log.debug_enabled else None
                     self.backoff_secs = self.initial_backoff_secs
                 else:
                     problem = f"value that failed to parse: {decoded.encode('unicode_escape')}"
@@ -258,17 +256,14 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
             if solar_lux < 100:  # only for reasonable daylight lux levels.
-                log.debug(f"LuxSemiAuto: update daylight-factor: ignored " 
-                          f"{new_lux_value=}, associated {solar_lux=} too small.") if log.debug_enabled else None
                 LuxMeterSemiAutoDevice.status_message = tr('DF unchanged - low sunlight.')
             else:
                 daylight_factor = new_lux_value / solar_lux
                 if daylight_factor < 0.000001:
-                    log.debug(f"LuxSemiAuto: update daylight-factor: ignored, too low "
-                              f"{daylight_factor:0.6f}={new_lux_value}/{solar_lux}, DF out of workable range.") if log.debug_enabled else None
                     LuxMeterSemiAutoDevice.status_message = tr('DF unchanged - too low (<=0.0)')
                 else:
-                    log.debug(f"LuxSemiAuto: update {daylight_factor=:0.6f} {semi_auto_source=}")
+                    if semi_auto_source:
+                        log.debug(f"LuxSemiAuto: update {daylight_factor=:0.6f} {semi_auto_source=}") if log.debug_enabled else None
                     LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, persist=semi_auto_source)
 
     @staticmethod
