@@ -1,25 +1,37 @@
-name: Deploy MkDocs User Manual to Pages
+# Simple workflow for deploying MkDocs user manual to GitHub Pages
+name: Deploy static content to Pages
 
 on:
+  # Runs on pushes targeting the default branch
   push:
     branches: ["master"]
+
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -30,29 +42,63 @@ jobs:
         run: |
           pip install mkdocs mkdocs-material
 
-      - name: Build site
+      - name: Build MkDocs site
         run: |
-          # If you have mkdocs.yml in the root:
-          mkdocs build --site-dir _site
-          
-          # If you want to use README.md as the homepage:
-          # Create a docs folder and copy README.md there
+          # Create docs folder if it doesn't exist
           mkdir -p docs
-          cp README.md docs/index.md
-          cp -r screen-shots docs/
           
-          # Create a minimal mkdocs.yml
+          # Copy README.md as the homepage
+          cp README.md docs/index.md
+          
+          # Copy screenshots folder
+          cp -r screenshots docs/ 2>/dev/null || echo "No screenshots folder found"
+          
+          # Create mkdocs.yml configuration
           cat > mkdocs.yml << 'EOF'
           site_name: User Manual
+          site_description: User guide for my project
+          
           theme:
             name: material
             features:
               - navigation.sections
               - navigation.top
               - search.highlight
+              - content.tabs.link
+            palette:
+              - scheme: default
+                primary: indigo
+                accent: indigo
+                toggle:
+                  icon: material/weather-sunny
+                  name: Switch to dark mode
+              - scheme: slate
+                primary: indigo
+                accent: indigo
+                toggle:
+                  icon: material/weather-night
+                  name: Switch to light mode
+          
+          plugins:
+            - search
+          
+          markdown_extensions:
+            - admonition
+            - pymdownx.highlight:
+                anchor_linenums: true
+            - pymdownx.superfences
+            - pymdownx.tabbed:
+                alternate_style: true
+          
+          nav:
+            - Home: index.md
           EOF
           
+          # Build the site
           mkdocs build --site-dir _site
+          
+          # Add .nojekyll to prevent Jekyll processing
+          touch _site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -61,4 +107,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5# Simple workflow for deploying static content to GitHub Pages
+        uses: actions/deploy-pages@v5
