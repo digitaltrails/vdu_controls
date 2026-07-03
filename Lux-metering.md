@@ -24,7 +24,7 @@ The `Vdu_controls` `Light Meter Dialog` includes controls for setting
 up a light meter, setting the brightness auto-adjustment interval, and
 defining each VDU's mapping of lux values to VDU brightness:
 
-![Default](screen-shots/lux-profiles.png)
+![Default](screenshots/lux-profiles.png)
 
 (Note: the `Light Meter Dialog` is only available after enabling `lux-options` in
 the main `Settings Dialog`)
@@ -43,7 +43,7 @@ The image below shows an [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Na
 the [GY-30](https://github.com/claws/BH1750#bh1750) and the
 required wiring connections: 
 
-![Default](screen-shots/arduino-gy30.jpg)
+![Default](screenshots/arduino-gy30.jpg)
 
 The components I purchased required the headers to be added
 by soldering. If you're not comfortable soldering components, 

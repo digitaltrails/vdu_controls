@@ -24,7 +24,7 @@ A control panel for external monitors (*Visual Display Units*).
 Description
 -----------
 
-<img src="screen-shots/ambient-slider-example.png" alt="vdu_controls v2.6" width="50%">
+<img src="screenshots/ambient-slider-example.png" alt="vdu_controls v2.6" width="50%">
 
 ``vdu_controls`` is a virtual control panel for external Visual Display Units 
 (VDUs, monitors, displays). It supports displays connected via DisplayPort, 
@@ -86,9 +86,9 @@ available to support all user defined Presets).
 > Within the UI, **tool-tips** are often available when hovering over UI components.
 
 
-![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
-![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
-![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
+![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 
+![Custom](screenshots/Screenshot_tray-200.png) ![Custom](screenshots/Screenshot_settings-300.png)
+![Custom](screenshots/presets.png) ![Custom](screenshots/lux-profiles.png)
 
 #### Laptop-Panel brightness controls
 
