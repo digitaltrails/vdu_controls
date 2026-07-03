@@ -526,7 +526,7 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
         self.current_lux_display.setFont(big_font)
         widget_layout.addWidget(self.current_lux_display)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(dpx(175))
+        self.plot_widget.setFixedWidth(dpx(195))
         self.plot_widget.setFixedHeight(dpx(50))
         widget_layout.addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
@@ -667,9 +667,10 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
         # Add some text to the bottom
         if location:
             eo = calc_solar_lux(zoned_now(), location, 1.0)
-            self.stats_label.setText(tr("Eo={0} lux    DF={1}").format(self.format_number(eo, 5), self.format_number(df, DF_PLACES)))
+            self.stats_label.setText(f'{tr("Eo={} lux").format(self.format_number(eo, 5))}\t' 
+                                     f'{tr("DF={}").format(self.format_number(df, DF_PLACES))}')
         else:
-            self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
+            self.stats_label.setText(f'{tr("Eo=?")}\t{tr("DF=?")} {tr("location not set")}')
 
     def connect_meter(self, new_lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
