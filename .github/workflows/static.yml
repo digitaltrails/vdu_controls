@@ -94,7 +94,10 @@ jobs:
             - pymdownx.superfences
             - pymdownx.tabbed:
                 alternate_style: true
-          
+            - toc:
+                permalink: true
+                toc_depth: 3
+                
           nav:
             - Home: index.md
             - Manual: help.md
