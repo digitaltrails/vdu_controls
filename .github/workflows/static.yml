@@ -78,6 +78,8 @@ jobs:
                 toggle:
                   icon: material/weather-night
                   name: Switch to light mode
+                  
+          docs_dir: manual
           
           plugins:
             - search
