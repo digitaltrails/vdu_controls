@@ -51,7 +51,7 @@ jobs:
           cp README.md docs/index.md
           
           # Copy screenshots folder
-          cp -r screenshots docs/ 2>/dev/null || echo "No screenshots folder found"
+          cp -r screen-shots docs/ 2>/dev/null || echo "No screen-shots folder found"
           
           # Create mkdocs.yml configuration
           cat > mkdocs.yml << 'EOF'
