@@ -1,11 +1,19 @@
-vdu_controls - a DDC control panel for monitors
-===============================================
+---
+#SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+#SPDX-License-Identifier: GPL-3.0-or-later
+title: VDU_CONTROLS
+section: 1
+header: vdu_controls Manual
+footer: vdu_controls 2.6.0
+---
+
+# vdu_controls - a DDC control panel for monitors
 
 A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs (*Visual Display Units*).
 
-Synopsis:
-=========
+## Synopsis:
 
+```
         vdu_controls
                      [--help|-h] [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
@@ -30,9 +38,8 @@ Synopsis:
                      [--location latitude,longitude] [--ddcutil-emulator emulator-path]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
-
-Optional arguments:
--------------------
+```
+## Optional arguments:
 
 Arguments supplied on the command line override config file equivalent settings.
 
@@ -132,8 +139,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --uninstall           uninstalls the vdu_controls application menu file and
                             script for the current user.
 
-Description
-===========
+## Description
+
 
 ``vdu_controls`` control panel for external Visual Display Units (VDUs, monitors, displays). 
 It supports displays connected via DisplayPort, DVI, HDMI, USB, and built-in laptop-panels.
@@ -174,13 +181,13 @@ For further information, including screenshots, see https://github.com/digitaltr
 The long-term effects of repeatably rewriting a VDUs setting are not well understood, but some
 concerns have been expressed. See **LIMITATIONS** for further details.
 
-Configuration
-=============
+## Configuration
+
 
 Configuration changes can be made via the *Settings-Dialog* or by editing the config-files.
 
-Settings Menu and Config files
-------------------------------
+## Settings Menu and Config files
+
 
 The *Settings-Dialog* features a tab for editing common/default settings as well as
 tabs specific to each VDU.  The config files are named according to the following scheme:
@@ -250,8 +257,7 @@ which will create initial templates based on the currently connected VDUs.
 The config files are completely optional, they need not be used if the default options are found to be
 adequate.
 
-Adding value restrictions to a VDU's capabilities override
-----------------------------------------------------------
+### Adding value restrictions to a VDU's capabilities override
 
 In some cases, a VDU's DDC reported minimums and maximums may be incorrect or overstated.  Within
 vdu_controls this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
@@ -271,8 +277,8 @@ For the brightness example, the completed edit would look like::
 
 The vdu_controls slider for that value will now be restricted to the specified range.
 
-Adding a refresh/reload requirement to a VDU's capabilities override
---------------------------------------------------------------------
+### Adding a refresh/reload requirement to a VDU's capabilities override
+
 
 Altering the values of some VCP codes may result in a cascade of changes to other
 codes.  For example, changing a VCP value for *Picture Mode* might result in changes
@@ -290,8 +296,8 @@ Can be annotated with::
 With this annotation, when ever *Picture Mode* is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
 
-DBUS ddcutil-service
---------------------
+### DBUS ddcutil-service
+
 
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
 service rather than the ``ddcutil`` command.  With some older monitors, the ``ddcutil`` command 
@@ -307,8 +313,8 @@ connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libdd
 options for finer control over which events are detected and how.  Whether to enable events
 in ``vdu_controls`` is controlled by the ``DBUS events`` checkbox in the *Settings-Dialog*.  
 
-Laptop-Panel brightness control
--------------------------------
+### Laptop-Panel brightness control
+
 
 Starting with version 2.6, laptop panels are supported for brightness-only control.
 When laptop support is enabled, the widely available command line utility ``brightnessctl``
@@ -317,8 +323,8 @@ Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
 inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
 for  *brightness* events.
 
-DDC emulation for special cases
--------------------------------
+### DDC emulation for special cases
+
 
 The `ddcutil-emulator` option is provided for handling special cases.  When set,
 it will be run in addition to the normal DDC sources.  It can be used to add 
@@ -328,8 +334,8 @@ case-LED's.  To use it you would have to create a script that emulates the
 basic `ddcutil` command set (see included sample script).
 
 
-Presets
--------
+## Presets
+
 
 A named *Preset* can be used to save the current VDU settings for later recall. Any number of
 presets can be created for different lighting conditions or different applications, for example,
@@ -372,8 +378,8 @@ you might create a preset that includes the brightness, but not the contrast or 
 While using the GUI to create or edit a preset, other automated adjustments are blocked until 
 editing is complete.
 
-Presets - VDU initialization-presets
-------------------------------------
+### Presets - VDU initialization-presets
+
 
 For a VDU named `abc` with a serial number `xyz`, if a preset named `abx xyz` exists, that
 preset will be restored at startup or when ever the VDU is subsequently detected.
@@ -381,8 +387,8 @@ preset will be restored at startup or when ever the VDU is subsequently detected
 This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
 or for VDUs where the NVRAM capacity has been exhausted or is faulty.
 
-Presets - solar elevation triggers
-----------------------------------
+### Presets - solar elevation triggers
+
 
 A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
 is to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
@@ -408,8 +414,8 @@ this day (if any).  For example, say a user has ``vdu_controls`` set to run at l
 also set a preset to trigger at dawn, but they don't log in until just after dawn, the
 overdue dawn preset will be triggered at login.
 
-Presets - time-of-day triggers
-------------------------------
+### Presets - time-of-day triggers
+
 
 A preset may be set to trigger at a fixed time each day.  This is an alternative to the
 elevation trigger.  It's not possible for a single preset to have both kinds of trigger.
@@ -419,14 +425,14 @@ override any trigger, in which case the trigger is suspended until the following
 Similarly, at startup, the most recent preset that would have been triggered for this
 day will be restored.
 
-Presets - Smooth Transitions
-----------------------------
+### Presets - Smooth Transitions
+
 
 **To minimize writes to VDU NVRAM, stepped smooth-transitions have been deprecated and are disabled
 for version 2.6.5 onward.**
 
-Presets - supplementary weather requirements
---------------------------------------------
+### Presets - supplementary weather requirements
+
 
 A solar elevation trigger can have a weather requirement which will be checked against the weather
 reported by https://wttr.in.
@@ -456,8 +462,8 @@ be issued if they are more than 200 km (124 miles) apart.
 If the place-name is left blank, the ``wttr.in`` server will try to guess your location from your
 external IP address.  The guess may not be accurate and may vary over time.
 
-Presets - remote control
-------------------------
+### Presets - remote control
+
 
 UNIX/Linux signals may be used to cause ``vdu_controls`` to restore a preset or to initiate a
 refresh of the application from the connected monitors.  Signals in the range 40 to 55 correspond to
@@ -479,8 +485,8 @@ settings from monitors".  For example:
 
 Any other signals will be handled normally (in many cases they will result in process termination).
 
-Ambient Light Levels and Light/Lux Metering
--------------------------------------------
+## Ambient Light Levels and Light/Lux Metering
+
 
 The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
 according to custom VDU profiles.  As well as manual adjustment, the
@@ -539,8 +545,8 @@ The examples may require customizing for your own webcam and lighting conditions
 If ambient light level controls are not required, the *Settings-Dialog* includes an option to
 disable and hide them.
 
-Lux Metering and brightness adjustments
----------------------------------------
+### Lux Metering and brightness adjustments
+
 
 The auto-brightness adjustment feature includes several measures to reduce the number of
 changes passed to the VDU:
@@ -564,8 +570,15 @@ fluctuating changes, interpolation won't result in brightness changes less than 
 interpolation, if a lux value is found to be close to any attached-preset, the preset
 values will be preferred over interpolated ones.
 
-Light/Lux Metering and Presets
--------------------------------
+### Saving a Daylight-Factor in a Preset
+
+The Preset-Dialog allows a Daylight-Factor to be manually entered and saved as part of a Preset.
+A Preset can be created to save only the Daylight Factor and nothing else.  This
+provides a way to save and recall favourite Daylight-Factors for use with semi-automatic 
+brightness adjustment.
+
+### Light/Lux Metering and Triggering Presets
+
 
 The Light-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
@@ -589,8 +602,8 @@ light-metering might increase it.  If you wish to use the two together, design y
 profile steps to match the brightness levels of specific presets. For example, give 
 a full-sun preset and a corresponding step in a lux/brightness Profile the same brightness value.
 
-Lux Metering Internal Parameters
---------------------------------
+### Lux Metering Internal Parameters
+
 
 The following internal constants can be altered by manually editing
 `~/.config/vdu_controls/AutoLux.conf`.  They guide the various metering and auto-adjustment
@@ -611,8 +624,8 @@ heuristics::
       interpolation-sensitivity-percent=10
 
 
-Improving Response Time: Dynamic Optimization and Sleep Multipliers
--------------------------------------------------------------------
+## Improving Response Time: Dynamic Optimization and Sleep Multipliers
+
 
 If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default to using the
 ``ddcutil`` *dynamic sleep optimizer*.  The optimizer automatically tunes and caches VDU specific
@@ -631,8 +644,8 @@ has to be quite conservative, many VDUs can cope with smaller multipliers. A bit
 with multiplier values may greatly speed up responsiveness. In a multi-VDU setup, individual sleep
 multipliers can be configured.
 
-Improving Response Time and Reliability: Connections and Controls
------------------------------------------------------------------
+### Improving Response Time and Reliability: Connections and Controls
+
 
 ``DDC/I2C`` is not a totally reliable form of communication. VDUs may vary in their responsiveness
 and compliance.  GPUs, GPU drivers, and types of connection may affect the reliability. Both ddcutil
@@ -646,11 +659,11 @@ reduce the time taken to restore presets.
 
 There's plenty of useful info for getting the best out of ``ddcutil`` at https://www.ddcutil.com/.
 
-Limitations
-===========
+## Limitations
 
-Possible impact on VDU lifespan
--------------------------------
+
+### Possible impact on VDU lifespan
+
 
 Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
 cycles, stressing the VDU power-supply, or increasing panel burn-in.
@@ -677,8 +690,8 @@ to reduce the overall frequency of adjustments to acceptable levels.
   + Hovering over a VDU name in the main window reveals a popup that includes the number of VCP (NVRAM) writes.
   + The bottom of the *About-Dialog* shows the same numbers. They update dynamically.
 
-Cross-platform differences
---------------------------
+### Cross-platform differences
+
 
 The UI attempts to step around minor differences between KDE, GNOME, and the rest,
 the UI on each may not be exactly the same.
@@ -696,8 +709,8 @@ application switches its platform to XWayland (X11 xcb).
 The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
 have Qt5 installed and prefer it, you can uncheck prefer-qt6 in settings.
 
-Desktop Theming
----------------
+### Desktop Theming
+
 
 Achieving desktop neutrality comes at the price of the application not being
 fully aware or compliant with the theming conventions of any particular desktop.
@@ -713,8 +726,8 @@ whether a tray or dock is differently themed. As a result the application includ
 several manual settings that can alter the tray/dock icon theming between
 colored, monochrome-dark and monochrome-light.
 
-Localization
-------------
+### Localization
+
 
 If *Settings* → *translations* is set, the application will 
 load a translation matching your system's locale if available. 
@@ -748,8 +761,8 @@ features. The provided translations are all testing samples which may not
 be supported over the long term. 
 
 
-Other concerns
---------------
+### Other concerns
+
 
 The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue because, in normal surroundings,
@@ -777,8 +790,8 @@ To avoid confusion, it may be advisable to stick to one picture-mode for use wit
 preserving the others unaltered.
 
 
-Examples
-========
+## Examples
+
 
     vdu_controls
         All default controls.
@@ -801,8 +814,8 @@ Examples
 This script often refers to displays and monitors as VDUs in order to disambiguate the noun/verb
 duality of "display" and "monitor"
 
-Prerequisites
-=============
+## Prerequisites
+
 
 Packaged versions of ``vdu_control`` are likely to include all the following
 automatically.
@@ -828,8 +841,8 @@ detect command detects your VDUs without issuing any errors:
 Read ddcutil documentation concerning config of i2c_dev with Nvidia GPUs. Detailed ddcutil info
 at https://www.ddcutil.com/
 
-Environment
-===========
+## Environment
+
 
     LC_ALL, LANG, LANGUAGE
         These variables specify the locale for language translations and units of distance.
@@ -869,8 +882,8 @@ Environment
     VDU_CONTROLS_DEBUG_LAYOUT
         Draws boxes around the UI elements.  (``no`` or ``yes``).
 
-Files
-=====
+## Files
+
     $HOME/.config/vdu_controls/
         Location for config files, Presets, and other persistent data.
 
@@ -888,12 +901,12 @@ Files
     /usr/share/vdu_controls
         Location for system-wide icons, sample-scripts, and translations.
 
-Reporting Bugs
-==============
+## Reporting Bugs
+
 https://github.com/digitaltrails/vdu_controls/issues
 
-GNU License
-===========
+## GNU License
+
 
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the

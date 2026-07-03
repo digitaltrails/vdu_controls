@@ -1,153 +1,422 @@
-<h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
-a DDC control panel for monitors</h1>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>VDU_CONTROLS</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">VDU_CONTROLS</h1>
+</header>
+<h2>NAME</h2>
+<p>vdu_controls - a DDC control panel for monitors</p>
 <p>A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs
 (<em>Visual Display Units</em>).</p>
-<h1 id="synopsis">Synopsis:</h1>
-<pre><code>    vdu_controls
-                 [--help|-h] [--about] [--detailed-help]
-                 [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                 [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                 [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
-                 [--splash|--no-splash] [--system-tray|--no-system-tray]
-                 [--single-instance | --no-single-instance]
-                 [--hide-on-focus-out|--no-hide-on-focus-out]
-                 [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
-                 [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
-                 [--tray-follows-theme|--no-tray-follows-theme]
-                 [--toolbar-at-top|-no-toolbar-at-top]
-                 [--separate-status-bar|--separate-status-bar]
-                 [--tick-marks | --no-tick-marks ]
-                 [--laptop-panel|--no-laptop-panel]
-                 [--lux-options|--no-lux-options]
-                 [--schedule|--no-schedule] [--weather|--no-weather] 
-                 [--tick-marks|--no-tick-marks]
-                 [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
-                 [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
-                 [--translations|--no-translations]
-                 [--location latitude,longitude] [--ddcutil-emulator emulator-path]
-                 [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
-                 [--create-config-files] [--install] [--uninstall]</code></pre>
+<h2 id="synopsis">Synopsis:</h2>
+<pre><code>        vdu_controls
+                     [--help|-h] [--about] [--detailed-help]
+                     [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                     [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                     [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
+                     [--splash|--no-splash] [--system-tray|--no-system-tray]
+                     [--single-instance | --no-single-instance]
+                     [--hide-on-focus-out|--no-hide-on-focus-out]
+                     [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
+                     [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
+                     [--tray-follows-theme|--no-tray-follows-theme]
+                     [--toolbar-at-top|-no-toolbar-at-top]
+                     [--separate-status-bar|--separate-status-bar]
+                     [--tick-marks | --no-tick-marks ]
+                     [--laptop-panel|--no-laptop-panel]
+                     [--lux-options|--no-lux-options]
+                     [--schedule|--no-schedule] [--weather|--no-weather] 
+                     [--tick-marks|--no-tick-marks]
+                     [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
+                     [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
+                     [--translations|--no-translations]
+                     [--location latitude,longitude] [--ddcutil-emulator emulator-path]
+                     [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
+                     [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <p>Arguments supplied on the command line override config file
 equivalent settings.</p>
-<pre><code>  -h, --help            show this help message and exit
-  --detailed-help       full help in Markdown format
-  --about               info about vdu_controls
-  --show control_name
-                        show specified control only, may be specified multiple times
-  --hide control_name
-                        hide/disable a control, may be specified multiple times
-  --enable-vcp-code vcp_code
-                        enable a control for a vcp-code unavailable via hide/show,
-                        may be specified multiple times
-  --splash|--no-splash
-                        show the splash screen.  ``--splash`` is the default.
-  --system-tray|--no-system-tray
-                        start up as an entry in the system tray.
-                        ``--no-system-tray`` is the default.
-  --single-instance|--no-single-instance
-                        run one instance only, further launches focus the existing instance.
-                        ``--single-instance`` is the default.
-  --hide-on-focus-out|--no-hide-on-focus-out
-                        minimize the main window automatically on focus out.
-                        ``--no-hide-on-focus-out`` is the default.
-  --smart-window|--no-smart-window
-                        smart main window placement and geometry.
-                        ``--smart-window`` is the default (may force UI to XWayland).
-  --smart-uses-xwayland|--no-smart-uses-xwayland
-                        if ``--smart-window`` is enabled, use XWayland (force X11 xcb).
-                        ``--smart-uses-xwayland`` is the default.
-  --monochrome-tray|--no-monochrome-tray
-                        monochrome dark-themed system-tray.
-                        ``--no-monochrome-tray`` is the default.
-  --mono-light-tray|--no-mono-light-tray
-                        monochrome themed system-tray.
-                        ``--no-mono-light-tray`` is the default.
-  --tray-follows-theme|--no-tray-follows-theme
-                        the tray-theme toggles between light/dark when the desktop-theme changes
-                        ``--tray-follows-theme`` is the default.
-  --toolbar-at-top|--no-toolbar-at-top
-                        locate the toolbar at the top or bottom of the main window
-                        ``--no-toolbar-at-top`` is the default
-  --separate-status-bar|--no-separate-status-bar
-                        separate the status-bar from the toolbar
-                        ``--no-separate-status-bar`` is the default
-  --tick-marks|--no-tick-marks
-                        show tick marks on control-sliders.
-                        ``--tick-marks`` is the default
-  --laptop-panel|--no-laptop-panel
-                        allow laptop panels to be controlled
-                        ``--laptop-panel`` is the default
-  --order-by-name|--no-order-by-name
-                        order tabs, lists, and dropdowns by VDU name.
-                        ``--no-order-by-name`` is the default.
-  --lux-options|--no-lux-options
-                        enable/disable ambient light metering options.
-                        ``--lux-options`` is the default.
-  --schedule|--no-schedule
-                        enable/disable preset scheduling. ``--schedule`` is the default.
-  --weather|--no-weather
-                        enable/disable weather lookups. ``--no-weather`` is the default.
-  --tick-marks|--no-tick-marks
-                        Show tick marks on control sliders. ``--tick-marks`` is the default.
-  --dbus-client|--no-dbus-client
-                        use the D-Bus ddcutil-service instead of the ddcutil command.
-                        ``--dbus-client`` is the default
-  --dbus-events|--no-dbus-events
-                        enable D-Bus ddcutil-service client events
-                        ``--dbus-events`` is the default
-  --syslog|-no-syslog
-                        divert diagnostic output to the syslog (journald).
-                        ``--no-syslog`` is the default.
-  --debug|--no-debug
-                        enable/disable additional debug information.
-                        ``--no-debug`` is the default.
-  --warnings--no-warnings
-                        popup a warning when a VDU lacks an enabled control.
-                        ``--no-warnings`` is the default.
-  --translations|--no-translations
-                        enable/disable language translations.
-                        ``--no-translations`` is the default.
-  --location latitude,longitude
-                        local latitude and longitude for triggering presets
-                        by solar elevation.
-  --ddcutil-emulator emulator-path
-                        additional command-line ddcutil-emulator for special cases.
-  --sleep-multiplier    set the default ddcutil sleep multiplier.
-                        protocol reliability multiplier for ddcutil (typically
-                        0.1 .. 2.0, default is 1.0)
-  --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes).
+<dl>
+<dt><strong>-h, --help            show this help message and
+exit</strong></dt>
+<dd>
 
-  --create-config-files
-                        if they do not exist, create template config INI files
-                        in $HOME/.config/vdu_controls/
-  --install             installs the vdu_controls binary and desktop file 
-                        into $HOME/.local/
-  --uninstall           uninstalls the vdu_controls application menu file and
-                        script for the current user.</code></pre>
-<h1 id="description">Description</h1>
-<p><code>vdu_controls</code> control panel for external Visual Display
-Units (VDUs, monitors, displays). It supports displays connected via
-DisplayPort, DVI, HDMI, USB, and built-in laptop-panels. Out of the box,
-<code>vdu_controls</code> offers a subset of controls including
+</dd>
+<dt><strong>--detailed-help       full help in Markdown
+format</strong></dt>
+<dd>
+
+</dd>
+<dt><strong>--about               info about vdu_controls</strong></dt>
+<dd>
+
+</dd>
+<dt><strong>--show control_name</strong></dt>
+<dd>
+show specified control only, may be specified multiple times
+</dd>
+<dt><strong>--hide control_name</strong></dt>
+<dd>
+hide/disable a control, may be specified multiple times
+</dd>
+<dt><strong>--enable-vcp-code vcp_code</strong></dt>
+<dd>
+enable a control for a vcp-code unavailable via hide/show, may be
+specified multiple times
+</dd>
+<dt><strong>--splash|--no-splash</strong></dt>
+<dd>
+show the splash screen. <code>--splash</code> is the default.
+</dd>
+<dt><strong>--system-tray|--no-system-tray</strong></dt>
+<dd>
+start up as an entry in the system tray. <code>--no-system-tray</code>
+is the default.
+</dd>
+<dt><strong>--single-instance|--no-single-instance</strong></dt>
+<dd>
+run one instance only, further launches focus the existing instance.
+<code>--single-instance</code> is the default.
+</dd>
+<dt><strong>--hide-on-focus-out|--no-hide-on-focus-out</strong></dt>
+<dd>
+minimize the main window automatically on focus out.
+<code>--no-hide-on-focus-out</code> is the default.
+</dd>
+<dt><strong>--smart-window|--no-smart-window</strong></dt>
+<dd>
+smart main window placement and geometry. <code>--smart-window</code> is
+the default (may force UI to XWayland).
+</dd>
+<dt><strong>--smart-uses-xwayland|--no-smart-uses-xwayland</strong></dt>
+<dd>
+if <code>--smart-window</code> is enabled, use XWayland (force X11 xcb).
+<code>--smart-uses-xwayland</code> is the default.
+</dd>
+<dt><strong>--monochrome-tray|--no-monochrome-tray</strong></dt>
+<dd>
+monochrome dark-themed system-tray. <code>--no-monochrome-tray</code> is
+the default.
+</dd>
+<dt><strong>--mono-light-tray|--no-mono-light-tray</strong></dt>
+<dd>
+monochrome themed system-tray. <code>--no-mono-light-tray</code> is the
+default.
+</dd>
+<dt><strong>--tray-follows-theme|--no-tray-follows-theme</strong></dt>
+<dd>
+the tray-theme toggles between light/dark when the desktop-theme changes
+<code>--tray-follows-theme</code> is the default.
+</dd>
+<dt><strong>--toolbar-at-top|--no-toolbar-at-top</strong></dt>
+<dd>
+locate the toolbar at the top or bottom of the main window
+<code>--no-toolbar-at-top</code> is the default
+</dd>
+<dt><strong>--separate-status-bar|--no-separate-status-bar</strong></dt>
+<dd>
+separate the status-bar from the toolbar
+<code>--no-separate-status-bar</code> is the default
+</dd>
+<dt><strong>--tick-marks|--no-tick-marks</strong></dt>
+<dd>
+show tick marks on control-sliders. <code>--tick-marks</code> is the
+default
+</dd>
+<dt><strong>--laptop-panel|--no-laptop-panel</strong></dt>
+<dd>
+allow laptop panels to be controlled <code>--laptop-panel</code> is the
+default
+</dd>
+<dt><strong>--order-by-name|--no-order-by-name</strong></dt>
+<dd>
+order tabs, lists, and dropdowns by VDU name.
+<code>--no-order-by-name</code> is the default.
+</dd>
+<dt><strong>--lux-options|--no-lux-options</strong></dt>
+<dd>
+enable/disable ambient light metering options.
+<code>--lux-options</code> is the default.
+</dd>
+<dt><strong>--schedule|--no-schedule</strong></dt>
+<dd>
+enable/disable preset scheduling. <code>--schedule</code> is the
+default.
+</dd>
+<dt><strong>--weather|--no-weather</strong></dt>
+<dd>
+enable/disable weather lookups. <code>--no-weather</code> is the
+default.
+</dd>
+<dt><strong>--tick-marks|--no-tick-marks</strong></dt>
+<dd>
+Show tick marks on control sliders. <code>--tick-marks</code> is the
+default.
+</dd>
+<dt><strong>--dbus-client|--no-dbus-client</strong></dt>
+<dd>
+use the D-Bus ddcutil-service instead of the ddcutil command.
+<code>--dbus-client</code> is the default
+</dd>
+<dt><strong>--dbus-events|--no-dbus-events</strong></dt>
+<dd>
+enable D-Bus ddcutil-service client events <code>--dbus-events</code> is
+the default
+</dd>
+<dt><strong>--syslog|-no-syslog</strong></dt>
+<dd>
+divert diagnostic output to the syslog (journald).
+<code>--no-syslog</code> is the default.
+</dd>
+<dt><strong>--debug|--no-debug</strong></dt>
+<dd>
+enable/disable additional debug information. <code>--no-debug</code> is
+the default.
+</dd>
+<dt><strong>--warnings--no-warnings</strong></dt>
+<dd>
+popup a warning when a VDU lacks an enabled control.
+<code>--no-warnings</code> is the default.
+</dd>
+<dt><strong>--translations|--no-translations</strong></dt>
+<dd>
+enable/disable language translations. <code>--no-translations</code> is
+the default.
+</dd>
+<dt><strong>--location latitude,longitude</strong></dt>
+<dd>
+local latitude and longitude for triggering presets by solar elevation.
+</dd>
+<dt><strong>--ddcutil-emulator emulator-path</strong></dt>
+<dd>
+additional command-line ddcutil-emulator for special cases.
+</dd>
+<dt><strong>--sleep-multiplier    set the default ddcutil sleep
+multiplier.</strong></dt>
+<dd>
+protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0,
+default is 1.0)
+</dd>
+<dt><strong>--ddcutil-extra-args  extra arguments to pass to ddcutil
+(enclosed in single quotes).</strong></dt>
+<dd>
+
+</dd>
+<dt><strong>--create-config-files</strong></dt>
+<dd>
+if they do not exist, create template config INI files in
+$HOME/.config/vdu_controls/
+</dd>
+<dt><strong>--install             installs the vdu_controls binary and
+desktop file</strong></dt>
+<dd>
+into $HOME/.local/
+</dd>
+<dt><strong>--uninstall           uninstalls the vdu_controls
+application menu file and</strong></dt>
+<dd>
+script for the current user.
+</dd>
+</dl>
+<h2 id="description">Description</h2>
+<p><strong>vdu_controls</strong> control panel for external Visual
+Display Units (VDUs, monitors, displays). It supports displays connected
+via DisplayPort, DVI, HDMI, USB, and built-in laptop-panels. Out of the
+box, <strong>vdu_controls</strong> offers a subset of controls including
 brightness, contrast and audio controls. Additional controls can be
 enabled via the *Settings-Dialog**.</p>
-<p><code>vdu_controls</code> interacts with VDUs by using
-<code>ddcutil</code> to issue standard VESA <em>Virtual Control
+<p><strong>vdu_controls</strong> interacts with VDUs by using
+<strong>ddcutil</strong> to issue standard VESA <em>Virtual Control
 Panel</em> (<em>VCP</em>) commands via the VESA <em>Display Data
-Channel</em> (<em>DDC</em>). <code>Ddcutil</code> provides a robust
+Channel</em> (<em>DDC</em>). <strong>Ddcutil</strong> provides a robust
 interface that is tolerant of the vagaries of the many OEM DDC
 implementations.</p>
-<p>From <code>vdu_controls 2.0</code> onward, <code>vdu_controls</code>
-defaults to using the <code>D-Bus ddcutil-service</code>. Should the
-<code>ddcutil-service</code> be unavailable, <code>vdu_controls</code>
-will fall back to running the <code>ddcutil</code> command to perform
-each request.</p>
+<p>From <strong>vdu_controls 2.0</strong> onward,
+<strong>vdu_controls</strong> defaults to using the <strong>D-Bus
+ddcutil-service</strong>. Should the <strong>ddcutil-service</strong> be
+unavailable, <strong>vdu_controls</strong> will fall back to running the
+<strong>ddcutil</strong> command to perform each request.</p>
 <p>The UI look-and-feel dynamically adjusts to dark and light themes.
 The application may optionally run in the system tray of KDE, Deepin,
 GNOME, and Xfce (and possibly others). For desktops that don’t integrate
-with Qt/KDE theming, the <code>qt5ct</code> and <code>qt6ct</code>
-utilities may be used to alter the overall Qt theme.</p>
+with Qt/KDE theming, the <strong>qt5ct</strong> and
+<strong>qt6ct</strong> utilities may be used to alter the overall Qt
+theme.</p>
 <p>The UI provides an optional <em>ambient-light slider</em> for
 simultaneously adjusting all VDUs according to custom per-VDU ambient
 lux/brightness profiles. Options are included for semi-automatic
@@ -159,19 +428,19 @@ example, presets may be created for night, day, photography, movies, and
 so forth. Presets can be triggered by specific ambient light levels,
 scheduled according to local solar elevation, vetoed by local weather
 conditions, or activated by UNIX signals.</p>
-<p>From any UI window, <code>F1</code> accesses help, and
-<code>F10</code> accesses the <em>main-menu</em>. The <em>main-menu</em>
-is also available via the hamburger-menu, and also via the right-mouse
-button in either the main-window or the system-tray icon. The
-<em>main-menu</em> has <code>ALT-key</code> shortcuts for all menu items
-(subject to sufficient letters being available to distinguish all user
-defined presets).</p>
+<p>From any UI window, <strong>F1</strong> accesses help, and
+<strong>F10</strong> accesses the <em>main-menu</em>. The
+<em>main-menu</em> is also available via the hamburger-menu, and also
+via the right-mouse button in either the main-window or the system-tray
+icon. The <em>main-menu</em> has <strong>ALT-key</strong> shortcuts for
+all menu items (subject to sufficient letters being available to
+distinguish all user defined presets).</p>
 <p>For further information, including screenshots, see
 https://github.com/digitaltrails/vdu_controls .</p>
 <p>The long-term effects of repeatably rewriting a VDUs setting are not
 well understood, but some concerns have been expressed. See
 <strong>LIMITATIONS</strong> for further details.</p>
-<h1 id="configuration">Configuration</h1>
+<h2 id="configuration">Configuration</h2>
 <p>Configuration changes can be made via the <em>Settings-Dialog</em> or
 by editing the config-files.</p>
 <h2 id="settings-menu-and-config-files">Settings Menu and Config
@@ -181,19 +450,20 @@ common/default settings as well as tabs specific to each VDU. The config
 files are named according to the following scheme:</p>
 <ul>
 <li>Application wide default config:
-<code>$HOME/.config/vdu_controls/vdu_controls.conf</code></li>
+<strong>$HOME/.config/vdu_controls/vdu_controls.conf</strong></li>
 <li>VDU model and serial number config:
-<code>$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf</code></li>
+<strong>$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf</strong></li>
 <li>VDU model-only config:
-<code>$HOME/.config/vdu_controls/&lt;model&gt;.conf</code> (deprecated,
-no longer created).</li>
+<strong>$HOME/.config/vdu_controls/&lt;model&gt;.conf</strong>
+(deprecated, no longer created).</li>
 </ul>
 <p>The VDU-specific config files can be used to:</p>
 <ul>
 <li>Correct manufacturer built-in metadata.</li>
 <li>Customize which controls are to be provided for each VDU.</li>
 <li>Define a user-friendly label for each VDU.</li>
-<li>Set optimal <code>ddcutil</code> DDC parameters for each VDU.</li>
+<li>Set optimal <strong>ddcutil</strong> DDC parameters for each
+VDU.</li>
 </ul>
 <p>The config files are in INI-format divided into a number of sections
 as outlined below::</p>
@@ -236,19 +506,19 @@ sleep-multiplier = 0.5
 # The (possibly edited) output from &quot;ddcutil --display N capabilities&quot; with leading spaces retained.
 capabilities-override =</code></pre>
 <p>Config files can only be used to enable and alter definitions of VCP
-codes supported by <code>ddcutil</code>. Unsupported
+codes supported by <strong>ddcutil</strong>. Unsupported
 manufacturer-specific features should only be enabled with caution; some
 may have irreversible consequences, including bricking the hardware.</p>
-<p>As well as using the <code>Settings</code>, config files may also be
-created by the command line option::</p>
+<p>As well as using the <strong>Settings</strong>, config files may also
+be created by the command line option::</p>
 <pre><code>vdu_controls --create-config-files</code></pre>
 <p>which will create initial templates based on the currently connected
 VDUs.</p>
 <p>The config files are completely optional, they need not be used if
 the default options are found to be adequate.</p>
-<h2
+<h3
 id="adding-value-restrictions-to-a-vdus-capabilities-override">Adding
-value restrictions to a VDU’s capabilities override</h2>
+value restrictions to a VDU’s capabilities override</h3>
 <p>In some cases, a VDU’s DDC reported minimums and maximums may be
 incorrect or overstated. Within vdu_controls this can be corrected by
 overriding the DDC reported range. For example, perhaps a VDU reports it
@@ -269,9 +539,9 @@ specification to the line following the feature definition,</li>
     Values: 20..80</code></pre>
 <p>The vdu_controls slider for that value will now be restricted to the
 specified range.</p>
-<h2
+<h3
 id="adding-a-refreshreload-requirement-to-a-vdus-capabilities-override">Adding
-a refresh/reload requirement to a VDU’s capabilities override</h2>
+a refresh/reload requirement to a VDU’s capabilities override</h3>
 <p>Altering the values of some VCP codes may result in a cascade of
 changes to other codes. For example, changing a VCP value for
 <em>Picture Mode</em> might result in changes to several VCP-code
@@ -286,45 +556,47 @@ obtained from each VDU, however, vdu_controls supports adding
 <p>With this annotation, when ever <em>Picture Mode</em> is altered,
 vdu_controls will reload all configuration files and refresh all control
 values from the VDUs.</p>
-<h2 id="dbus-ddcutil-service">DBUS ddcutil-service</h2>
-<p>When available, <code>vdu_controls</code> defaults to interacting
-with VDUs via the DBUS <code>ddcutil-service</code> service rather than
-the <code>ddcutil</code> command. With some older monitors, the
-<code>ddcutil</code> command can take a couple of seconds to handshake a
-connection each time it is run. The service caches connections and
-should be both faster and more reliable than the command.<br />
-Whether to use the service can be controlled by the
-<code>DBUS client</code> checkbox in the <em>Settings-Dialog</em>.</p>
-<p><code>vdu_controls</code> can use the service to monitor for DPMS
+<h3 id="dbus-ddcutil-service">DBUS ddcutil-service</h3>
+<p>When available, <strong>vdu_controls</strong> defaults to interacting
+with VDUs via the DBUS <strong>ddcutil-service</strong> service rather
+than the <strong>ddcutil</strong> command. With some older monitors, the
+<strong>ddcutil</strong> command can take a couple of seconds to
+handshake a connection each time it is run. The service caches
+connections and should be both faster and more reliable than the
+command.<br />
+Whether to use the service can be controlled by the <strong>DBUS
+client</strong> checkbox in the <em>Settings-Dialog</em>.</p>
+<p><strong>vdu_controls</strong> can use the service to monitor for DPMS
 events and VDU connectivity events, including power-cycling VDUs or
 hot-plugging cable connections. The reliability and timeliness of event
 detection can vary depending on the hardware involved (GPU model, GPU
 driver, VDU model, and type of connector-cable). In some cases, the
 service polling for DPMS or connection status may wake some VDU models.
-Both <code>ddcutil-service</code> or <code>libddcutil</code> offer
-options for finer control over which events are detected and how.
-Whether to enable events in <code>vdu_controls</code> is controlled by
-the <code>DBUS events</code> checkbox in the
+Both <strong>ddcutil-service</strong> or <strong>libddcutil</strong>
+offer options for finer control over which events are detected and how.
+Whether to enable events in <strong>vdu_controls</strong> is controlled
+by the <strong>DBUS events</strong> checkbox in the
 <em>Settings-Dialog</em>.</p>
-<h2 id="laptop-panel-brightness-control">Laptop-Panel brightness
-control</h2>
+<h3 id="laptop-panel-brightness-control">Laptop-Panel brightness
+control</h3>
 <p>Starting with version 2.6, laptop panels are supported for
 brightness-only control. When laptop support is enabled, the widely
-available command line utility <code>brightnessctl</code> is used to
+available command line utility <strong>brightnessctl</strong> is used to
 emulate DDC control of brightness
 (https://github.com/Hummer12007/brightnessctl). Additionally,
-<code>vdu_controls</code> will react to laptop brightness-function-keys
-or inactivity-dimming by using the <code>python3-pyudev</code> library
-to monitor udev for <em>brightness</em> events.</p>
-<h2 id="ddc-emulation-for-special-cases">DDC emulation for special
-cases</h2>
-<p>The <code>ddcutil-emulator</code> option is provided for handling
+<strong>vdu_controls</strong> will react to laptop
+brightness-function-keys or inactivity-dimming by using the
+<strong>python3-pyudev</strong> library to monitor udev for
+<em>brightness</em> events.</p>
+<h3 id="ddc-emulation-for-special-cases">DDC emulation for special
+cases</h3>
+<p>The <strong>ddcutil-emulator</strong> option is provided for handling
 special cases. When set, it will be run in addition to the normal DDC
 sources. It can be used to add brightness controls and other controls
 for non-DDC devices. For example, you might add a brightness control for
 a keyboard-backlight, or for case-LED’s. To use it you would have to
-create a script that emulates the basic <code>ddcutil</code> command set
-(see included sample script).</p>
+create a script that emulates the basic <strong>ddcutil</strong> command
+set (see included sample script).</p>
 <h2 id="presets">Presets</h2>
 <p>A named <em>Preset</em> can be used to save the current VDU settings
 for later recall. Any number of presets can be created for different
@@ -340,12 +612,12 @@ SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
 light. If a preset lacks an icon, an icon will be created from the
 initials of the first and last words of its name. A starter set of icons
-is included in <code>/usr/share/vdu_controls/icons/</code>.</p>
+is included in <strong>/usr/share/vdu_controls/icons/</strong>.</p>
 <p>Any time the current VDUs settings match those of a preset, the
 preset’s name and icon will automatically show in the window-title, tray
 tooltip, tray icon.</p>
 <p>Each preset is stored in config directory as:
-<code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
+<strong>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</strong></p>
 <p>Preset files are saved in INI-file format for ease of editing. Each
 preset file contains a section for each connected VDU, for example::</p>
 <pre><code>[preset]
@@ -365,17 +637,17 @@ for each VDU. For example, you might create a preset that includes the
 brightness, but not the contrast or audio-volume.</p>
 <p>While using the GUI to create or edit a preset, other automated
 adjustments are blocked until editing is complete.</p>
-<h2 id="presets---vdu-initialization-presets">Presets - VDU
-initialization-presets</h2>
-<p>For a VDU named <code>abc</code> with a serial number
-<code>xyz</code>, if a preset named <code>abx xyz</code> exists, that
-preset will be restored at startup or when ever the VDU is subsequently
-detected.</p>
+<h3 id="presets---vdu-initialization-presets">Presets - VDU
+initialization-presets</h3>
+<p>For a VDU named <strong>abc</strong> with a serial number
+<strong>xyz</strong>, if a preset named <strong>abx xyz</strong> exists,
+that preset will be restored at startup or when ever the VDU is
+subsequently detected.</p>
 <p>This feature is designed to restore settings that cannot be saved in
 the VDU’s NVRAM or for VDUs where the NVRAM capacity has been exhausted
 or is faulty.</p>
-<h2 id="presets---solar-elevation-triggers">Presets - solar elevation
-triggers</h2>
+<h3 id="presets---solar-elevation-triggers">Presets - solar elevation
+triggers</h3>
 <p>A preset may be set to automatically trigger when the sun rises to a
 specified elevation. The idea is to allow a preset to trigger relative
 to dawn or dusk, or when the sun rises above some surrounding terrain
@@ -398,14 +670,14 @@ temporarily override any trigger, in which case the trigger is suspended
 until the following day. For example, a user might choose to disable a
 trigger intended for the brightest part of the day if the day is
 particularly dull.</p>
-<p>At startup <code>vdu_controls</code> will restore the most recent
+<p>At startup <strong>vdu_controls</strong> will restore the most recent
 preset that would have been triggered for this day (if any). For
-example, say a user has <code>vdu_controls</code> set to run at login,
-and they’ve also set a preset to trigger at dawn, but they don’t log in
-until just after dawn, the overdue dawn preset will be triggered at
-login.</p>
-<h2 id="presets---time-of-day-triggers">Presets - time-of-day
-triggers</h2>
+example, say a user has <strong>vdu_controls</strong> set to run at
+login, and they’ve also set a preset to trigger at dawn, but they don’t
+log in until just after dawn, the overdue dawn preset will be triggered
+at login.</p>
+<h3 id="presets---time-of-day-triggers">Presets - time-of-day
+triggers</h3>
 <p>A preset may be set to trigger at a fixed time each day. This is an
 alternative to the elevation trigger. It’s not possible for a single
 preset to have both kinds of trigger.</p>
@@ -414,47 +686,48 @@ used to temporarily override any trigger, in which case the trigger is
 suspended until the following day. Similarly, at startup, the most
 recent preset that would have been triggered for this day will be
 restored.</p>
-<h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
+<h3 id="presets---smooth-transitions">Presets - Smooth Transitions</h3>
 <p><strong>To minimize writes to VDU NVRAM, stepped smooth-transitions
 have been deprecated and are disabled for version 2.6.5
 onward.</strong></p>
-<h2 id="presets---supplementary-weather-requirements">Presets -
-supplementary weather requirements</h2>
+<h3 id="presets---supplementary-weather-requirements">Presets -
+supplementary weather requirements</h3>
 <p>A solar elevation trigger can have a weather requirement which will
 be checked against the weather reported by https://wttr.in.</p>
 <p>By default, there are three possible weather requirements:
-<code>good</code>, <code>bad</code>, and <code>all weather</code>. Each
-requirement is defined by a file containing a list of WWO
-(https://www.worldweatheronline.com) weather codes, one per line. The
-three default requirements are contained in the files
-<code>$HOME/.config/vdu_controls/{good,bad,all}.weather</code>.
+<strong>good</strong>, <strong>bad</strong>, and <strong>all
+weather</strong>. Each requirement is defined by a file containing a
+list of WWO (https://www.worldweatheronline.com) weather codes, one per
+line. The three default requirements are contained in the files
+<strong>$HOME/.config/vdu_controls/{good,bad,all}.weather</strong>.
 Additional weather requirements can be created by using a text editor to
-create further files. The <code>all.weather</code> file exists primarily
-as a convenient resource that lists all possible codes.</p>
+create further files. The <strong>all.weather</strong> file exists
+primarily as a convenient resource that lists all possible codes.</p>
 <p>Because reported current weather conditions may be inaccurate or out
 of date, it’s best to use weather requirements as a coarse measure.
 Going beyond good and bad may not be very practical. What’s possible
 might depend on your local weather conditions.</p>
-<p>To ensure <code>wttr.in</code> supplies the weather for your
-location, please ensure that <code>Settings</code> <code>Location</code>
-includes a place-name suffix. The <code>Settings</code>
-<code>Location</code> <code>Detect</code> button has been enhanced to
-fill out a place-name for you. Should <code>wttr.in</code> not recognize
-a place-name, the place-name can be manually edited to something more
+<p>To ensure <strong>wttr.in</strong> supplies the weather for your
+location, please ensure that <strong>Settings</strong>
+<strong>Location</strong> includes a place-name suffix. The
+<strong>Settings</strong> <strong>Location</strong>
+<strong>Detect</strong> button has been enhanced to fill out a
+place-name for you. Should <strong>wttr.in</strong> not recognize a
+place-name, the place-name can be manually edited to something more
 suitable. The nearest big city or an airport-code will do, for example:
 LHR, LAX, JFK. You can use a web browser to test a place-name, for
 example: https://wttr.in/JFK</p>
-<p>When weather requirements are in use, <code>vdu_controls</code> will
-check that the coordinates in <code>Settings</code>
-<code>Location</code> are a reasonable match for those returned from
-<code>wttr.in</code>, a warning will be issued if they are more than 200
-km (124 miles) apart.</p>
-<p>If the place-name is left blank, the <code>wttr.in</code> server will
-try to guess your location from your external IP address. The guess may
-not be accurate and may vary over time.</p>
-<h2 id="presets---remote-control">Presets - remote control</h2>
-<p>UNIX/Linux signals may be used to cause <code>vdu_controls</code> to
-restore a preset or to initiate a refresh of the application from the
+<p>When weather requirements are in use, <strong>vdu_controls</strong>
+will check that the coordinates in <strong>Settings</strong>
+<strong>Location</strong> are a reasonable match for those returned from
+<strong>wttr.in</strong>, a warning will be issued if they are more than
+200 km (124 miles) apart.</p>
+<p>If the place-name is left blank, the <strong>wttr.in</strong> server
+will try to guess your location from your external IP address. The guess
+may not be accurate and may vary over time.</p>
+<h3 id="presets---remote-control">Presets - remote control</h3>
+<p>UNIX/Linux signals may be used to cause <strong>vdu_controls</strong>
+to restore a preset or to initiate a refresh of the application from the
 connected monitors. Signals in the range 40 to 55 correspond to first to
 last presets (if any are defined). Additionally, SIGHUP can be used to
 initiate “Refresh settings from monitors”. For example:</p>
@@ -474,16 +747,17 @@ If some other activity has changed a VDU&#39;s settings, trigger vdu_controls to
 result in process termination).</p>
 <h2 id="ambient-light-levels-and-lightlux-metering">Ambient Light Levels
 and Light/Lux Metering</h2>
-<p>The default UI includes an <code>ambient-light slider</code> which
-will simultaneously adjust all VDUs according to custom VDU profiles. As
-well as manual adjustment, the slider-value can adjust
+<p>The default UI includes an <strong>ambient-light slider</strong>
+which will simultaneously adjust all VDUs according to custom VDU
+profiles. As well as manual adjustment, the slider-value can adjust
 semi-automatically based on geolocation and local-datetime, or
 fully-automatically by hardware light-metering.</p>
-<p>The <code>Light-Metering</code> dialog provides options for setting
-up light-metering, adjustment intervals, and per-VDU lux/brightness
-profiles. The metering dialog additionally provides a rolling display of
-current metered light level and VDU brightness levels.</p>
-<p><code>Semi-automatic ambient-light level adjustment</code>
+<p>The <strong>Light-Metering</strong> dialog provides options for
+setting up light-metering, adjustment intervals, and per-VDU
+lux/brightness profiles. The metering dialog additionally provides a
+rolling display of current metered light level and VDU brightness
+levels.</p>
+<p><strong>Semi-automatic ambient-light level adjustment</strong>
 periodically adjusts the light-level in proportion to the estimated
 sunlight for your geolocation. Use the ambient-light-level slider to
 indicate your current lighting condition. This establishes a baseline
@@ -494,10 +768,10 @@ proportion. The estimated trajectory is plotted in the
 <em>Light-Metering dialog</em>, along with the <em>Estimate of outdoor
 lux</em> (<strong>Eo</strong>) and the <em>Daylight-Factor</em>
 (<strong>DF</strong>) - the baseline ratio of indoor to outdoor lux.</p>
-<p><code>Fully-automatic ambient-light level adjustment</code> requires
-setting up a hardware lux metering device. A metering device may be a
-serial-device, a UNIX FIFO (named-pipe), or an executable (script or
-program):</p>
+<p><strong>Fully-automatic ambient-light level adjustment</strong>
+requires setting up a hardware lux metering device. A metering device
+may be a serial-device, a UNIX FIFO (named-pipe), or an executable
+(script or program):</p>
 <ul>
 <li>A serial-device must periodically supply one floating-point
 lux-value terminated by a carriage-return newline.</li>
@@ -521,22 +795,22 @@ GY-30/BH1750, can be found at:</p>
 <pre><code>https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md</code></pre>
 <p>Example scripts for mapping a webcam’s average-brightness to
 approximate lux values are included in
-<code>/usr/share/vdu_controls/sample-scripts/</code>, or they can also
-be downloaded from the following location:</p>
+<strong>/usr/share/vdu_controls/sample-scripts/</strong>, or they can
+also be downloaded from the following location:</p>
 <pre><code>https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.</code></pre>
-<p>The examples include <code>vlux_meter.py</code>, a beta-release
+<p>The examples include <strong>vlux_meter.py</strong>, a beta-release
 Qt-GUI python-script that meters from a webcam and writes to a FIFO
-(<code>$HOME/.cache/vlux_fifo</code>). Controls are included for mapping
-image-brightness to lux mappings, and for defining a crop from which to
-sample brightness values. The script optionally runs in the
+(<strong>$HOME/.cache/vlux_fifo</strong>). Controls are included for
+mapping image-brightness to lux mappings, and for defining a crop from
+which to sample brightness values. The script optionally runs in the
 system-tray.</p>
 <p>The examples may require customizing for your own webcam and lighting
 conditions.</p>
 <p>If ambient light level controls are not required, the
 <em>Settings-Dialog</em> includes an option to disable and hide
 them.</p>
-<h2 id="lux-metering-and-brightness-adjustments">Lux Metering and
-brightness adjustments</h2>
+<h3 id="lux-metering-and-brightness-adjustments">Lux Metering and
+brightness adjustments</h3>
 <p>The auto-brightness adjustment feature includes several measures to
 reduce the number of changes passed to the VDU:</p>
 <ul>
@@ -565,8 +839,8 @@ changes, interpolation won’t result in brightness changes less than 10%.
 During interpolation, if a lux value is found to be close to any
 attached-preset, the preset values will be preferred over interpolated
 ones.</p>
-<h2 id="lightlux-metering-and-presets">Light/Lux Metering and
-Presets</h2>
+<h3 id="lightlux-metering-and-presets">Light/Lux Metering and
+Presets</h3>
 <p>The Light-Metering Dialog includes the ability to set a Preset to
 trigger at a lux value. This feature is accessed by hovering under the
 bottom axis of the Lux Profile Chart.</p>
@@ -591,11 +865,11 @@ might increase it. If you wish to use the two together, design your
 lux/brightness profile steps to match the brightness levels of specific
 presets. For example, give a full-sun preset and a corresponding step in
 a lux/brightness Profile the same brightness value.</p>
-<h2 id="lux-metering-internal-parameters">Lux Metering Internal
-Parameters</h2>
+<h3 id="lux-metering-internal-parameters">Lux Metering Internal
+Parameters</h3>
 <p>The following internal constants can be altered by manually editing
-<code>~/.config/vdu_controls/AutoLux.conf</code>. They guide the various
-metering and auto-adjustment heuristics::</p>
+<strong>~/.config/vdu_controls/AutoLux.conf</strong>. They guide the
+various metering and auto-adjustment heuristics::</p>
 <pre><code>  [lux-meter]
   # How many times per minute to sample from the Lux meter (for auto-adjustment)
   samples-per-minute=3
@@ -612,50 +886,52 @@ metering and auto-adjustment heuristics::</p>
 <h2
 id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
-<p>If you are using <code>ddcutil</code> version 2.0 or greater,
-<code>vdu_controls</code> will default to using the <code>ddcutil</code>
-<em>dynamic sleep optimizer</em>. The optimizer automatically tunes and
-caches VDU specific timings when ever <code>ddcutil</code> is run. Any
-reliability-issues or errors may be automatically resolved as the
-optimizer refines its cached timings. Should problems persist, the
-optimizer can be disabled by adding <code>--disable-dynamic-sleep</code>
-to the <em>ddcutil extra arguments</em> in the <em>Settings-Dialog</em>
-(either globally on the <em>vdu_controls tab</em> or selectively under
-each VDU’s tab). If dynamic sleep is disabled, multipliers can then be
-manually assigned. The optimizer’s heuristics continue to be refined, it
-may be that some issues may be resolved by moving to a more recent
-version of <code>libddcutil/ddcutil</code>.</p>
-<p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
-set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
-<code>ddcutil</code>. A sleep multiplier less than one will speed up the
-i2c protocol interactions at the risk of increased protocol errors. The
-default sleep multiplier of 1.0 has to be quite conservative, many VDUs
-can cope with smaller multipliers. A bit of experimentation with
-multiplier values may greatly speed up responsiveness. In a multi-VDU
-setup, individual sleep multipliers can be configured.</p>
-<h2
+<p>If you are using <strong>ddcutil</strong> version 2.0 or greater,
+<strong>vdu_controls</strong> will default to using the
+<strong>ddcutil</strong> <em>dynamic sleep optimizer</em>. The optimizer
+automatically tunes and caches VDU specific timings when ever
+<strong>ddcutil</strong> is run. Any reliability-issues or errors may be
+automatically resolved as the optimizer refines its cached timings.
+Should problems persist, the optimizer can be disabled by adding
+<strong>--disable-dynamic-sleep</strong> to the <em>ddcutil extra
+arguments</em> in the <em>Settings-Dialog</em> (either globally on the
+<em>vdu_controls tab</em> or selectively under each VDU’s tab). If
+dynamic sleep is disabled, multipliers can then be manually assigned.
+The optimizer’s heuristics continue to be refined, it may be that some
+issues may be resolved by moving to a more recent version of
+<strong>libddcutil/ddcutil</strong>.</p>
+<p>For versions of <strong>ddcutil</strong> prior to 2.0, you can
+manually set the <strong>vdu_control</strong>
+<strong>sleep-multiplier</strong> passed to <strong>ddcutil</strong>. A
+sleep multiplier less than one will speed up the i2c protocol
+interactions at the risk of increased protocol errors. The default sleep
+multiplier of 1.0 has to be quite conservative, many VDUs can cope with
+smaller multipliers. A bit of experimentation with multiplier values may
+greatly speed up responsiveness. In a multi-VDU setup, individual sleep
+multipliers can be configured.</p>
+<h3
 id="improving-response-time-and-reliability-connections-and-controls">Improving
-Response Time and Reliability: Connections and Controls</h2>
-<p><code>DDC/I2C</code> is not a totally reliable form of communication.
-VDUs may vary in their responsiveness and compliance. GPUs, GPU drivers,
-and types of connection may affect the reliability. Both ddcutil and
-vdu_controls attempt to manage the reliability by using repetition and
-by adjusting timings.</p>
-<p>If you have the choice, a <code>DisplayPort</code> to
-<code>DisplayPort</code> connection may be more reliable than
-<code>DVI</code> or <code>HDMI</code>.</p>
+Response Time and Reliability: Connections and Controls</h3>
+<p><strong>DDC/I2C</strong> is not a totally reliable form of
+communication. VDUs may vary in their responsiveness and compliance.
+GPUs, GPU drivers, and types of connection may affect the reliability.
+Both ddcutil and vdu_controls attempt to manage the reliability by using
+repetition and by adjusting timings.</p>
+<p>If you have the choice, a <strong>DisplayPort</strong> to
+<strong>DisplayPort</strong> connection may be more reliable than
+<strong>DVI</strong> or <strong>HDMI</strong>.</p>
 <p>Reducing the number of enabled controls can speed up initialization,
 decrease the refresh time, and reduce the time taken to restore
 presets.</p>
 <p>There’s plenty of useful info for getting the best out of
-<code>ddcutil</code> at https://www.ddcutil.com/.</p>
-<h1 id="limitations">Limitations</h1>
-<h2 id="possible-impact-on-vdu-lifespan">Possible impact on VDU
-lifespan</h2>
+<strong>ddcutil</strong> at https://www.ddcutil.com/.</p>
+<h2 id="limitations">Limitations</h2>
+<h3 id="possible-impact-on-vdu-lifespan">Possible impact on VDU
+lifespan</h3>
 <p>Repeatably altering VDU settings might affect VDU lifespan,
 exhausting the NVRAM write cycles, stressing the VDU power-supply, or
 increasing panel burn-in.</p>
-<p>That said, <code>vdu_controls</code> does include a number of
+<p>That said, <strong>vdu_controls</strong> does include a number of
 features that can be used to reduce the overall frequency of adjustments
 to acceptable levels.</p>
 <ul>
@@ -694,7 +970,7 @@ includes the number of VCP (NVRAM) writes.</li>
 update dynamically.</li>
 </ul></li>
 </ul>
-<h2 id="cross-platform-differences">Cross-platform differences</h2>
+<h3 id="cross-platform-differences">Cross-platform differences</h3>
 <p>The UI attempts to step around minor differences between KDE, GNOME,
 and the rest, the UI on each may not be exactly the same.</p>
 <p>Depending on which desktop or system-tray-extension you are using, a
@@ -710,7 +986,7 @@ XWayland (X11 xcb).</p>
 <p>The scaling and appearance of Qt6 differs from Qt5, its more chunky
 and rounded. If you have Qt5 installed and prefer it, you can uncheck
 prefer-qt6 in settings.</p>
-<h2 id="desktop-theming">Desktop Theming</h2>
+<h3 id="desktop-theming">Desktop Theming</h3>
 <p>Achieving desktop neutrality comes at the price of the application
 not being fully aware or compliant with the theming conventions of any
 particular desktop.</p>
@@ -724,7 +1000,7 @@ to discover whether a tray or dock is differently themed. As a result
 the application includes several manual settings that can alter the
 tray/dock icon theming between colored, monochrome-dark and
 monochrome-light.</p>
-<h2 id="localization">Localization</h2>
+<h3 id="localization">Localization</h3>
 <p>If <em>Settings</em> → <em>translations</em> is set, the application
 will load a translation matching your system’s locale if available.</p>
 <p><strong>The supplied translations are unverified and should be
@@ -732,25 +1008,25 @@ regarded as samples that may be incorrect.</strong></p>
 <p>Where a supported locale is right-to-left oriented, layouts will be
 reconfigured appropriately.</p>
 <p>Locale is determined by the Linux and Qt environment variables,
-<code>LC_ALL</code> and <code>LANGUAGE</code>, which should preferably
-be in agreement. These two environment variables can be manually set to
-force a locale, for example:</p>
+<strong>LC_ALL</strong> and <strong>LANGUAGE</strong>, which should
+preferably be in agreement. These two environment variables can be
+manually set to force a locale, for example:</p>
 <p>The following locations are searched for localized translations:</p>
 <ol type="1">
-<li><code>$HOME/.local/share/vdu_controls/translations/</code></li>
-<li><code>/usr/share/vdu_controls/translations/</code></li>
-<li><code>zipapp-root/vdu_controls/resources/translations/</code></li>
+<li><strong>$HOME/.local/share/vdu_controls/translations/</strong></li>
+<li><strong>/usr/share/vdu_controls/translations/</strong></li>
+<li><strong>zipapp-root/vdu_controls/resources/translations/</strong></li>
 </ol>
 <p>In some cases, Qt internal buttons seem to lack translations in Qt’s
 own translation files, either because there isn’t a translation or
 &amp;-shortcut specifiers cause mismatches.<br />
-The <code>vdu_controls</code> code attempts to cope with &amp;-shortcut
-specifier mismatches, but doesn’t include any solutions for translations
-that are simply missing.</p>
+The <strong>vdu_controls</strong> code attempts to cope with
+&amp;-shortcut specifier mismatches, but doesn’t include any solutions
+for translations that are simply missing.</p>
 <p>To date, there hasn’t been any expression of interest in the
 localization features. The provided translations are all testing samples
 which may not be supported over the long term.</p>
-<h2 id="other-concerns">Other concerns</h2>
+<h3 id="other-concerns">Other concerns</h3>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue
 because, in normal surroundings, older VDUs are often not usable below
@@ -760,17 +1036,17 @@ with hidden or undocumented features or values has the potential to make
 irreversible changes.</p>
 <p>Some controls change the number of connected devices (for example,
 some VDUs support a power-off command). If such controls are used,
-<code>vdu_controls</code> will detect the change and will reconfigure
-the controls for the new situation (for example, DDC VDU 2 may now be
-DDC VDU 1). If you change settings independently of
-<code>vdu_controls</code>, for example, by using a VDU’s physical
-controls, the <code>vdu_controls</code> UI includes a refresh button to
-force it to assess the new configuration.</p>
+<strong>vdu_controls</strong> will detect the change and will
+reconfigure the controls for the new situation (for example, DDC VDU 2
+may now be DDC VDU 1). If you change settings independently of
+<strong>vdu_controls</strong>, for example, by using a VDU’s physical
+controls, the <strong>vdu_controls</strong> UI includes a refresh button
+to force it to assess the new configuration.</p>
 <p>Some VDU settings may disable or enable other settings in the VDU.
 For example, setting a VDU to a specific picture-profile might result in
-the contrast-control being disabled, but <code>vdu_controls</code> will
-not be aware of the restriction resulting in its contrast-control erring
-or appearing to do nothing.</p>
+the contrast-control being disabled, but <strong>vdu_controls</strong>
+will not be aware of the restriction resulting in its contrast-control
+erring or appearing to do nothing.</p>
 <p>If your VDUs support <em>picture-modes</em>, altering any controls in
 vdu_controls will most likely result in the picture-mode being
 customized. For example, say you have selected the VDU’s <em>Vivid</em>
@@ -779,7 +1055,7 @@ likely that this will now become the brightness for <em>Vivid</em> until
 the VDU is reset to its defaults. To avoid confusion, it may be
 advisable to stick to one picture-mode for use with vdu_controls,
 preserving the others unaltered.</p>
-<h1 id="examples">Examples</h1>
+<h2 id="examples">Examples</h2>
 <pre><code>vdu_controls
     All default controls.
 
@@ -799,26 +1075,27 @@ vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
     All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.</code></pre>
 <p>This script often refers to displays and monitors as VDUs in order to
 disambiguate the noun/verb duality of “display” and “monitor”</p>
-<h1 id="prerequisites">Prerequisites</h1>
-<p>Packaged versions of <code>vdu_control</code> are likely to include
-all the following automatically.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Packaged versions of <strong>vdu_control</strong> are likely to
+include all the following automatically.</p>
 <ul>
-<li><code>python3</code>, <code>python3-qt6</code> or
-<code>python-qt5</code>, <code>noto-sans-math-fonts</code>,
-<code>noto-sans-symbols2-fonts</code>.</li>
-<li><code>ddcutil</code>, the command line DDC interface.</li>
-<li><code>libddcutil</code> and <code>ddcutil-service</code>, optional,
-but recommended for increased reliability. more features, and increased
-speed.</li>
+<li><strong>python3</strong>, <strong>python3-qt6</strong> or
+<strong>python-qt5</strong>, <strong>noto-sans-math-fonts</strong>,
+<strong>noto-sans-symbols2-fonts</strong>.</li>
+<li><strong>ddcutil</strong>, the command line DDC interface.</li>
+<li><strong>libddcutil</strong> and <strong>ddcutil-service</strong>,
+optional, but recommended for increased reliability. more features, and
+increased speed.</li>
 </ul>
-<p>The following need not be present to run <code>vdu_controls</code>,
-library imports are only attempted when settings require them:</p>
+<p>The following need not be present to run
+<strong>vdu_controls</strong>, library imports are only attempted when
+settings require them:</p>
 <ul>
-<li><code>brightnessctl</code>, optional, needed for controlling
+<li><strong>brightnessctl</strong>, optional, needed for controlling
 laptop-panels.</li>
-<li><code>python3-pyudev</code>, optional, needed for detecting
+<li><strong>python3-pyudev</strong>, optional, needed for detecting
 brightness changes on laptop-panels.</li>
-<li><code>pyserial</code>, optional, required to use a serial-port
+<li><strong>pyserial</strong>, optional, required to use a serial-port
 light-metering device (only loaded if needed).</li>
 </ul>
 <p>It’s often best to start simple and get ddcutil working first. Check
@@ -827,64 +1104,95 @@ errors:</p>
 <pre><code>    ddcutil detect</code></pre>
 <p>Read ddcutil documentation concerning config of i2c_dev with Nvidia
 GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
-<h1 id="environment">Environment</h1>
-<pre><code>LC_ALL, LANG, LANGUAGE
-    These variables specify the locale for language translations and units of distance.
-    LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-    value, for example, ``Da_DK``. For these to have any effect on 
-    language, *Settings* -&gt; *Translations* must also be enabled.
-
-VDU_CONTROLS_UI_IDLE_SECS
-    The length of pause in slider or spin-box control motion that triggers commit of
-    the controls value to the VDU.  This prevents altering a slider from constantly updating
-    a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
-
-VDU_CONTROLS_IPINFO_URL
-    Overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
-
-VDU_CONTROLS_WTTR_URL
-     Overrides the default weather service URL (``https://wttr.in``).
-
-VDU_CONTROLS_WEATHER_KM
-    Overrides the default maximum permissible spherical distance (in kilometres)
-    between the *Settings*-&gt;*Location* and ``wttr.in`` reported location (``200 km``, 124 miles).
-
-VDU_CONTROLS_DDCUTIL_ARGS
-    Add to the list of arguments passed to each exec of ddcutil.
-
-VDU_CONTROLS_DDCUTIL_RETRIES
-    Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
-
-VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
-    Dbus call wait timeout. Default is 10000, 10 seconds.
-
-VDU_CONTROLS_DEVELOPER
-    Changes some search paths to include the current working directory, which is
-    more convenient in a development scenario. Enables control of desktop LEDs 
-    via brightnessctl so a laptop isn&#39;t required for testing. (``no`` or ``yes``).
-
-VDU_CONTROLS_DEBUG_LAYOUT
-    Draws boxes around the UI elements.  (``no`` or ``yes``).</code></pre>
-<h1 id="files">Files</h1>
-<pre><code>$HOME/.config/vdu_controls/
-    Location for config files, Presets, and other persistent data.
-
-$HOME/.config/vdu_controls/tray_icon.svg
-    If present, this file is the preferred source for the system-tray icon. It can be used if the normal
-    icon conflicts with the desktop theme. If the *Settings* *monochrome-tray*
-    and *mono-light-tray* are enabled, they are applied to the file when it is read.
-
-$HOME/.config/vdu_controls/translations/
-    Location for user supplied translations.
-
-$HOME/.config/vdu_controls.qt.state/
-    Location for Qt/desktop state such as the past window sizes and locations.
-
-/usr/share/vdu_controls
-    Location for system-wide icons, sample-scripts, and translations.</code></pre>
-<h1 id="reporting-bugs">Reporting Bugs</h1>
+<h2 id="environment">Environment</h2>
+<dl>
+<dt><strong>LC_ALL, LANG, LANGUAGE</strong></dt>
+<dd>
+These variables specify the locale for language translations and units
+of distance. LC_ALL is used by python, LANGUAGE is used by Qt. Normally,
+they should all have the same value, for example, <code>Da_DK</code>.
+For these to have any effect on language, *Settings* -&gt;
+*Translations* must also be enabled.
+</dd>
+<dt><strong>VDU_CONTROLS_UI_IDLE_SECS</strong></dt>
+<dd>
+The length of pause in slider or spin-box control motion that triggers
+commit of the controls value to the VDU. This prevents altering a slider
+from constantly updating a VDU, which might shorten its NVRAM lifespan.
+The default is 0.5 seconds.
+</dd>
+<dt><strong>VDU_CONTROLS_IPINFO_URL</strong></dt>
+<dd>
+Overrides the default ip-address to location service URL
+(<code>https://ipinfo.io/json</code>).
+</dd>
+<dt><strong>VDU_CONTROLS_WTTR_URL</strong></dt>
+<dd>
+Overrides the default weather service URL
+(<code>https://wttr.in</code>).
+</dd>
+<dt><strong>VDU_CONTROLS_WEATHER_KM</strong></dt>
+<dd>
+Overrides the default maximum permissible spherical distance (in
+kilometres) between the *Settings*-&gt;*Location* and
+<code>wttr.in</code> reported location (<code>200 km</code>, 124 miles).
+</dd>
+<dt><strong>VDU_CONTROLS_DDCUTIL_ARGS</strong></dt>
+<dd>
+Add to the list of arguments passed to each exec of ddcutil.
+</dd>
+<dt><strong>VDU_CONTROLS_DDCUTIL_RETRIES</strong></dt>
+<dd>
+Set the number of times to repeat a ddcutil getvcp or setvcp before
+returning an error.
+</dd>
+<dt><strong>VDU_CONTROLS_DBUS_TIMEOUT_MILLIS</strong></dt>
+<dd>
+Dbus call wait timeout. Default is 10000, 10 seconds.
+</dd>
+<dt><strong>VDU_CONTROLS_DEVELOPER</strong></dt>
+<dd>
+Changes some search paths to include the current working directory,
+which is more convenient in a development scenario. Enables control of
+desktop LEDs via brightnessctl so a laptop isn't required for testing.
+(<code>no</code> or <code>yes</code>).
+</dd>
+<dt><strong>VDU_CONTROLS_DEBUG_LAYOUT</strong></dt>
+<dd>
+Draws boxes around the UI elements. (<code>no</code> or
+<code>yes</code>).
+</dd>
+</dl>
+<h2 id="files">Files</h2>
+<dl>
+<dt><strong>$HOME/.config/vdu_controls/</strong></dt>
+<dd>
+Location for config files, Presets, and other persistent data.
+</dd>
+<dt><strong>$HOME/.config/vdu_controls/tray_icon.svg</strong></dt>
+<dd>
+If present, this file is the preferred source for the system-tray icon.
+It can be used if the normal icon conflicts with the desktop theme. If
+the *Settings* *monochrome-tray* and *mono-light-tray* are enabled, they
+are applied to the file when it is read.
+</dd>
+<dt><strong>$HOME/.config/vdu_controls/translations/</strong></dt>
+<dd>
+Location for user supplied translations.
+</dd>
+<dt><strong>$HOME/.config/vdu_controls.qt.state/</strong></dt>
+<dd>
+Location for Qt/desktop state such as the past window sizes and
+locations.
+</dd>
+<dt><strong>/usr/share/vdu_controls</strong></dt>
+<dd>
+Location for system-wide icons, sample-scripts, and translations.
+</dd>
+</dl>
+<h2 id="reporting-bugs">Reporting Bugs</h2>
 <p>https://github.com/digitaltrails/vdu_controls/issues</p>
-<h1 id="gnu-license">GNU License</h1>
+<h2 id="gnu-license">GNU License</h2>
 <p>This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.</p>
@@ -894,3 +1202,5 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 Public License for more details.</p>
 <p>You should have received a copy of the GNU General Public License
 along with this program. If not, see https://www.gnu.org/licenses/.</p>
+</body>
+</html>

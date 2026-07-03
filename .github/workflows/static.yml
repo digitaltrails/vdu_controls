@@ -50,55 +50,17 @@ jobs:
           # Copy README.md as the homepage
           cp README.md manual/index.md
           
-          # Copy screenshots folder
-          cp -r screen-shots manual/ 2>/dev/null || echo "No screen-shots folder found"
-
-          # Copy manual page
+          # Copy app help page
           cp src/vdu_controls/resources/docs/help.md manual/help.md
           
-          # Create mkdocs.yml configuration
-          cat > mkdocs.yml << 'EOF'
-          site_name: User Manual
-          site_description: User guide for my project
+          # Copy supporting folders
+          cp -r screenshots manual/ 2>/dev/null || echo "No screen-shots folder found"
+          cp -r sample-scripts manual/
+          cp -r LICENSE.md manual/
+
           
-          theme:
-            name: material
-            features:
-              - navigation.sections
-              - navigation.top
-              - search.highlight
-              - content.tabs.link
-            palette:
-              - scheme: default
-                primary: indigo
-                accent: indigo
-                toggle:
-                  icon: material/weather-sunny
-                  name: Switch to dark mode
-              - scheme: slate
-                primary: indigo
-                accent: indigo
-                toggle:
-                  icon: material/weather-night
-                  name: Switch to light mode
-                  
-          docs_dir: manual
-          
-          plugins:
-            - search
-          
-          markdown_extensions:
-            - admonition
-            - pymdownx.highlight:
-                anchor_linenums: true
-            - pymdownx.superfences
-            - pymdownx.tabbed:
-                alternate_style: true
-                
-          nav:
-            - Home: index.md
-            - Manual: help.md
-          EOF
+          # Copy mkdocs.yml configuration
+          cp src/docs/mkdocs.yml ./mkdocs.yml
           
           # Build the site
           mkdocs build --site-dir _site
