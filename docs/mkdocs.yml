@@ -39,5 +39,5 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Manual: help.md
+  - Manual: manual.md
   - License: LICENSE.md

@@ -80,7 +80,7 @@ on the bottom right of the main window, and the right-mouse button on the system
 available to support all user defined Presets).
 
 > [!TIP]
-> A formatted versions of the [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html) manual page is available for preview on GitHub.
+> An browseable versions of the [vdu_controls](https://digitaltrails.github.io/vdu_controls/manual/) manual page is available for preview on GitHub.
 > 
 > Within the UI, **tool-tips** are often available when hovering over UI components.
 
