@@ -3,8 +3,6 @@ SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.c
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-[![Documentation](https://shields.io?v=1)](https://digitaltrails.github.io/vdu_controls/)
-
 vdu_controls - a DDC control panel for monitors
 ===============================================
 
