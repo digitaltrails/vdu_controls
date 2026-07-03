@@ -44,14 +44,14 @@ jobs:
 
       - name: Build MkDocs site
         run: |
-          # Create docs folder if it doesn't exist
-          mkdir -p docs
+          # Create manual folder if it doesn't exist
+          mkdir -p manual
           
           # Copy README.md as the homepage
-          cp README.md docs/index.md
+          cp README.md manual/index.md
           
           # Copy screenshots folder
-          cp -r screen-shots docs/ 2>/dev/null || echo "No screen-shots folder found"
+          cp -r screen-shots manual/ 2>/dev/null || echo "No screen-shots folder found"
           
           # Create mkdocs.yml configuration
           cat > mkdocs.yml << 'EOF'
