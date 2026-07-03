@@ -52,6 +52,9 @@ jobs:
           
           # Copy screenshots folder
           cp -r screen-shots manual/ 2>/dev/null || echo "No screen-shots folder found"
+
+          # Copy manual page
+          cp src/vdu_controls/resources/docs/help.md manual/help.md
           
           # Create mkdocs.yml configuration
           cat > mkdocs.yml << 'EOF'
@@ -94,6 +97,7 @@ jobs:
           
           nav:
             - Home: index.md
+            - Manual: help.md
           EOF
           
           # Build the site
