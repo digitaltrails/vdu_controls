@@ -60,7 +60,7 @@ jobs:
 
           
           # Copy mkdocs.yml configuration
-          cp src/docs/mkdocs.yml ./mkdocs.yml
+          cp docs/mkdocs.yml ./mkdocs.yml
           
           # Build the site
           mkdocs build --site-dir _site
