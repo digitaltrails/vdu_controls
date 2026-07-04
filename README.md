@@ -70,14 +70,16 @@ Where a desktop supports Qt theming events, the UI dynamically adjusts
 to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE theming, 
 the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 
-The main-toolbar may be dragged to either the top or bottom of the main-window.
-The toolbar's location persists across restarts.
+To further assist with adapting to different desktops, the Settings-Dialog 
+contains options for locating the main-toolbar at the top or bottom of the 
+main-window.  A futher option is provided for separating the status-line 
+from the toolbar.
 
-From any application window, use **F1** to access **help**, and **F10** to access the *main-menu*.   
-The *main-menu* is also available via the right-mouse button in the main-window, the hamburger-menu
-item on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
-*main-menu* provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
-available to support all user defined Presets).
+From any application window, use **F1** to access **help**, and **F10** to access the 
+*main-menu*.  The *main-menu* is also available via the right-mouse button in the main-window, the 
+hamburger-menu item on the bottom right of the main window, and the right-mouse button on the 
+system-tray icon. The  *main-menu* provides **ALT-_key_ shortcuts** for all menu items (subject 
+to sufficient letters being available to support all user defined Presets).
 
 > [!TIP]
 > The online [vdu_controls manual](https://digitaltrails.github.io/vdu_controls/manual/) 
@@ -127,22 +129,35 @@ conditions, but they often need to be turned down when the ambient light level
 decreases. I created `vdu_controls` to allow me to more easily adjust my own 
 displays.
 
-`vdu_controls` communicates with displays by using either 
-the [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), 
-a D-Bus interface to [libddcutil](https://www.ddcutil.com/api_main/), or [ddcutil](https://www.ddcutil.com/), a command line utility.
-The D-Bus `ddcutil-service` is preferred, its more reliable, it detects 
-DPMS/hotplug events, and it's faster (noticably so if you have
-multiple displays). If `ddcutil-service` 
-isn't available, `vdu_controls` falls back to the `ddcutil` command.
+`vdu_controls` communicates with displays by using one of two interfaces:
+
+- [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), a DBus session-sevice
+ interface to [libddcutil](https://www.ddcutil.com/api_main/).
+- [ddcutil](https://www.ddcutil.com/), a command line DDC utility.
 
 Both `ddcutil` and `libddcutil` interface to the **VESA** standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
 Both the command and the library  provide a robust interface that supports 
 many different OEM DDC implementations and GPU drivers. 
 
+I created `ddcutil-service` access the faster API interface
+provided by `libddcutil`.  Due to connection caching in `libddcutil`, the 
+service can be significantly faster when accessing multiple displays. The
+service also uses `libddcutil` to assist with detecting DPMS and hotplug 
+events, such as a monitor being powered down.  
+
+If `ddcutil-service`  isn't available, `vdu_controls` automatically 
+falls back to the `ddcutil` command.  The command has to be run each time
+a display needs to be interogated or changed. The command doesn't cache
+connections. The handshake with each display can take a substantial amount
+of time depending on the quality of the displays DDC implementation. The
+command doesn't provide any event detection.
+
+
+
 The `ddcutil-service` is quite new and less commonly pre-packaged.
-If `libddcutil` is prepackaged, a DIY build of the service should be straight forward (it's 
-coded in C, in only one C source file). If 
+If `libddcutil` isn't prepackaged, a DIY build should be straight forward. It's 
+coded in C, in only one C source file. If 
 a distribution provides `ddcutil`, it probably also provides `libddcutil` and
 its dev/c-header packages. Beyond `libddcutil` the service has only standard requirments
 common to all distros .   The service 
