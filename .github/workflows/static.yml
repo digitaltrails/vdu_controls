@@ -40,7 +40,10 @@ jobs:
 
       - name: Install MkDocs
         run: |
-          pip install mkdocs mkdocs-material
+          # MkDocs 2.0, the underlying framework of Material for MkDocs,
+          # will introduce backward-incompatible changes
+          # pip install mkdocs mkdocs-material
+          pip install "mkdocs<2.0.0" "mkdocs-material<10.0.0"
 
       - name: Build MkDocs site
         run: |
