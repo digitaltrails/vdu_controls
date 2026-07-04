@@ -5,7 +5,7 @@ site_description: Manuals and user guides for vdu_controls
 
 theme:
   name: material
-  logo: assets/vdu_controls.svg
+  logo: assets/vdu_controls_light.svg
   favicon: assets/vdu_controls.svg
   features:
     - navigation.sections

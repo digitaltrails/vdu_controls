@@ -10,7 +10,7 @@ cp LICENSE.md docs/manual/LICENSE.md
 cp -r screenshots docs/manual/
 cp -r sample-scripts docs/manual/
 cp src/vdu_controls/resources/icons/app/vdu_controls.svg docs/manual/assets/
-sed -i 's/color:#232629;/color:#f3f3f3;/' docs/manual/assets/vdu_controls.svg
+sed 's/color:#232629;/color:#f3f3f3;/' docs/manual/assets/vdu_controls.svg > docs/manual/assets/vdu_controls_light.svg
 cd docs
 mkdocs build --site-dir _site
 echo 'to test:  (cd docs; mkdocs serve)'
