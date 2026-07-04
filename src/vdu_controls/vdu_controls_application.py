@@ -641,7 +641,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             if df := preset.get_daylight_factor():
                                 log.info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
                                 LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
-                                if self.lux_auto_controller.lux_slider is not None:
+                                if self.lux_auto_controller is not None and self.lux_auto_controller.lux_slider is not None:
                                     self.lux_auto_controller.lux_slider.update_label_df(df)
                                 LuxDialog.reconfigure_instance()
                     else:  # Interrupted or exception:
