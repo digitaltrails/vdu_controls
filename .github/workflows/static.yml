@@ -66,6 +66,10 @@ jobs:
           # Copy mkdocs.yml configuration
           cp docs/mkdocs.yml ./mkdocs.yml
           
+          # Get the icon and convert it to be OK on a dark header
+          cp src/vdu_controls/resources/icons/app/vdu_controls.svg docs/manual/assets/
+          sed -i 's/color:#232629;/color:#f3f3f3;/' docs/manual/assets/vdu_controls.svg
+          
           # Build the site
           mkdocs build --site-dir _site
           

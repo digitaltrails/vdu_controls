@@ -2,12 +2,15 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 mkdir -p docs/manual
+mkdir -p docs/manual/assets
 cp src/vdu_controls/resources/docs/help.md docs/manual/manual.md
 cp README.md docs/manual/index.md
 python3 utils/convert_alerts.py docs/manual/index.md
 cp LICENSE.md docs/manual/LICENSE.md
 cp -r screenshots docs/manual/
 cp -r sample-scripts docs/manual/
+cp src/vdu_controls/resources/icons/app/vdu_controls.svg docs/manual/assets/
+sed -i 's/color:#232629;/color:#f3f3f3;/' docs/manual/assets/vdu_controls.svg
 cd docs
 mkdocs build --site-dir _site
 echo 'to test:  (cd docs; mkdocs serve)'
