@@ -9,10 +9,10 @@ import vdu_controls.logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
-    DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL
+    DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL, VDU_CONTROLS_HELP_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.icon_utils import create_icon_from_svg_bytes
-from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication
+from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication, QDesktopServices, QUrl
 from vdu_controls.scaling import dpx
 from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 from vdu_controls.widgets import DialogSingletonMixin
@@ -166,6 +166,17 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.setText(tr('About vdu_controls'))
         icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)
         self.setIconPixmap(icon.pixmap(dpx(125), dpx(125)))
+
+        self.setStandardButtons(QMessageBox.StandardButton.Close)
+
+        def online_help_clicked():
+            QDesktopServices.openUrl(QUrl(VDU_CONTROLS_HELP_URL))
+
+        help_button = self.addButton(tr("Online Help"), QMessageBox.ButtonRole.HelpRole)
+        help_button.clicked.connect(online_help_clicked)
+
+        self.setDefaultButton(self.button(QMessageBox.StandardButton.Close))
+
         self.dir_html = 'rtl' if self.layoutDirection() == Qt.LayoutDirection.RightToLeft else 'ltf'
         self.refresh_content()
         self.setModal(False)

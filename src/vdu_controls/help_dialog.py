@@ -5,12 +5,14 @@ from __future__ import annotations
 import re
 
 from vdu_controls import constants
-from vdu_controls.icon_utils import StdPixmap, si
+
 from vdu_controls.app_locale import tr
-from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, Qt
+from vdu_controls.constants import VDU_CONTROLS_HELP_URL
+from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, QUrl, QDesktopServices, QDialogButtonBox
 from vdu_controls.scaling import dpx
-from vdu_controls.widgets import SubWinDialog, StdButton, DialogSingletonMixin
+from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin
 import vdu_controls.app_locale as app_locale
+
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
@@ -30,8 +32,20 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         markdown_view.setViewportMargins(dpx(40), dpx(40), dpx(25), dpx(15))
         markdown_view.setMarkdown(qt_markdown)
         layout.addWidget(markdown_view)
-        close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
-        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
+
+        buttons = QDialogButtonBox.StandardButton.Help | QDialogButtonBox.StandardButton.Close
+        button_box = QDialogButtonBox(buttons)
+
+        def online_help():
+            QDesktopServices.openUrl(QUrl(VDU_CONTROLS_HELP_URL))
+
+        button_box.helpRequested.connect(online_help)
+        button_box.rejected.connect(self.close)
+        button_box.button(QDialogButtonBox.StandardButton.Close).setDefault(True)
+        help_button = button_box.button(QDialogButtonBox.StandardButton.Help)
+        help_button.setText(tr("Online Help"))
+        layout.addWidget(button_box)
+
         self.setLayout(layout)
         self.make_visible()
 

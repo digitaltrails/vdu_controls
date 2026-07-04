@@ -13,11 +13,11 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt6 import QtCore, QtNetwork, sip
             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins, pyqtBoundSignal
+                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins, QUrl, pyqtBoundSignal
             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator, QStandardItemModel, QFocusEvent
+                QDoubleValidator, QStandardItemModel, QFocusEvent, QDesktopServices
             from PyQt6.QtSvg import QSvgRenderer
             from PyQt6.QtSvgWidgets import QSvgWidget
             from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
@@ -31,11 +31,11 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt5 import QtCore, QtNetwork, sip
             from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins, pyqtBoundSignal
+                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins, QUrl, pyqtBoundSignal
             from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator, QStandardItemModel, QFocusEvent
+                QDoubleValidator, QStandardItemModel, QFocusEvent, QDesktopServices
             from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
             from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
                 QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
