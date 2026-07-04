@@ -73,16 +73,18 @@ the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 The main-toolbar may be dragged to either the top or bottom of the main-window.
 The toolbar's location persists across restarts.
 
-From any application window, use **F1** to access **help**, and **F10** to access the *main-menu*.   The 
-*main-menu* is also available via the right-mouse button in the main-window, the hamburger-menu item 
-on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
+From any application window, use **F1** to access **help**, and **F10** to access the *main-menu*.   
+The *main-menu* is also available via the right-mouse button in the main-window, the hamburger-menu
+item on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
 *main-menu* provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
 
 > [!TIP]
-> An browseable versions of the [vdu_controls](https://digitaltrails.github.io/vdu_controls/manual/) manual page is available for preview on GitHub.
-> 
-> Within the UI, **tool-tips** are often available when hovering over UI components.
+> The online [vdu_controls manual](https://digitaltrails.github.io/vdu_controls/manual/) 
+> is available for preview on GitHub.
+
+> [!TIP]
+> Within ``vdu_controls``, *tool-tips* are often revealed when hovering over UI components.
 
 
 ![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 

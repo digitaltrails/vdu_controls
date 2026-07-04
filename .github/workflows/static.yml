@@ -49,6 +49,7 @@ jobs:
           
           # Copy README.md as the homepage
           cp README.md manual/index.md
+          python3 utils/convert_alerts.py manual/index.md
           
           # Copy app help page as a starter manual (it's a md man page)
           cp src/vdu_controls/resources/docs/help.md manual/manual.md

@@ -4,6 +4,7 @@
 mkdir -p docs/manual
 cp src/vdu_controls/resources/docs/help.md docs/manual/manual.md
 cp README.md docs/manual/index.md
+python3 utils/convert_alerts.py docs/manual/index.md
 cp LICENSE.md docs/manual/LICENSE.md
 cp -r screenshots docs/manual/
 cp -r sample-scripts docs/manual/
