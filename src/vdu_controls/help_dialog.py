@@ -34,16 +34,16 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         layout.addWidget(markdown_view)
 
         buttons = QDialogButtonBox.StandardButton.Help | QDialogButtonBox.StandardButton.Close
-        button_box = QDialogButtonBox(buttons)
+        button_box = QDialogButtonBox(buttons)  # pyright:ignore
 
         def online_help():
             QDesktopServices.openUrl(QUrl(VDU_CONTROLS_HELP_URL))
 
         button_box.helpRequested.connect(online_help)
-        button_box.rejected.connect(self.close)
-        button_box.button(QDialogButtonBox.StandardButton.Close).setDefault(True)
+        button_box.rejected.connect(self.close)  # pyright:ignore
+        button_box.button(QDialogButtonBox.StandardButton.Close).setDefault(True)  # pyright:ignore
         help_button = button_box.button(QDialogButtonBox.StandardButton.Help)
-        help_button.setText(tr("Online Help"))
+        help_button.setText(tr("Online Help"))  # pyright:ignore
         layout.addWidget(button_box)
 
         self.setLayout(layout)

@@ -172,8 +172,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         def online_help_clicked():
             QDesktopServices.openUrl(QUrl(VDU_CONTROLS_HELP_URL))
 
-        help_button = self.addButton(tr("Online Help"), QMessageBox.ButtonRole.HelpRole)
-        help_button.clicked.connect(online_help_clicked)
+        help_button = self.addButton(tr("Online Help"), QMessageBox.ButtonRole.HelpRole)  # pyright:ignore
+        help_button.clicked.connect(online_help_clicked)   # pyright:ignore
 
         self.setDefaultButton(self.button(QMessageBox.StandardButton.Close))
 
