@@ -5,8 +5,6 @@ import re
 import sys
 from pathlib import Path
 
-from mypy.server import target
-
 # Maps GitHub alert tags to MkDocs Material names and titles
 TAG_MAP = {
     "TIP": ("tip", "Tip"),
