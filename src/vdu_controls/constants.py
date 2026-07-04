@@ -45,8 +45,9 @@ VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
 
 assert _sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {_sys.version}).'
 
-VDU_CONTROLS_WEBSITE_URL = 'https://github.com/digitaltrails/vdu_controls'
-VDU_CONTROLS_HELP_URL = "https://digitaltrails.github.io/vdu_controls/"
+VDU_CONTROLS_PROJECT_URL = 'https://github.com/digitaltrails/vdu_controls'
+VDU_CONTROLS_WEBSITE_URL = "https://digitaltrails.github.io/vdu_controls/"
+VDU_CONTROLS_HELP_URL = VDU_CONTROLS_WEBSITE_URL   # For now, they're the same
 DDCUTIL_WEBSITE_URL = 'https://www.ddcutil.com/'
 DDCUTIL_SERVICE_WEBSITE_URL = 'https://github.com/digitaltrails/ddcutil-service'
 BRIGHTNESSCTL_WEBSITE_URL = 'https://github.com/Hummer12007/brightnessctl'

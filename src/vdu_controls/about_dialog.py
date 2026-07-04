@@ -9,7 +9,8 @@ import vdu_controls.logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
-    DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL, VDU_CONTROLS_HELP_URL
+    DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_PROJECT_URL, VDU_CONTROLS_HELP_URL, \
+    VDU_CONTROLS_WEBSITE_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.icon_utils import create_icon_from_svg_bytes
 from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication, QDesktopServices, QUrl
@@ -104,7 +105,7 @@ class _AboutTemplateData:
     @property
     def release_notes(self) -> str:
         return tr("Release notes: {}").format(
-            _AboutTemplateData._link(VDU_CONTROLS_WEBSITE_URL + f'/releases/tag/v{VDU_CONTROLS_VERSION}', VDU_CONTROLS_VERSION))
+            _AboutTemplateData._link(VDU_CONTROLS_PROJECT_URL + f'/releases/tag/v{VDU_CONTROLS_VERSION}', VDU_CONTROLS_VERSION))
 
     @property
     def dependencies(self):
