@@ -528,6 +528,7 @@ Version History
   * Tick marks on control-sliders are now optional, see Settings-Dialog -> tick-marks.
   * The right-mouse action that could irretrievably hide the toolbar has been
     disabled.
+  * An Online-Help button has been added to the Help-Dialog and About-Dialog.
   * When parsing monitor metadata, if the same VCP-feature-code is 
     defined multiple times, the first definition is kept and any following 
     definitions are logged (rather than silently overwriting the first). 
