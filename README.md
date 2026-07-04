@@ -374,7 +374,7 @@ in a number of ways:
 * Command line options.
 * Configurations files in `$HOME/.config/vdu_controls/`
 
-See the *main-menu* or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+See the *main-menu* or the  [online help](https://digitaltrails.github.io/vdu_controls/#help)
  for details.
 
 Localization
@@ -460,18 +460,12 @@ python3 -m zipapp vdu_controls --output vdu_controls.pyz --main vdu_controls_mai
 python3 vdu_controls.pyz
 ```
 
-Configuration files for the 
-[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html) are included. 
-The following commands will extract documentation from ``vdu_controls.py``:
-```
-% cd docs
-% make man
-% make html
-```
-I prefer [Pandoc](https://pandoc.org/)'s HTML generation. There is a util script that generates the
-Sphinx outputs and then pandoc for the HTML:
+There are configuration files for the 
+[Pandoc](https://pandoc.org/)'s and [MkDocs](https://www.mkdocs.org/). There are util scripts that generate 
+pandoc output and the MkDocs site pages:
 ```
 % ./util/make-man
+% ./util/make-pages
 ```
 
 My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/).
