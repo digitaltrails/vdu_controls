@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -12,6 +12,11 @@
         <location filename="../src/vdu_controls/about_dialog.py" line="166" />
         <source>About vdu_controls</source>
         <translation>Om vdu_controls</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/about_dialog.py" line="175" />
+        <source>Online Help</source>
+        <translation>Online hjælp</translation>
     </message>
 </context><context>
     <name>ConfOpt</name>
@@ -510,14 +515,14 @@ Dette diagram kan ændres i størrelsen.</translation>
 </context><context>
     <name>HelpDialog</name>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="26" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="28" />
         <source>Help</source>
         <translation>Hjælp</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="33" />
-        <source>Close</source>
-        <translation>Luk</translation>
+        <location filename="../src/vdu_controls/help_dialog.py" line="46" />
+        <source>Online Help</source>
+        <translation>Online hjælp</translation>
     </message>
 </context><context>
     <name>LatitudeLongitudeValidator</name>
