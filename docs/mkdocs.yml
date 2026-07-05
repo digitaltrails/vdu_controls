@@ -39,9 +39,11 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.blocks.admonition
+  - attr_list
 
 nav:
   - Home: index.md
   - Manual: manual.md
+  - Auto: ambient-howto.md
   - Source: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md

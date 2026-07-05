@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Defaults: source is current dir, output is ./build/site (clean out-of-tree)
+SOURCE_DIR="${PWD}"
+OUTPUT_DIR="${SOURCE_DIR}/build/site"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --source) SOURCE_DIR="$2"; shift 2 ;;
+        --output) OUTPUT_DIR="$2"; shift 2 ;;
+        -h|--help)
+            echo "Usage: $0 [--source SOURCE_DIR] [--output OUTPUT_DIR]"
+            echo "  --source   Project root directory (default: current dir)"
+            echo "  --output   Output directory for the final site (default: ./build/site)"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+# Convert output dir to absolute path so we can copy to it later
+OUTPUT_DIR=$(cd "$(dirname "$OUTPUT_DIR")" && pwd)/$(basename "$OUTPUT_DIR")
+
+# Create a temporary working directory – automatically cleaned up on exit
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+
+echo "📂 Source:       $SOURCE_DIR"
+echo "📦 Output:       $OUTPUT_DIR"
+echo "⚙️  Working in:   $WORK_DIR (temporary)"
+
+# Change to source dir so relative paths work as they did in the workflow
+cd "$SOURCE_DIR"
+
+# 1. Prepare the manual folder inside the temp dir
+mkdir -p "$WORK_DIR/manual"
+
+# 2. Copy and convert README → index.md
+cp README.md "$WORK_DIR/manual/index.md"
+python3 utils/convert_alerts.py "$WORK_DIR/manual/index.md"
+
+# 3. Copy the app help page
+cp src/vdu_controls/resources/docs/help.md "$WORK_DIR/manual/manual.md"
+
+# 4. Copy supporting folders/files (ignore missing screenshots)
+cp -r screenshots "$WORK_DIR/manual/" 2>/dev/null || echo "ℹ️  No screenshots folder found, skipping"
+cp -r sample-scripts "$WORK_DIR/manual/"
+cp LICENSE.md "$WORK_DIR/manual/"   # no -r needed for a single file
+
+# 5. Copy mkdocs.yml from docs/ to the temp root
+cp docs/mkdocs.yml "$WORK_DIR/mkdocs.yml"
+
+# 6. Copy and lighten the icon
+mkdir -p "$WORK_DIR/manual/assets"
+cp src/vdu_controls/resources/icons/app/vdu_controls.svg "$WORK_DIR/manual/assets/"
+sed 's/color:#232629;/color:#f3f3f3;/' \
+    "$WORK_DIR/manual/assets/vdu_controls.svg" \
+    > "$WORK_DIR/manual/assets/vdu_controls_light.svg"
+
+# 6.5 Copy any additional contributing documents
+cp -r docs/src/* $pages_build/
+
+# 7. Build the site – inside the temp dir, using the copied config
+mkdocs build \
+    --config-file "$WORK_DIR/mkdocs.yml" \
+    --site-dir "$WORK_DIR/_site" \
+    --clean
+
+# 8. Add .nojekyll
+touch "$WORK_DIR/_site/.nojekyll"
+
+# 9. Copy the final built site to the user's chosen output directory
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$(dirname "$OUTPUT_DIR")"
+cp -r "$WORK_DIR/_site" "$OUTPUT_DIR"
+
+echo "✅ Build complete! Site is at: $OUTPUT_DIR"

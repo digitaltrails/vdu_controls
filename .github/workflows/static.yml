@@ -46,36 +46,7 @@ jobs:
           pip install "mkdocs<2.0.0" "mkdocs-material<10.0.0"
 
       - name: Build MkDocs site
-        run: |
-          # Create manual folder if it doesn't exist
-          mkdir -p manual
-          
-          # Copy README.md as the homepage
-          cp README.md manual/index.md
-          python3 utils/convert_alerts.py manual/index.md
-          
-          # Copy app help page as a starter manual (it's a md man page)
-          cp src/vdu_controls/resources/docs/help.md manual/manual.md
-          
-          # Copy supporting folders
-          cp -r screenshots manual/ 2>/dev/null || echo "No screenshots folder found"
-          cp -r sample-scripts manual/
-          cp -r LICENSE.md manual/
-
-          
-          # Copy mkdocs.yml configuration
-          cp docs/mkdocs.yml ./mkdocs.yml
-          
-          # Get the icon and convert it to be OK on a dark header
-          mkdir =p manual/assets
-          cp src/vdu_controls/resources/icons/app/vdu_controls.svg manual/assets/
-          sed 's/color:#232629;/color:#f3f3f3;/' manual/assets/vdu_controls.svg > manual/assets/vdu_controls_light.svg 
-          
-          # Build the site
-          mkdocs build --site-dir _site
-          
-          # Add .nojekyll to prevent Jekyll processing
-          touch _site/.nojekyll
+        run: ./utils/make-mkdocs --output _site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
