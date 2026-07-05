@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 site_name: vdu_controls
 site_description: Manuals and user guides for vdu_controls
+copyright: 2021-2026 Contributors to vdu_controls
 
 theme:
   name: material
@@ -26,7 +27,7 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
 
-docs_dir: manual
+docs_dir: _build/mkdocs/input
 
 plugins:
   - search
