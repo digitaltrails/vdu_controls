@@ -6,8 +6,10 @@ SOURCE_DIR="${PWD}"
 OUTPUT_DIR="${SOURCE_DIR}/build/site"
 
 # Parse arguments
+SERVE=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --serve) SERVE=true; shift ;;
         --source) SOURCE_DIR="$2"; shift 2 ;;
         --output) OUTPUT_DIR="$2"; shift 2 ;;
         -h|--help)
@@ -21,7 +23,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Convert output dir to absolute path so we can copy to it later
-OUTPUT_DIR=$(cd "$(dirname "$OUTPUT_DIR")" && pwd)/$(basename "$OUTPUT_DIR")
+OUTPUT_DIR=$(realpath -m $OUTPUT_DIR)
 
 # Create a temporary working directory – automatically cleaned up on exit
 WORK_DIR=$(mktemp -d)
@@ -60,13 +62,19 @@ sed 's/color:#232629;/color:#f3f3f3;/' \
     > "$WORK_DIR/manual/assets/vdu_controls_light.svg"
 
 # 6.5 Copy any additional contributing documents
-cp -r docs/src/* "$WORK_DIR/manual/"
+cp -r docs/assets/* "$WORK_DIR/manual/assets/"
 
 # 7. Build the site – inside the temp dir, using the copied config
-mkdocs build \
-    --config-file "$WORK_DIR/mkdocs.yml" \
-    --site-dir "$WORK_DIR/_site" \
-    --clean
+if [[ "$SERVE" == true ]]; then
+    echo "🔥 Starting live server from $WORK_DIR"
+    cd "$WORK_DIR"
+    mkdocs serve --config-file "$WORK_DIR/mkdocs.yml"
+else
+    mkdocs build \
+        --config-file "$WORK_DIR/mkdocs.yml" \
+        --site-dir "$WORK_DIR/_site" \
+        --clean
+fi
 
 # 8. Add .nojekyll
 touch "$WORK_DIR/_site/.nojekyll"
@@ -77,3 +85,4 @@ mkdir -p "$(dirname "$OUTPUT_DIR")"
 cp -r "$WORK_DIR/_site" "$OUTPUT_DIR"
 
 echo "✅ Build complete! Site is at: $OUTPUT_DIR"
+echo "test using mkdocs serve --config-file docs/mkdocs.yml --site-dir $OUTPUT_DIR"

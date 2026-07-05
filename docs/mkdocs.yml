@@ -44,6 +44,6 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Manual: manual.md
-  - Auto: ambient-howto.md
+  - AutoLux: assets/ambient-howto.md
   - Source: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md
