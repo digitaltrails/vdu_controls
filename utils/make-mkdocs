@@ -87,6 +87,4 @@ mkdir -p "$(dirname "$OUTPUT_DIR")"
 cp -r "$WORK_DIR/_site" "$OUTPUT_DIR"
 
 echo "✅ Build complete! Site is at: $OUTPUT_DIR"
-echo "test using mkdocs serve --config-file docs/mkdocs.yml --site-dir $OUTPUT_DIR"
-
-fi
+echo "🔥 To serve it locally (cd $OUTPUT_DIR; python3 -m http.server)"
