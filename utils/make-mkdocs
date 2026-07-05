@@ -60,7 +60,7 @@ sed 's/color:#232629;/color:#f3f3f3;/' \
     > "$WORK_DIR/manual/assets/vdu_controls_light.svg"
 
 # 6.5 Copy any additional contributing documents
-cp -r docs/src/* $pages_build/
+cp -r docs/src/* "$WORK_DIR/manual/"
 
 # 7. Build the site – inside the temp dir, using the copied config
 mkdocs build \
