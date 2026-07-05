@@ -1117,9 +1117,9 @@ GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
 <dd>
 These variables specify the locale for language translations and units
 of distance. LC_ALL is used by python, LANGUAGE is used by Qt. Normally,
-they should all have the same value, for example, <code>Da_DK</code>.
-For these to have any effect on language, *Settings* -&gt;
-*Translations* must also be enabled.
+they should all have the same value, for example, Da_DK. For these to
+have any effect on language, Settings &gt; Translations must also be
+enabled.
 </dd>
 <dt><strong>VDU_CONTROLS_UI_IDLE_SECS</strong></dt>
 <dd>
@@ -1131,18 +1131,17 @@ The default is 0.5 seconds.
 <dt><strong>VDU_CONTROLS_IPINFO_URL</strong></dt>
 <dd>
 Overrides the default ip-address to location service URL
-(<code>https://ipinfo.io/json</code>).
+(https://ipinfo.io/json).
 </dd>
 <dt><strong>VDU_CONTROLS_WTTR_URL</strong></dt>
 <dd>
-Overrides the default weather service URL
-(<code>https://wttr.in</code>).
+Overrides the default weather service URL (https://wttr.in).
 </dd>
 <dt><strong>VDU_CONTROLS_WEATHER_KM</strong></dt>
 <dd>
-Overrides the default maximum permissible spherical distance (in
-kilometres) between the *Settings*-&gt;*Location* and
-<code>wttr.in</code> reported location (<code>200 km</code>, 124 miles).
+Overrides the default permissible spherical distance (in kilometres)
+between the Settings &gt; Location and wttr.in reported location (200
+km, 124 miles).
 </dd>
 <dt><strong>VDU_CONTROLS_DDCUTIL_ARGS</strong></dt>
 <dd>
@@ -1162,12 +1161,11 @@ Dbus call wait timeout. Default is 10000, 10 seconds.
 Changes some search paths to include the current working directory,
 which is more convenient in a development scenario. Enables control of
 desktop LEDs via brightnessctl so a laptop isn't required for testing.
-(<code>no</code> or <code>yes</code>).
+(no or yes).
 </dd>
 <dt><strong>VDU_CONTROLS_DEBUG_LAYOUT</strong></dt>
 <dd>
-Draws boxes around the UI elements. (<code>no</code> or
-<code>yes</code>).
+Draws boxes around the UI elements. (no or yes).
 </dd>
 </dl>
 <h2 id="files">Files</h2>
@@ -1180,7 +1178,7 @@ Location for config files, Presets, and other persistent data.
 <dd>
 If present, this file is the preferred source for the system-tray icon.
 It can be used if the normal icon conflicts with the desktop theme. If
-the *Settings* *monochrome-tray* and *mono-light-tray* are enabled, they
+the Settings &gt; monochrome-tray and mono-light-tray are enabled, they
 are applied to the file when it is read.
 </dd>
 <dt><strong>$HOME/.config/vdu_controls/translations/</strong></dt>

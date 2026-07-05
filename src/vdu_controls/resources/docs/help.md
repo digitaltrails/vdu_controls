@@ -845,42 +845,45 @@ at https://www.ddcutil.com/
 
 
     LC_ALL, LANG, LANGUAGE
-        These variables specify the locale for language translations and units of distance.
-        LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-        value, for example, ``Da_DK``. For these to have any effect on 
-        language, *Settings* -> *Translations* must also be enabled.
+        These variables specify the locale for language translations and units 
+        of distance. LC_ALL is used by python, LANGUAGE is used by Qt. Normally, 
+        they should all have the same value, for example, Da_DK. For these 
+        to have any effect on language, Settings > Translations must also be 
+        enabled.
 
     VDU_CONTROLS_UI_IDLE_SECS
-        The length of pause in slider or spin-box control motion that triggers commit of
-        the controls value to the VDU.  This prevents altering a slider from constantly updating
-        a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
+        The length of pause in slider or spin-box control motion that triggers 
+        commit of the controls value to the VDU. This prevents altering a slider
+        from constantly updating a VDU, which might shorten its NVRAM lifespan. 
+        The default is 0.5 seconds.
 
     VDU_CONTROLS_IPINFO_URL
-        Overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
+        Overrides the default ip-address to location service URL (https://ipinfo.io/json).
 
     VDU_CONTROLS_WTTR_URL
-         Overrides the default weather service URL (``https://wttr.in``).
+         Overrides the default weather service URL (https://wttr.in).
 
     VDU_CONTROLS_WEATHER_KM
-        Overrides the default maximum permissible spherical distance (in kilometres)
-        between the *Settings*->*Location* and ``wttr.in`` reported location (``200 km``, 124 miles).
+        Overrides the default permissible spherical distance (in kilometres)
+        between the Settings > Location and wttr.in reported location (200 km, 124 miles).
 
     VDU_CONTROLS_DDCUTIL_ARGS
         Add to the list of arguments passed to each exec of ddcutil.
 
     VDU_CONTROLS_DDCUTIL_RETRIES
-        Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
+        Set the number of times to repeat a ddcutil getvcp or setvcp before 
+        returning an error.
 
     VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
         Dbus call wait timeout. Default is 10000, 10 seconds.
 
     VDU_CONTROLS_DEVELOPER
-        Changes some search paths to include the current working directory, which is
-        more convenient in a development scenario. Enables control of desktop LEDs 
-        via brightnessctl so a laptop isn't required for testing. (``no`` or ``yes``).
+        Changes some search paths to include the current working directory, which
+        is more convenient in a development scenario. Enables control of desktop
+        LEDs via brightnessctl so a laptop isn't required for testing. (no or yes).
 
     VDU_CONTROLS_DEBUG_LAYOUT
-        Draws boxes around the UI elements.  (``no`` or ``yes``).
+        Draws boxes around the UI elements.  (no or yes).
 
 ## Files
 
@@ -888,9 +891,10 @@ at https://www.ddcutil.com/
         Location for config files, Presets, and other persistent data.
 
     $HOME/.config/vdu_controls/tray_icon.svg
-        If present, this file is the preferred source for the system-tray icon. It can be used if the normal
-        icon conflicts with the desktop theme. If the *Settings* *monochrome-tray*
-        and *mono-light-tray* are enabled, they are applied to the file when it is read.
+        If present, this file is the preferred source for the system-tray icon. 
+        It can be used if the normal icon conflicts with the desktop theme. 
+        If the Settings > monochrome-tray and mono-light-tray are enabled, 
+        they are applied to the file when it is read.
 
     $HOME/.config/vdu_controls/translations/
         Location for user supplied translations.

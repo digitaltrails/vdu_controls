@@ -18,7 +18,7 @@ A control panel for external monitors (*Visual Display Units*).
 > **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
 > time.  This may interfere with changes made via **vdu_controls**, including
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
-> be found under ***System Settings -> System -> Energy Saving***.
+> be found under **System Settings** > **System** > **Energy Saving**.
 
 Description
 -----------
@@ -97,7 +97,7 @@ to sufficient letters being available to support all user defined Presets).
 
 Starting with version 2.6, laptop panels are supported for brightness-only control.
 
-Laptop support is optional and controlled by the  __Settings->vdu_control globals->DDC options->laptop panel__.
+Laptop support is optional and controlled by the  __Settings__ > __vdu_control globals__ > __DDC options__ > __laptop panel__.
 
 The command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl) is used to emulate DDC control of brightness.
 Brightness control is widely available and packaged for many distros.
@@ -337,7 +337,7 @@ Installing
 The script can self-install itself as desktop application in the current user's `$HOME\.local`
 hierarchy, this will add it to the normal desktop application menu: 
 
-   as *Applications->Settings->VDU Controls* by running:
+   as **Applications** > **Settings** > **vdu_controls** by running:
    ```
     % python3 vdu_controls.pyz --install
    ```
