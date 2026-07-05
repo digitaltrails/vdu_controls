@@ -2,8 +2,9 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 # hacky - pandoc is better at html
-pandoc --standalone --from markdown --to html --lua-filter=docs/man-bold.lua src/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1.html
-pandoc --standalone --from markdown --to man --lua-filter=docs/man-bold.lua src/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1
+mkdir -p docs/_build/man
+pandoc --standalone --from markdown --to html --lua-filter=utils/pandoc-man-bold.lua src/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1.html
+pandoc --standalone --from markdown --to man --lua-filter=utils/pandoc-man-bold.lua src/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1
 #cd docs
 ## Prefer sphinx handling of embedded python documentation over straight handling of .md.
 ## Create a dummy .py file for sphinx to process.
