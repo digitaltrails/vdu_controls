@@ -1,18 +1,61 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
-mkdir -p docs/manual
-mkdir -p docs/manual/assets
-cp src/vdu_controls/resources/docs/help.md docs/manual/manual.md
-cp README.md docs/manual/index.md
-python3 utils/convert_alerts.py docs/manual/index.md
-cp LICENSE.md docs/manual/LICENSE.md
-cp -r screenshots docs/manual/
-cp -r sample-scripts docs/manual/
-cp src/vdu_controls/resources/icons/app/vdu_controls.svg docs/manual/assets/
-sed 's/color:#232629;/color:#f3f3f3;/' docs/manual/assets/vdu_controls.svg > docs/manual/assets/vdu_controls_light.svg
-cd docs
+
+cd
+
+# Create manual folder if it doesn't exist
+pages_build=docs/_build/manual
+
+# Copy README.md as the homepage
+cp README.md $pages_build/index.md
+python3 utils/convert_alerts.py $pages_build/index.md
+
+# Copy app help page as a starter $pages_build (it's a md man page)
+cp src/vdu_controls/resources/docs/help.md $pages_build/manual.md
+
+# Copy supporting folders
+cp -r screenshots $pages_build/
+cp -r sample-scripts $pages_build/
+cp -r LICENSE.md $pages_build/
+
+
+# Copy mkdocs.yml configuration
+cp docs/mkdocs.yml ./mkdocs.yml
+
+cp -r docs/src/* $pages_build/
+
+# Get the icon and convert it to be OK on a dark header
+mkdir =p $pages_build/assets
+cp src/vdu_controls/resources/icons/app/vdu_controls.svg $pages_build/assets/
+sed 's/color:#232629;/color:#f3f3f3;/' $pages_build/assets/vdu_controls.svg > $pages_build/assets/vdu_controls_light.svg
+
+# Build the site
 mkdocs build --site-dir _site
-echo 'to test:  (cd docs; mkdocs serve)'
+
+# Add .nojekyll to prevent Jekyll processing
+touch _site/.nojekyll
+
+
+
+
+
+
+pages_build=docs/_build/manual
+mkdir -p $pages_build
+mkdir -p $pages_build/assets
+cp src/vdu_controls/resources/docs/help.md $pages_build/manual.md
+cp README.md $pages_build/index.md
+python3 utils/convert_alerts.py $pages_build/index.md
+cp LICENSE.md $pages_build/LICENSE.md
+cp -r screenshots $pages_build/
+cp -r sample-scripts $pages_build/
+cp -r docs/src/* $pages_build/
+cp src/vdu_controls/resources/icons/app/vdu_controls.svg $pages_build/assets/
+sed 's/color:#232629;/color:#f3f3f3;/' $pages_build/assets/vdu_controls.svg > $pages_build/assets/vdu_controls_light.svg
+cp docs/mkdocs.yml docs/_build/
+cd docs/_build/
+mkdocs build --site-dir ../_site
+echo 'to test:  (cd docs/_build/; mkdocs serve)'
 
 
