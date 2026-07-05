@@ -23,13 +23,13 @@ Each display's brightness is periodically updated by matching the estimated indo
 
 1. Set the prevailing indoor light level using the _ambient-light-level_ slider ➀.
 2. If not already enabled, click the sun icon to enable automatic adjustments ➁.
-3. Starting from your chosen level; the application will periodically updates _ambient-light-level_ ➀ in proportion to the expected outdoor sunlight (the adjustment period is set in the _Light Metering Dialog_). 
+3. Starting from your chosen level; the application will periodically update _ambient-light-level_ ➀ in proportion to the expected outdoor sunlight (the adjustment period is set in the _Light Metering Dialog_). 
 4. If conditions change, adjust the _ambient-light-level_ slider ➀ to establish a new ratio of indoor to outdoor illumination.
 
 The _Light Metering Dialog_ live plots the current indoor and outdoor (Eo) illumination estimates ➂, 
 along with the set Daylight-Factor.
 
 A Daylight-Factor value can optionally be saved in a Preset.  For example, you could use the
-_Preset-Dialog_ to setup _Cloudy_DF_
-and _Sunny-DF Presets.  The DF can be the only thing in a preset, you need not include
+_Preset Dialog_ to set up _Cloudy-DF_
+and _Sunny-DF_ Presets.  The DF can be the only thing in a preset, you need not include
 any display controls or features. 
