@@ -64,17 +64,19 @@ sed 's/color:#232629;/color:#f3f3f3;/' \
 # 6.5 Copy any additional contributing documents
 cp -r docs/assets/* "$WORK_DIR/manual/assets/"
 
-# 7. Build the site – inside the temp dir, using the copied config
+# 6.6 Option only create a test serve
 if [[ "$SERVE" == true ]]; then
     echo "🔥 Starting live server from $WORK_DIR"
     cd "$WORK_DIR"
     mkdocs serve --config-file "$WORK_DIR/mkdocs.yml"
-else
-    mkdocs build \
-        --config-file "$WORK_DIR/mkdocs.yml" \
-        --site-dir "$WORK_DIR/_site" \
-        --clean
+    exit 0
 fi
+
+# 7. Build the site – inside the temp dir, using the copied config
+mkdocs build \
+    --config-file "$WORK_DIR/mkdocs.yml" \
+    --site-dir "$WORK_DIR/_site" \
+    --clean
 
 # 8. Add .nojekyll
 touch "$WORK_DIR/_site/.nojekyll"
@@ -86,3 +88,5 @@ cp -r "$WORK_DIR/_site" "$OUTPUT_DIR"
 
 echo "✅ Build complete! Site is at: $OUTPUT_DIR"
 echo "test using mkdocs serve --config-file docs/mkdocs.yml --site-dir $OUTPUT_DIR"
+
+fi

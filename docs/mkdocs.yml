@@ -43,7 +43,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Manual: manual.md
-  - AutoLux: assets/ambient-howto.md
-  - Source: https://github.com/digitaltrails/vdu_controls
+  - Manual Page: manual.md
+  - Semi-Auto Howto: assets/ambient-howto.md
+  - Source Code: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md
