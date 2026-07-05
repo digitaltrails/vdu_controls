@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
-site_name: vdu_controls documentation
+site_name: vdu_controls
 site_description: Manuals and user guides for vdu_controls
 
 theme:
