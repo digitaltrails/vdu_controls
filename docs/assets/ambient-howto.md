@@ -18,7 +18,7 @@ Each display's brightness is periodically updated by matching the estimated indo
 2. **Light Metering Dialog**: check that the light-meter ➁ is set to **Semi-automatic geolocated** (it's normally the default). If you haven't already done so, setup **Lux Brightness Response Profiles** for each display ➂.  Older displays, with weak back lights, can be given relatively flat profiles, perhaps varying from 80% to 100% ④.  Newer displays, with HDR capable back lights, can be given stepper profiles, possibly varying from 10% to 100% ⑤.
 ![Screenshot_Ambient_Meter_and_Profile-small](images/ambient-2.png) 
 
-### How to use it:
+### How to use it
 ![Screenshot_Ambient_Meter_Use_Main-small](images/ambient-5.png)![Screenshot_Ambient_Meter_Use_Meter-small](images/ambient-6.png)
 
 1. Set the prevailing indoor light level using the _ambient-light-level_ slider ➀.
