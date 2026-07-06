@@ -20,8 +20,7 @@ A control panel for external monitors (*Visual Display Units*).
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
 > be found under **System Settings** > **System** > **Energy Saving**.
 
-Description
------------
+## Description
 
 <img src="screenshots/ambient-slider-example.png" alt="vdu_controls v2.6" width="50%">
 
@@ -30,50 +29,66 @@ Description
 DVI, HDMI, USB, and built-in laptop-panels (laptop-panel integration
 is provided by ``brightnessctrl`` for brightness only).
 
-A subset of controls is shown by default - these include brightness, 
-contrast, and audio controls - with additional options available in the 
+Controls include brightness, 
+contrast, and audio - with additional options available in the 
 *Settings-Dialog*.
 
-For convenience, a single **ambient-light-level slider** can simultaneously
+A single **ambient-light-level slider** can simultaneously
 adjust _all_ displays, each following its own custom profile:
-_one slider to rule them all_.  Each profile defines a curve that maps 
-ambient light-level to display-brightness. Relatively flat curves
+_one slider to rule them all_.  Each display's profile defines a curve mapping 
+ambient light-level to display-brightness. Flat curves
 can be created for older displays and steeper ones for newer HDR 
 displays.
+
+#### Semi-Automative Adjustment Throughout the Day
+
+In versions >= 2.4, the ambient-light-level slider has been combined with an 
+estimate of local solar-illumination to achieve **semi-automatic brightness 
+control** throughout the day. Adjusting the slider gives an indication of
+your perceived indoor illumination.  This indoor value sets the ratio between 
+indoor-illumination and outdoor solar-illumination. Once the ratio is set,
+it is used to automatically update brightness as the day proceeds. 
+Should the cloud-cover or weather change, adjusting the slider revises the 
+ratio.  See the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/ambient-howto/) 
+for a brief tutorial.
+(Solar-illumination is estimated for a  location by using the local date-time 
+to determine a sun-angle, and from
+that estimates for illumination, and air-mass.)
+
+#### Fully Automatic Light-Metered Adjustment
 
 Several methods are supported for integrating a hardware light-meter to
 achieve **fully automatic** brightness control. (An _Arduino_
 based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
-In versions >= 2.4, the _ambient-light-level_ slider has been combined with an 
-estimate of local solar-illumination to achieve **semi-automatic brightness 
-control** throughout the day. Adjusting the slider sets the ratio between 
-indoor-illumination and outdoor solar-illumination. Once the ratio is set,
-it is used to automatically update brightness as the day proceeds. 
-Should the cloud-cover or weather change, adjusting the slider revises the ratio.  
-See the [2.4 release notes](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.4.0) for a brief tutorial.
-(Solar-illumination is estimated for a  location by using the local date-time 
-to determine a sun-angle, and from
-that estimates for illumination, and air-mass.)
+#### Presets for Saving Favorite Settings
 
 Favorite settings can be saved as named **Presets**, such as
 _night_, _day_, _photography_, _movies_, and so forth.  Presets may be set to 
 automatically trigger according to ambient light levels or solar-elevation, 
 display hotplug-events, or UNIX signals.
 
+#### Optionally resides in the System-Tray
+
 The application may optionally run in the **system tray** of KDE, Deepin, 
 GNOME, COSMIC, and Xfce (and possibly others). It automatically adapts to the 
 different tray implementations.
+
+#### Dynamic Light/Dark Theme Adjustment
 
 The UI automatically adjusts to **light and dark Qt desktop-themes**.
 Where a desktop supports Qt theming events, the UI dynamically adjusts 
 to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE theming, 
 the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 
+#### Configurable Layout 
+
 To further assist with adapting to different desktops, the Settings-Dialog 
 contains options for locating the main-toolbar at the top or bottom of the 
 main-window.  A futher option is provided for separating the status-line 
 from the toolbar.
+
+#### Offline and Online Help
 
 From any application window, use **F1** to access **help**, and **F10** to access the 
 *main-menu*.  The *main-menu* is also available via the right-mouse button in the main-window, the 
@@ -88,6 +103,7 @@ to sufficient letters being available to support all user defined Presets).
 > [!TIP]
 > Within ``vdu_controls``, *tool-tips* are often revealed when hovering over UI components.
 
+#### Sample Sceenshots
 
 ![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 
 ![Custom](screenshots/Screenshot_tray-200.png) ![Custom](screenshots/Screenshot_settings-300.png)
@@ -121,7 +137,6 @@ A sample [sample script](sample-scripts/laptop-ddcutil-emulator.bash) is
 available in the sample-scripts folder.  
 
 #### Technical background
-
 Historically, there was little need to frequently adjust display brightness.
 This changed with the introduction of displays offering HDR (High Dynamic Range)
 and increased contrast. These newer displays can cope better with very bright
@@ -129,45 +144,49 @@ conditions, but they often need to be turned down when the ambient light level
 decreases. I created `vdu_controls` to allow me to more easily adjust my own 
 displays.
 
-`vdu_controls` communicates with displays by using one of two interfaces:
+##### VESA DDC
 
-- [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), a DBus session-sevice
+Many display manufacturers implement the VESA DDC the **VESA** standard
+*Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
+DDC PC-Display communication commonly takes place over DisplayPort, HDMI, DVI, 
+or USB using i2c.  The GPU manufacturers provide DDC access in there drivers.
+
+##### DDC via *ddcutil-service* or *ddcutil* 
+
+`vdu_controls` communicates with DDC-capable displays by using one of two 
+interfaces:
+
+- [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), a _D-Bus session-sevice_
  interface to [libddcutil](https://www.ddcutil.com/api_main/).
 - [ddcutil](https://www.ddcutil.com/), a command line DDC utility.
 
-Both `ddcutil` and `libddcutil` interface to the **VESA** standard
-*Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
 Both the command and the library  provide a robust interface that supports 
-many different OEM DDC implementations and GPU drivers. 
+numerous OEM DDC implementations and GPU drivers. 
 
-I created `ddcutil-service` access the faster API interface
-provided by `libddcutil`.  Due to connection caching in `libddcutil`, the 
-service can be significantly faster when accessing multiple displays. The
-service also uses `libddcutil` to assist with detecting DPMS and hotplug 
-events, such as a monitor being powered down.  
+##### An Overview of ddcutil-service
+I wrote `ddcutil-service` to access the faster API interface
+provided by `libddcutil`.  The connection caching in `libddcutil` often
+results in significantly faster access when dealing with multiple displays. 
+By leveraging `libddcutil`, the service can pass DPMS and hotplug 
+events back to the client, events such as a monitor being powered down.  
 
 If `ddcutil-service`  isn't available, `vdu_controls` automatically 
-falls back to the `ddcutil` command.  The command has to be run each time
-a display needs to be interogated or changed. The command doesn't cache
-connections. The handshake with each display can take a substantial amount
-of time depending on the quality of the displays DDC implementation. The
-command doesn't provide any event detection.
+falls back to the `ddcutil` command.  he command doesn't cache
+connections and needs to be rerun each time a display needs to be interogated 
+or changed.   The rsponse time can also vary considerably depending on each
+display's DDC implementation. Not being continuously running, the command 
+doesn't provide any facilities to monitor for events.
 
+Being quite new, `ddcutil-service` is less commonly pre-packaged. If it 
+isn't available pre-packaged, [a custom build](https://github.com/digitaltrails/ddcutil-service/blob/master/README.md#installation-via-makefile
+) may be possible. It only has
+one C source file that depends on `libddcutil` and `glib-2.0`. The
+service runs as user-session service under the current user's login.  It 
+dosn't require any extra privaleges, `libddcutil` provides the necessary 
+udev access.  It can be installed as an start-on-demand D-Bus service,
+or it can simply be started from the command-line.
 
-
-The `ddcutil-service` is quite new and less commonly pre-packaged.
-If `libddcutil` isn't prepackaged, a DIY build should be straight forward. It's 
-coded in C, in only one C source file. If 
-a distribution provides `ddcutil`, it probably also provides `libddcutil` and
-its dev/c-header packages. Beyond `libddcutil` the service has only standard requirments
-common to all distros .   The service 
-does not run as root, it runs a user-session service,
-`libddcutil` provides the necessary udev access to the user session.
-
-
-
-Does adjusting a VDU affect its lifespan or health?
----------------------------------------------------
+## Does adjusting a VDU affect its lifespan or health?
 
 Repeatably altering VDU settings might affect VDU lifespan.  Possible reasons 
 include the consumption of NVRAM write cycles, stressing the VDU power-supply, 
@@ -226,8 +245,8 @@ The power-supplies in some older VDUs may buzz/squeel audibly when the brightnes
 turned way down. This may not be a major issue, in normal circumstances
 older VDUs are often not usable below 85-90% brightness.
 
-Downloads
----------
+## Downloads
+
 
 ### Pre-built Packages
 
@@ -298,8 +317,7 @@ required dependencies available - see below.
 > a release or package.
 
 
-Dependencies
-------------
+## Dependencies
 
 All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
@@ -334,8 +352,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 > grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
 > all the steps detailed in the links above.  
 
-Installing
-----------
+## Installing
 
 The script can self-install itself as desktop application in the current user's `$HOME\.local`
 hierarchy, this will add it to the normal desktop application menu: 
@@ -396,8 +413,7 @@ can be altered in a number of ways:
 See the *main-menu* or the  [online help](https://digitaltrails.github.io/vdu_controls/#help)
  for details.
 
-Localization
-------------
+## Localization
 
 If _Settings_ _translations enabled_ is set, the application will 
 load a translation matching your system's locale if available. 
@@ -432,13 +448,12 @@ To date, there hasn't been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
 be supported over the long term. 
 
-Bugs and Suggestions
---------------------
+## Bugs and Suggestions
+
 If you encounter a bug or issue, or wish to make a suggestion, you're most welcome to raise 
 it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
 
-Development
------------
+## Development
 
 I've set up the ``vdu_controls`` source as a typical Python development.  The source
 for the application proper is located in the `src` folder in the root of the
@@ -498,19 +513,23 @@ There are configuration files for the
 pandoc output and the MkDocs site pages:
 ```
 % ./util/make-man
-% ./util/make-pages
+% ./util/make-mkdocs
 ```
 
 My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/).
 
 Coverage testing is assisted by [Coverage.py](https://coverage.readthedocs.io/) and [Vulture](https://pypi.org/project/vulture/).
-Type checking is assisted by [Mypy](https://mypy.readthedocs.io/).
+Type checking is assisted by [pyright](https://github.com/microsoft/pyright), 
+and [mypy](https://mypy.readthedocs.io/). A small amount of testing of internal 
+components is  done by [pytest](https://docs.pytest.org/), but being a GUI a 
+fully automated set of tests would be complex to create and maintain. A small 
+collection of testing hardware is employed along with some VM's in which I 
+can run a ddcutil simulator.
 
 My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
 interpreter and python3 libraries are from the standard Tumbleweed repositories. 
 
-Acknowledgements
-----------------
+## Acknowledgements
 
 * Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility and all the friendly help and assistance.
 * Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)), for Gnome related suggestions and AUR port.
@@ -532,13 +551,12 @@ Acknowledgements
   [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
 * Plus others who have supplied feedback and suggestions.
 
-Author
-------
+## Author
 
 Michael Hamilton
 
-Version History
----------------
+## Version History
+
 * 2.6.5 
   * The required minimum python3 version has risen from 3.8 to 3.9.
   * vdu_controls now defaults to a _single-instance_ mode. Subsequent launches 
