@@ -7,17 +7,20 @@ MKDOCS_YML="${PROJECT_DIR}/docs/mkdocs.yml"
 INPUT_DIR="${PROJECT_DIR}/docs/_build/mkdocs/input"
 OUTPUT_DIR="${PROJECT_DIR}/docs/_build/mkdocs/site"
 
+ASSEMBLE_ONLY=false
 SERVE=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --assemble) ASSEMBLE_ONLY=true; shift;;
         --serve) SERVE=true; shift ;;
         --source) PROJECT_DIR="$2"; shift 2 ;;
         --output) OUTPUT_DIR="$2"; shift 2 ;;
         -h|--help)
-            echo "Usage: $0 [--source PROJECT_DIR] [--output OUTPUT_DIR]"
+            echo "Usage: $0 [--serve|--assemble] [--source PROJECT_DIR] [--output OUTPUT_DIR]"
+            echo "  --serve    Test with mkdocs serve instead of mkdocs build"
+            echo "  --assemble Assemble the inputs only (useful for testing with --serve)"
             echo "  --source   Project root directory (default: current dir)"
             echo "  --output   Output directory for the final site (default: ./build/site)"
-            echo "  --serve    Run the mkdocs serve instead of mkdocs build"
             exit 0
             ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -57,6 +60,11 @@ cp LICENSE.md "$INPUT_DIR/"
 cp src/vdu_controls/resources/icons/app/vdu_controls.svg "$INPUT_DIR/assets/"
 sed 's/color:#232629;/color:#f3f3f3;/' "$INPUT_DIR/assets/vdu_controls.svg" \
     > "$INPUT_DIR/assets/vdu_controls_light.svg"
+
+if [[ "$ASSEMBLE_ONLY" == true ]]; then
+    echo "⚙️ Assembled $INPUT_DIR"
+    exit 0
+fi
 
 # Option - only create a test server
 if [[ "$SERVE" == true ]]; then
