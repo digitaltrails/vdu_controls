@@ -4,17 +4,17 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
         <source>About</source>
         <translation>حول</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
         <source>About vdu_controls</source>
         <translation>حول vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="175" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="176" />
         <source>Online Help</source>
         <translation>مساعدة عبر الإنترنت</translation>
     </message>
@@ -193,207 +193,212 @@ placement and geometry at start up.</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="252" />
+        <source>When required, the weather option will query the weather for your location from https://wttr.in.</source>
+        <translation>عند الحاجة، سيقوم خيار الطقس بالاستعلام عن الطقس لموقعك من https://wttr.in.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="254" />
         <source>Enable weather lookups for vetoing scheduling.&lt;br/&gt; For some locations weather-lookups are not accurate or timely. The network lookups can also be a source of delay.</source>
         <translation>تمكين عمليات البحث عن الطقس للاعتراض على الجدولة.&lt;br/&gt; بالنسبة لبعض المواقع، لا تكون عمليات البحث عن الطقس دقيقة أو في الوقت المناسب. يمكن أن تكون عمليات البحث في الشبكة أيضًا مصدرًا للتأخير.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="258" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
         <source>tick marks</source>
         <translation>علامات التجزئة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="262" />
         <source>Show tick marks on control-sliders.</source>
         <translation>إظهار علامات التجزئة على أشرطة تمرير التحكم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="264" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
         <source>dbus client</source>
         <translation>عميل dbus</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="268" />
         <source>Use the d-bus ddcutil-server if available.</source>
         <translation>استخدم خادم d-bus ddcutil إذا كان متاحًا.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="271" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
         <source>dbus events</source>
         <translation>أحداث دي باص</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
         <source>Enable D-bus ddcutil-server events for detecting display hotplug and power events.</source>
         <translation>قم بتمكين أحداث D-bus ddcutil-server لاكتشاف أحداث التوصيل السريع وأحداث الطاقة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="276" />
         <source>Display hotplug and power events will no longer be detected.</source>
         <translation>لن يتم اكتشاف أحداث عرض التوصيل السريع والطاقة بعد الآن.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="279" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
         <source>laptop panel</source>
         <translation>لوحة الكمبيوتر المحمول</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="283" />
         <source>Use brightnessctl utility for laptop panel control.</source>
         <translation>استخدم الأداة المساعدة Brightnessctl للتحكم في لوحة الكمبيوتر المحمول.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="285" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
         <source>syslog</source>
         <translation>سجل النظام</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="289" />
         <source>Divert diagnostic output from stdout to the syslog.</source>
         <translation>تحويل مخرجات التشخيص من stdout إلى سجل النظام.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="291" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
         <source>debug</source>
         <translation>تصحيح</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="295" />
         <source>Output extra debug information.</source>
         <translation>إخراج معلومات تصحيح إضافية.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="297" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
         <source>single instance</source>
         <translation>مثيل واحد</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="301" />
         <source>Only allow one running vdu_controls. Running another raises the existing instance.</source>
         <translation>السماح بتشغيل vdu_controls واحد فقط. يؤدي تشغيل آخر إلى رفع المثيل الموجود.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="304" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
         <source>Invalid control warnings</source>
         <translation>تحذيرات التحكم غير صالحة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="308" />
         <source>Popup warnings if a VDU lacks an enabled control.</source>
         <translation>تحذيرات منبثقة إذا كان VDU يفتقر إلى عنصر تحكم ممكّن.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="310" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
         <source>translations</source>
         <translation>ترجمات</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
         <source>Enable language translations. Translations have been AI-generated without any human oversight.</source>
         <translation>تمكين ترجمات اللغة. تم إنشاء الترجمات بواسطة الذكاء الاصطناعي دون أي إشراف بشري.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
         <source>Your locale {} will be translated.</source>
         <translation>ستتم ترجمة لغتك المحلية {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
         <source>Your locale {} lacks a translation.</source>
         <translation>لغتك المحلية {} تفتقر إلى الترجمة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="319" />
         <source>Installed translations: {}.</source>
         <translation>الترجمات المثبتة: {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="320" />
         <source>These translations are AI-generated without any human oversight.</source>
         <translation>يتم إنشاء هذه الترجمات بواسطة الذكاء الاصطناعي دون أي إشراف بشري.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="322" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="324" />
         <source>location</source>
         <translation>الموقع</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="325" />
         <source>Latitude, Longitude for solar elevation calculations.</source>
         <translation>خطوط الطول والعرض لحسابات الارتفاع الشمسي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="327" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="329" />
         <source>ddcutil emulator</source>
         <translation>محاكي ddcutil</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="328" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="330" />
         <source>User supplied command-line ddcutil-emulator for handling special cases. This emulator is consulted in addition to the normal DDC. It provides a way for non-DDC devices to be incorporated into vdu_controls.  For example, you might add the ability to control keyboard-backlight brightness.</source>
         <translation>قام المستخدم بتوفير محاكي ddcutil لسطر الأوامر للتعامل مع الحالات الخاصة. تتم استشارة هذا المحاكي بالإضافة إلى DDC العادي. فهو يوفر طريقة لدمج الأجهزة غير التابعة لـ DDC في vdu_controls.  على سبيل المثال، يمكنك إضافة القدرة على التحكم في سطوع الإضاءة الخلفية للوحة المفاتيح.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="335" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
         <source>sleep multiplier</source>
         <translation>مضاعف النوم</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="339" />
         <source>Ddcutil --sleep-multiplier (0.1 .. 2.0, default none).</source>
         <translation>Ddcutil --sleep-multiplier (0.1 .. 2.0، الافتراضي لا شيء).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="341" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
         <source>ddcutil extra args</source>
         <translation>ddcutil وسائط إضافية</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="345" />
         <source>Ddcutil extra arguments (default none).</source>
         <translation>وسيطات Ddcutil الإضافية (لا شيء افتراضيًا).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="347" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
         <source>vdu name</source>
         <translation>اسم فيدو</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="351" />
         <source>Name to display for this VDU</source>
         <translation>الاسم المعروض لهذا VDU</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="353" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="355" />
         <source>enable vcp codes</source>
         <translation>تمكين رموز vcp</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="356" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
         <source>CSV list of VCP-code Features to enable (in hex). See capabilities-override for VCP Features.</source>
         <translation>قائمة CSV لميزات رمز VCP لتمكينها (بالصيغة السداسية). راجع تجاوز القدرات لميزات VCP.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="360" />
         <source>While enabling well understood VCP Features should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>في حين أن تمكين ميزات VCP المفهومة جيدًا يجب أن يكون جيدًا، فإن تجربة ميزات البائع غير الموثقة أو غير المفهومة جيدًا قد يكون لها عواقب لا رجعة فيها - بما في ذلك إتلاف الأجهزة أو تعطيلها.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="364" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
         <source>capabilities override</source>
         <translation>تجاوز القدرات</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
         <source>Cached capabilities text. Edit this text to correct any inaccuracies in the vendor metadata extracted from the device. </source>
         <translation>نص القدرات المخزنة مؤقتا. قم بتحرير هذا النص لتصحيح أي معلومات غير دقيقة في بيانات تعريف البائع المستخرجة من الجهاز.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="370" />
         <source>While correcting well understood metadata should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>في حين أن تصحيح البيانات التعريفية المفهومة جيدًا يجب أن يكون أمرًا جيدًا، فإن تجربة ميزات البائع غير الموثقة أو غير المفهومة بشكل جيد قد يكون لها عواقب لا رجعة فيها - بما في ذلك إتلاف الأجهزة أو تعطيلها.</translation>
     </message>
     <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="399" />
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="397" />
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="395" />
         <source>(default)</source>
         <translation>(افتراضي)</translation>
     </message>
@@ -966,44 +971,44 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="735" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="734" />
         <source>Lux Brightness Response Profiles</source>
         <translation>ملامح استجابة السطوع للوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="753" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="751" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="752" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="750" />
         <source>Brightness %</source>
         <translation>السطوع %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="867" />
         <source>Click remove preset at {} lux</source>
         <translation>انقر لإزالة الإعداد المسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="879" />
         <source>Click to add preset at {} lux</source>
         <translation>انقر لإضافة إعداد مسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="919" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="903" />
         <source>No displays available.</source>
         <translation>.ﺔﺣﺎﺘﻣ ﺽﺮﻋ ﺕﺎﺷﺎﺷ ﺪﺟﻮﻳ ﻻ﻿</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="936" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>حدد إعدادًا مسبقًا لإرفاقه عند {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>There are no Presets.</source>
         <translation>لا توجد إعدادات مسبقة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>استخدم حوار الإعدادات المسبقة لإنشاء بعضها.</translation>
     </message>
@@ -2108,37 +2113,37 @@ Check that ddcutil and i2c are installed and configured.</source>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
         <source>{0} version {1}</source>
         <translation>{0} الإصدار {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
         <source>A virtual control panel for visual display units.</source>
         <translation>لوحة تحكم افتراضية لوحدات العرض المرئية.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="103" />
         <source>Visit {} for more details.</source>
         <translation>قم بزيارة {} لمزيد من التفاصيل.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="107" />
         <source>Release notes: {}</source>
         <translation>ملاحظات الإصدار: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="112" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>تعتمد vdu_controls على {0}، وهي واجهة قوية لـ ddc القادرة على vdus؛ {1}، واجهة DBus سريعة لـ libddcutil؛ و{2}، التحكم في سطوع لوحات الكمبيوتر المحمول.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="122" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>بناءً على طلبك، قد يتم استرداد موقعك الجغرافي من {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="127" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>بناءً على طلبك، قد يتم استرداد الطقس لموقعك من {}.</translation>
     </message>

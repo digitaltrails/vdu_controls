@@ -249,6 +249,8 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('weather'),
         sub_group=SubGroup.FEATURES,
         requires=[SCHEDULE_ENABLED],
+        warning=QT_TR_NOOP('When required, the weather option will query the weather'
+                           ' for your location from https://wttr.in.'),
         help=QT_TR_NOOP('Enable weather lookups for vetoing scheduling.<br/> '
                         'For some locations weather-lookups are not accurate or timely. '
                         'The network lookups can also be a source of delay.'))

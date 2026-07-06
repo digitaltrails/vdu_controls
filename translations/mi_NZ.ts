@@ -4,17 +4,17 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
         <source>About</source>
         <translation>Mō</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
         <source>About vdu_controls</source>
         <translation>Mō vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="175" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="176" />
         <source>Online Help</source>
         <translation>Āwhina ipurangi</translation>
     </message>
@@ -194,207 +194,212 @@ te whakanohonga me te ahuahanga i te tiimatanga.</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="252" />
+        <source>When required, the weather option will query the weather for your location from https://wttr.in.</source>
+        <translation>Ina hiahiatia, ka uiuia e te whiringa huarere te huarere mo to waahi mai i https://wttr.in.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="254" />
         <source>Enable weather lookups for vetoing scheduling.&lt;br/&gt; For some locations weather-lookups are not accurate or timely. The network lookups can also be a source of delay.</source>
         <translation>Whakahohehia te rapu huarere mo te whakaeato i te whakahōtaka. Ko nga rapunga whatunga ka waiho hei take whakaroa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="258" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
         <source>tick marks</source>
         <translation>tohu tohu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="262" />
         <source>Show tick marks on control-sliders.</source>
         <translation>Whakaatuhia nga tohu tohu ki runga i nga riipene mana.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="264" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
         <source>dbus client</source>
         <translation>kiritaki dbus</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="268" />
         <source>Use the d-bus ddcutil-server if available.</source>
         <translation>Whakamahia te d-bus ddcutil-server mena kei te waatea.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="271" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
         <source>dbus events</source>
         <translation>nga huihuinga dbus</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
         <source>Enable D-bus ddcutil-server events for detecting display hotplug and power events.</source>
         <translation>Whakahohehia nga kaupapa D-bus ddcutil-server mo te kite i nga kaupapa werawera me nga kaupapa hiko.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="276" />
         <source>Display hotplug and power events will no longer be detected.</source>
         <translation>Ka kore e kitea nga kaupapa werawera me nga kaupapa hiko.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="279" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
         <source>laptop panel</source>
         <translation>panui pona</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="283" />
         <source>Use brightnessctl utility for laptop panel control.</source>
         <translation>Whakamahia te whaipainga brightnessctl mo te mana papa pona.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="285" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
         <source>syslog</source>
         <translation>syslog</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="289" />
         <source>Divert diagnostic output from stdout to the syslog.</source>
         <translation>Hurihia te putanga tātaritanga mai i te stdout ki te syslog.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="291" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
         <source>debug</source>
         <translation>patuiro</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="295" />
         <source>Output extra debug information.</source>
         <translation>Whakaputaina etahi atu korero patuiro.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="297" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
         <source>single instance</source>
         <translation>tauira kotahi</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="301" />
         <source>Only allow one running vdu_controls. Running another raises the existing instance.</source>
         <translation>Tukuna kia kotahi te whakahaere vdu_controls. Ko te whakahaere i tetahi atu ka hiki ake te tauira o naianei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="304" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
         <source>Invalid control warnings</source>
         <translation>Whakatupato mana muhu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="308" />
         <source>Popup warnings if a VDU lacks an enabled control.</source>
         <translation>Whakatupato pahūake ki te kore te VDU he mana whakahohea.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="310" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
         <source>translations</source>
         <translation>whakamaoritanga</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
         <source>Enable language translations. Translations have been AI-generated without any human oversight.</source>
         <translation>Whakahohehia nga whakamaoritanga reo. Ko nga whakamaoritanga i hangaia e AI me te kore e tirotirohia e te tangata.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
         <source>Your locale {} will be translated.</source>
         <translation>Ka whakamaoritia to rohe {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
         <source>Your locale {} lacks a translation.</source>
         <translation>Karekau he whakamaoritanga o to rohe {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="319" />
         <source>Installed translations: {}.</source>
         <translation>Whakamaoritanga kua whakauruhia: {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="320" />
         <source>These translations are AI-generated without any human oversight.</source>
         <translation>Ko enei whakamaoritanga he mea hanga AI me te kore e tirotirohia e te tangata.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="322" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="324" />
         <source>location</source>
         <translation>wāhi</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="325" />
         <source>Latitude, Longitude for solar elevation calculations.</source>
         <translation>Latitude, Longitude mo nga tatauranga teitei o te ra.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="327" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="329" />
         <source>ddcutil emulator</source>
         <translation>ddcutil emulator</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="328" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="330" />
         <source>User supplied command-line ddcutil-emulator for handling special cases. This emulator is consulted in addition to the normal DDC. It provides a way for non-DDC devices to be incorporated into vdu_controls.  For example, you might add the ability to control keyboard-backlight brightness.</source>
         <translation>I tukuna e te kaiwhakamahi te raina whakahau ddcutil-emulator mo te whakahaere i nga keehi motuhake. Ko tenei emulator he taapiri atu ki te DDC noa. Ka whakaratohia he huarahi mo nga taputapu kore-DDC ki te whakauru ki roto i nga vdu_controls.  Hei tauira, ka taea e koe te taapiri i te kaha ki te whakahaere i te wherikotanga papapātuhi-whakamuri.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="335" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
         <source>sleep multiplier</source>
         <translation>whakarea moe</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="339" />
         <source>Ddcutil --sleep-multiplier (0.1 .. 2.0, default none).</source>
         <translation>Ddcutil --sleep-multiplier (0.1 .. 2.0, kore taunoa).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="341" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
         <source>ddcutil extra args</source>
         <translation>ddcutil atu args</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="345" />
         <source>Ddcutil extra arguments (default none).</source>
         <translation>Ddcutil tohenga taapiri (kaore he taunoa).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="347" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
         <source>vdu name</source>
         <translation>ingoa vdu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="351" />
         <source>Name to display for this VDU</source>
         <translation>Ingoa hei whakaatu mō tēnei VDU</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="353" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="355" />
         <source>enable vcp codes</source>
         <translation>whakahohea nga waehere vcp</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="356" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
         <source>CSV list of VCP-code Features to enable (in hex). See capabilities-override for VCP Features.</source>
         <translation>Rrangi CSV o nga waahanga VCP-waehere hei whakaahei (i te hex). Tirohia nga kaha-whakakore mo nga waahanga VCP.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="360" />
         <source>While enabling well understood VCP Features should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>Ahakoa he pai te whakaahei i nga waahanga VCP e tino marama ana, ko te whakamatautau ki nga ahuatanga o te kaihoko kaore i tuhia, karekau ranei e tino marama ana kare pea e taea te whakahoki - tae atu ki te whakakino, te pereki taputapu ranei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="364" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
         <source>capabilities override</source>
         <translation>karekau i nga kaha</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
         <source>Cached capabilities text. Edit this text to correct any inaccuracies in the vendor metadata extracted from the device. </source>
         <translation>Kuputuhi kaha keteroki. Whakatikaina tenei kuputuhi ki te whakatika i nga hapa o te raraunga meta kaihoko i tangohia mai i te taputapu.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="370" />
         <source>While correcting well understood metadata should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>Ahakoa he pai te whakatika i nga metadata e tino marama ana, ko te whakamatau i nga ahuatanga o te kaihoko kaore i tuhia, kaore ranei i te tino maarama he hua kare e taea te huri - tae atu ki te pakaru me te pereki taputapu.</translation>
     </message>
     <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="399" />
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="397" />
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="395" />
         <source>(default)</source>
         <translation>(taunoa)</translation>
     </message>
@@ -967,44 +972,44 @@ Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</tr
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="735" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="734" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Kōtaha Urupare Kanapa Lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="753" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="751" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="752" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="750" />
         <source>Brightness %</source>
         <translation>Kanapa %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="867" />
         <source>Click remove preset at {} lux</source>
         <translation>Pāwhiri ki te tango i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="879" />
         <source>Click to add preset at {} lux</source>
         <translation>Pāwhiri ki te tāpiri i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="919" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="903" />
         <source>No displays available.</source>
         <translation>Karekau he whakaaturanga e waatea ana.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="936" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>Tīpakohia he Tatūkē hei āpiti ki {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>There are no Presets.</source>
         <translation>Kāore he Tautapanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Whakamahia te Pārongo Tautapanga hei waihanga i ētahi.</translation>
     </message>
@@ -2114,37 +2119,37 @@ Tirohia kua tāutahia, kua whirihorahia rānei a ddcutil me i2c.</translation>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
         <source>{0} version {1}</source>
         <translation>{0} putanga {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
         <source>A virtual control panel for visual display units.</source>
         <translation>He paewhiri mana mariko mo nga waeine whakaatu ataata.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="103" />
         <source>Visit {} for more details.</source>
         <translation>Tirohia {} mo etahi atu taipitopito.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="107" />
         <source>Release notes: {}</source>
         <translation>Tuhinga o mua: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="112" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls e whakawhirinaki ana ki a {0}, he atanga pakari ki te vdus kaha ddc; {1}, he atanga DBus tere ki te libddcutil; me {2}, he mana wherikotanga mo nga papa-pona.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="122" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>I runga i to tono, ka tikina pea to waahi matawhenua mai i {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="127" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>I runga i to tono, ka tikina pea te huarere mo to waahi mai i {}.</translation>
     </message>

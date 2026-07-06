@@ -4,17 +4,17 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="164" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="165" />
         <source>About</source>
         <translation>关于</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="166" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="167" />
         <source>About vdu_controls</source>
         <translation>关于 vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="175" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="176" />
         <source>Online Help</source>
         <translation>在线帮助</translation>
     </message>
@@ -194,207 +194,212 @@ placement and geometry at start up.</source>
     </message>
     <message>
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="252" />
+        <source>When required, the weather option will query the weather for your location from https://wttr.in.</source>
+        <translation>需要时，天气选项将从 https://wttr.in 查询您所在位置的天气。</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="254" />
         <source>Enable weather lookups for vetoing scheduling.&lt;br/&gt; For some locations weather-lookups are not accurate or timely. The network lookups can also be a source of delay.</source>
         <translation>启用天气查询以否决调度。&lt;br/&gt;对于某些位置，天气查询不准确或不及时。网络查找也可能是延迟的根源。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="258" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
         <source>tick marks</source>
         <translation>刻度线</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="260" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="262" />
         <source>Show tick marks on control-sliders.</source>
         <translation>在控制滑块上显示刻度线。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="264" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
         <source>dbus client</source>
         <translation>数据库总线客户端</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="266" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="268" />
         <source>Use the d-bus ddcutil-server if available.</source>
         <translation>如果可用，请使用 d-bus ddcutil-server。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="271" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
         <source>dbus events</source>
         <translation>dbus事件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="273" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="275" />
         <source>Enable D-bus ddcutil-server events for detecting display hotplug and power events.</source>
         <translation>启用 D-bus ddcutil-server 事件以检测显示器热插拔和电源事件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="274" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="276" />
         <source>Display hotplug and power events will no longer be detected.</source>
         <translation>将不再检测显示器热插拔和电源事件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="279" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
         <source>laptop panel</source>
         <translation>笔记本电脑面板</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="281" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="283" />
         <source>Use brightnessctl utility for laptop panel control.</source>
         <translation>使用亮度控制实用程序进行笔记本电脑面板控制。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="285" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
         <source>syslog</source>
         <translation>系统日志</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="287" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="289" />
         <source>Divert diagnostic output from stdout to the syslog.</source>
         <translation>将诊断输出从标准输出转移到系统日志。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="291" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
         <source>debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="293" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="295" />
         <source>Output extra debug information.</source>
         <translation>输出额外的调试信息。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="297" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
         <source>single instance</source>
         <translation>单实例</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="299" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="301" />
         <source>Only allow one running vdu_controls. Running another raises the existing instance.</source>
         <translation>只允许一个运行 vdu_controls。运行另一个实例会引发现有实例。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="304" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
         <source>Invalid control warnings</source>
         <translation>无效控制警告</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="306" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="308" />
         <source>Popup warnings if a VDU lacks an enabled control.</source>
         <translation>如果 VDU 缺少启用的控件，则会弹出警告。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="310" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
         <source>translations</source>
         <translation>翻译</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="312" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
         <source>Enable language translations. Translations have been AI-generated without any human oversight.</source>
         <translation>启用语言翻译。翻译是人工智能生成的，没有任何人工监督。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="314" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
         <source>Your locale {} will be translated.</source>
         <translation>您的区域设置 {} 将被翻译。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="316" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
         <source>Your locale {} lacks a translation.</source>
         <translation>您的区域设置 {} 缺少翻译。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="317" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="319" />
         <source>Installed translations: {}.</source>
         <translation>已安装的翻译：{}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="318" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="320" />
         <source>These translations are AI-generated without any human oversight.</source>
         <translation>这些翻译是人工智能生成的，没有任何人工监督。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="322" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="324" />
         <source>location</source>
         <translation>位置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="323" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="325" />
         <source>Latitude, Longitude for solar elevation calculations.</source>
         <translation>用于太阳高度角计算的纬度、经度。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="327" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="329" />
         <source>ddcutil emulator</source>
         <translation>ddcutil 模拟器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="328" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="330" />
         <source>User supplied command-line ddcutil-emulator for handling special cases. This emulator is consulted in addition to the normal DDC. It provides a way for non-DDC devices to be incorporated into vdu_controls.  For example, you might add the ability to control keyboard-backlight brightness.</source>
         <translation>用户提供的命令行 ddcutil-emulator 用于处理特殊情况。除了正常的 DDC 之外，还参考该仿真器。它提供了一种将非 DDC 设备合并到 vdu_controls 中的方法。  例如，您可以添加控制键盘背光亮度的功能。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="335" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
         <source>sleep multiplier</source>
         <translation>睡眠乘数</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="337" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="339" />
         <source>Ddcutil --sleep-multiplier (0.1 .. 2.0, default none).</source>
         <translation>Ddcutil --sleep-multiplier（0.1 .. 2.0，默认无）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="341" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
         <source>ddcutil extra args</source>
         <translation>ddcutil 额外参数</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="343" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="345" />
         <source>Ddcutil extra arguments (default none).</source>
         <translation>Ddcutil 额外参数（默认无）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="347" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
         <source>vdu name</source>
         <translation>虚拟数据单元名称</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="349" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="351" />
         <source>Name to display for this VDU</source>
         <translation>为此 VDU 显示的名称</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="353" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="355" />
         <source>enable vcp codes</source>
         <translation>启用 vcp 代码</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="356" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
         <source>CSV list of VCP-code Features to enable (in hex). See capabilities-override for VCP Features.</source>
         <translation>要启用的 VCP 代码功能的 CSV 列表（十六进制）。请参阅 VCP 功能的功能覆盖。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="358" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="360" />
         <source>While enabling well understood VCP Features should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>虽然启用众所周知的 VCP 功能应该没问题，但尝试未记录或不太了解的供应商功能可能会产生不可逆转的后果 - 包括损坏或变砖硬件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="364" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
         <source>capabilities override</source>
         <translation>能力覆盖</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="366" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
         <source>Cached capabilities text. Edit this text to correct any inaccuracies in the vendor metadata extracted from the device. </source>
         <translation>缓存的功能文本。编辑此文本以更正从设备提取的供应商元数据中的任何不准确之处。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="368" />
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="370" />
         <source>While correcting well understood metadata should be fine, experimenting with undocumented or poorly understood vendor features may have irreversible consequences - including damaging or bricking hardware.</source>
         <translation>虽然纠正众所周知的元数据应该没问题，但尝试未记录或不太了解的供应商功能可能会产生不可逆转的后果 - 包括损坏或变砖硬件。</translation>
     </message>
     <message>
+        <location filename="../src/vdu_controls/vdu_controls_config.py" line="399" />
         <location filename="../src/vdu_controls/vdu_controls_config.py" line="397" />
-        <location filename="../src/vdu_controls/vdu_controls_config.py" line="395" />
         <source>(default)</source>
         <translation>(默认)</translation>
     </message>
@@ -966,44 +971,44 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="735" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="734" />
         <source>Lux Brightness Response Profiles</source>
         <translation>勒克斯亮度响应配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="753" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="751" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="752" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="750" />
         <source>Brightness %</source>
         <translation>亮度百分比</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="867" />
         <source>Click remove preset at {} lux</source>
         <translation>单击删除 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="879" />
         <source>Click to add preset at {} lux</source>
         <translation>单击以添加 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="919" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="903" />
         <source>No displays available.</source>
         <translation>没有可用的显示器。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="936" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>选择要在 {} lux 下附加的预设</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>There are no Presets.</source>
         <translation>没有预置项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="952" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>使用预置对话框创建一些。</translation>
     </message>
@@ -2112,37 +2117,37 @@ Check that ddcutil and i2c are installed and configured.</source>
 </context><context>
     <name>_AboutTemplateData</name>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="94" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="95" />
         <source>{0} version {1}</source>
         <translation>{0}版本{1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="98" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="99" />
         <source>A virtual control panel for visual display units.</source>
         <translation>用于视觉显示单元的虚拟控制面板。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="102" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="103" />
         <source>Visit {} for more details.</source>
         <translation>请访问 {} 了解更多详情。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="106" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="107" />
         <source>Release notes: {}</source>
         <translation>发行说明：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="111" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="112" />
         <source>vdu_controls relies on {0}, a robust interface to ddc capable vdus; {1}, a fast DBus-interface to libddcutil; and {2}, a brightness control for laptop-panels.</source>
         <translation>vdu_controls 依赖于 {0}，它是支持 ddc 的 vdus 的强大接口； {1}，libddcutil 的快速 DBus 接口； {2}，笔记本电脑面板的亮度控制。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="121" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="122" />
         <source>At your request, your geographic location may be retrieved from {}</source>
         <translation>根据您的请求，可以从 {} 检索您的地理位置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/about_dialog.py" line="126" />
+        <location filename="../src/vdu_controls/about_dialog.py" line="127" />
         <source>At your request, weather for your location may be retrieved from {}.</source>
         <translation>根据您的请求，可以从 {} 检索您所在位置的天气情况。</translation>
     </message>
