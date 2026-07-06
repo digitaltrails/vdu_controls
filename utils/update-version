@@ -12,7 +12,7 @@ echo "INFO: update PKGBUILD"
 sed -E --in-place "s/^pkgver=[0-9.]+/pkgver=$base_version/" PKGBUILD || exit 1
 
 echo "INFO: update setup.cfg"
-sed -E --in-place "s/^version = [0-9.]+/version = $base_version/" setup.cfg || exit 1
+sed -E --in-place "s/^version = [0-9.]+/version = $base_version/" pyproject.toml || exit 1
 
 echo "INFO: update vdu_controls.spec"
 sed -E --in-place "s/^Version:( *)[0-9.]+/Version:\\1$base_version/" vdu_controls.spec || exit 1
