@@ -33,7 +33,7 @@ BuildArch:      noarch
 Requires:       ddcutil
 Requires:       noto-sans-math-fonts
 Requires:       noto-sans-symbols2-fonts
-Requires:       python3 > 3.8
+Requires:       python3 >= 3.9
 %if 0%{?sle_version} > 150000 && 0%{?is_opensuse}
 Requires:       python3-qt5
 %else
