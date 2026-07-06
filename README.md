@@ -226,27 +226,31 @@ The power-supplies in some older VDUs may buzz/squeel audibly when the brightnes
 turned way down. This may not be a major issue, in normal circumstances
 older VDUs are often not usable below 85-90% brightness.
 
-Getting Started
----------------
+Downloads
+---------
+
+### Pre-built Packages
 
 Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR 
 package for arch-based systems:
 
  * OpenSUSE RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
- * Unofficial Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
- * archlinux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+ 
+ * Arch Linux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+ * Unofficial Arch, Fedora, and OpenSUSE built packages at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
+
+
+### GitHub Zipapp or Download
 
 > [!WARNING]
 > These instructions are for versions >= 2.6.5.  For earlier versions,
 > follow the instructions in the README.md included in the release tar or zip.
 
-If vdu_controls isn't already available for your distribution, you can
-download a release python-zipapp (.pyz), zip, or git-clone the latest from GitHub.  
+If vdu_controls isn't already available for your distribution,
+you can download the runnable python-zipapp 
+`vdu_controls.pyz` asset from one of the [GitHub Releases](https://github.com/digitaltrails/vdu_controls/releases).
 
-If you want to use a release version, you can download the runnable python-zipapp
-`vdu_controls.pyz` from one of the GitHub release pages.
-
-The release page `vdu_controls.pyz` is directly runnable:
+The asset  `vdu_controls.pyz` is a runnable zip:
 
    ```
    % python3 vdu_controls.pyz              # run the actual GUI
@@ -275,9 +279,9 @@ Although it's easily runnable, you'll still need to ensure you have the
 required dependencies available - see below.  
 
 > [!Tip]
-> The zip contains the source archive (along with a cache of pre-compiled files).
+> The zipapp contains the source archive (along with a cache of pre-compiled files).
 > Should you wish to make any tweaks directly to the unzipped code, you can
-> do so and then rezip a new executable:
+> do so and then uswe python to create a new zipapp:
 > 
 >    ```
 >    cd my_vdu_controls_dir/
@@ -291,8 +295,7 @@ required dependencies available - see below.
 > ([master](https://github.com/digitaltrails/vdu_controls)) should always be usable
 > as a daily-driver.  If you want the latest features, download from master. 
 > That being said, a download of trunk may sometimes be less stable than downloading 
-> one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
-> or installing one of the distro packages.
+> a release or package.
 
 
 Dependencies
@@ -368,8 +371,9 @@ is likely to install some or all of the following, typically to these locations:
 Help
 ----
 
-Detailed help can be accessed by using the right mouse-button to bring up the *main-menu*.  Access to the *main-menu*
-is available in the application-window and in the system-tray icon.
+Detailed help can be accessed from the application's *main-menu*.  The manual
+page is baked in, but there is also a button to take you to the 
+[online help pages](https://digitaltrails.github.io/vdu_controls/)
 
 Both brief help and detailed help can also be accessed via the command line:
 ```
@@ -382,8 +386,8 @@ Both brief help and detailed help can also be accessed via the command line:
 % vdu_controls --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
 ```
 
-Whether run from the desktop start-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-in a number of ways:
+Whether run from the desktop start-menu or run from the command line, ``vdu-controls`` behaviour 
+can be altered in a number of ways:
 
 * The *Settings* item in the *main-menu*.
 * Command line options.
