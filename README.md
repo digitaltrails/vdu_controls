@@ -402,8 +402,9 @@ Localization
 If _Settings_ _translations enabled_ is set, the application will 
 load a translation matching your system's locale if available. 
 
-__The supplied translations are 
-unverified and should be regarded as samples that may be incorrect.__
+> [!CAUTION] 
+> The supplied translations should be regarded as samples.
+> They are unverified and may be incorrect.
 
 Where a supported locale is right-to-left oriented, layouts will be 
 reconfigured appropriately. 
@@ -468,7 +469,7 @@ imports, for example:
    ```
 
 
-A standard python setup.cfg is included, however I don't normally use build or pip.
+I don't normally use Python _pip_.
 I typically just assemble the source into a zipapp by running zipapp at the 
 top of the project hierarchy, for example:
 
@@ -478,6 +479,19 @@ python3 -m zipapp vdu_controls --output vdu_controls.pyz --main vdu_controls_mai
 # Run the result:
 python3 vdu_controls.pyz
 ```
+
+For those that do prefer to use _pip_, a standard python `pyproject.toml` is 
+included that will pull in the required Python dependencies:
+
+```aiignore
+# Create a user python virtual environment called my_venv an activate it
+python3 -m venv my_venv
+source my_venv/bin/activate
+# Build, install, and run my_venv/bin/vdu_controls
+pip install -e .
+vdu_controls
+```
+
 
 There are configuration files for the 
 [Pandoc](https://pandoc.org/)'s and [MkDocs](https://www.mkdocs.org/). There are util scripts that generate 
