@@ -286,11 +286,11 @@ subject to my tests and checks, no one else vets them.
   - [https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries)
 
 > [!CAUTION]
-> As well as the unofficial/community builds made by **mchnz**, 
-> there are other unofficial/community vdu_controls builds made by other users
+> As well as the unofficial/community vdu_controls builds made by **mchnz**, 
+> there are other vdu_controls builds made by other community users
 > for unknown purposes.  All of these OBS builds are discoverable
 > by search. **It is exceptionally risky to use one of these
-> other OBS builds without establishing some confidence in 
+> other OBS builds without first establishing some confidence in 
 > its content and creator.**
 
 The collective ``vdu_controls`` mchnz OBS build status page is: 
