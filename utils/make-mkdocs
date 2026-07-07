@@ -59,6 +59,8 @@ mkdir -p "$INPUT_DIR/assets"
 cp -r docs/assets/* "$INPUT_DIR/assets/"
 cp -r screenshots "$INPUT_DIR/"
 cp -r sample-scripts "$INPUT_DIR/"
+mkdir -p "$INPUT_DIR/stylesheets"
+cp -r docs/stylesheets/* "$INPUT_DIR/stylesheets/"
 cp LICENSE.md "$INPUT_DIR/"
 
 # Copy and lighten the icon

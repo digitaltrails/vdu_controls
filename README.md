@@ -40,7 +40,7 @@ ambient light-level to display-brightness. Flat curves
 can be created for older displays and steeper ones for newer HDR 
 displays.
 
-#### Semi-Automative Adjustment Throughout the Day
+### Semi-Automative Adjustment Throughout the Day
 
 In versions >= 2.4, the ambient-light-level slider has been combined with an 
 estimate of local solar-illumination to achieve **semi-automatic brightness 
@@ -55,40 +55,41 @@ for a brief tutorial.
 to determine a sun-angle, and from
 that estimates for illumination, and air-mass.)
 
-#### Fully Automatic Light-Metered Adjustment
+### Fully-Automatic Light-Metered Adjustment
 
 Several methods are supported for integrating a hardware light-meter to
-achieve **fully automatic** brightness control. (An _Arduino_
-based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
+achieve **fully automatic** brightness control - see 
+the [Light Meters document](https://digitaltrails.github.io/vdu_controls/assets/light-meters-howto). An
+_Arduino_ light-meter [can be built for around $10](https://digitaltrails.github.io/vdu_controls/assets/light-meters-howto/#arduino-light-meter-gy30gy302bh1750).
 
-#### Presets for Saving Favorite Settings
+### Presets for Saving Favorite Settings
 
 Favorite settings can be saved as named **Presets**, such as
 _night_, _day_, _photography_, _movies_, and so forth.  Presets may be set to 
 automatically trigger according to ambient light levels or solar-elevation, 
 display hotplug-events, or UNIX signals.
 
-#### Optionally resides in the System-Tray
+### Optionally resides in the System-Tray
 
 The application may optionally run in the **system tray** of KDE, Deepin, 
 GNOME, COSMIC, and Xfce (and possibly others). It automatically adapts to the 
 different tray implementations.
 
-#### Dynamic Light/Dark Theme Adjustment
+### Dynamic Light/Dark Theme Adjustment
 
 The UI automatically adjusts to **light and dark Qt desktop-themes**.
 Where a desktop supports Qt theming events, the UI dynamically adjusts 
 to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE theming, 
 the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 
-#### Configurable Layout 
+### Configurable Layout 
 
 To further assist with adapting to different desktops, the Settings-Dialog 
 contains options for locating the main-toolbar at the top or bottom of the 
 main-window.  A futher option is provided for separating the status-line 
 from the toolbar.
 
-#### Offline and Online Help
+### Offline and Online Help
 
 From any application window, use **F1** to access **help**, and **F10** to access the 
 *main-menu*.  The *main-menu* is also available via the right-mouse button in the main-window, the 
@@ -98,18 +99,25 @@ to sufficient letters being available to support all user defined Presets).
 
 > [!TIP]
 > The online [vdu_controls manual](https://digitaltrails.github.io/vdu_controls/manual/) 
-> is available for preview on GitHub.
+> is also [directly available](https://digitaltrails.github.io/vdu_controls/manual/).
+
+
+### Sample Sceenshots
+
+![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 
+
+
+![Custom](screenshots/Screenshot_tray-200.png) ![Custom](screenshots/Screenshot_settings-300.png)
+
 
 > [!TIP]
 > Within ``vdu_controls``, *tool-tips* are often revealed when hovering over UI components.
 
-#### Sample Sceenshots
 
-![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 
-![Custom](screenshots/Screenshot_tray-200.png) ![Custom](screenshots/Screenshot_settings-300.png)
 ![Custom](screenshots/presets.png) ![Custom](screenshots/lux-profiles.png)
 
-#### Laptop-Panel brightness controls
+
+### Laptop-Panel brightness controls
 
 Starting with version 2.6, laptop panels are supported for brightness-only control.
 
@@ -122,7 +130,7 @@ Brightness control is widely available and packaged for many distros.
 inactivity-dimming.  (The ``python3-pyudev`` library is employed to listen for
 `brigthness` events.)
 
-#### Control of other devices, such as motherboard LED's
+### Control of other devices, such as motherboard LED's
 
 `Vdu_controls` supports a DIY _virtual-DDC plugin_ for scripting the
 control of non-DDC displays or other devices such as keyboard-backlights or 
@@ -136,7 +144,8 @@ that's appropriate to the task.
 A sample [sample script](sample-scripts/laptop-ddcutil-emulator.bash) is 
 available in the sample-scripts folder.  
 
-#### Technical background
+
+## Technical background
 Historically, there was little need to frequently adjust display brightness.
 This changed with the introduction of displays offering HDR (High Dynamic Range)
 and increased contrast. These newer displays can cope better with very bright
@@ -144,14 +153,14 @@ conditions, but they often need to be turned down when the ambient light level
 decreases. I created `vdu_controls` to allow me to more easily adjust my own 
 displays.
 
-##### VESA DDC
+### VESA DDC
 
 Many display manufacturers implement the VESA DDC the **VESA** standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
 DDC PC-Display communication commonly takes place over DisplayPort, HDMI, DVI, 
 or USB using i2c.  The GPU manufacturers provide DDC access in there drivers.
 
-##### DDC via *ddcutil-service* or *ddcutil* 
+### DDC via *ddcutil-service* or *ddcutil* 
 
 `vdu_controls` communicates with DDC-capable displays by using one of two 
 interfaces:
@@ -163,7 +172,7 @@ interfaces:
 Both the command and the library  provide a robust interface that supports 
 numerous OEM DDC implementations and GPU drivers. 
 
-##### An Overview of ddcutil-service
+### An Overview of ddcutil-service
 I wrote `ddcutil-service` to access the faster API interface
 provided by `libddcutil`.  The connection caching in `libddcutil` often
 results in significantly faster access when dealing with multiple displays. 
@@ -185,6 +194,7 @@ service runs as user-session service under the current user's login.  It
 dosn't require any extra privaleges, `libddcutil` provides the necessary 
 udev access.  It can be installed as an start-on-demand D-Bus service,
 or it can simply be started from the command-line.
+
 
 ## Does adjusting a VDU affect its lifespan or health?
 
@@ -234,7 +244,7 @@ Some feedback is provided to help with making reducing NVRAM usage:
     the number of VCP (NVRAM) writes. 
   + The bottom of the *About-Dialog* shows the same numbers. They update dynamically.
 
-#### Other concerns
+### Other concerns
 
 > [!Caution]
 > Going beyond the standard DDC features by experimenting with undocumented-features 
@@ -245,8 +255,8 @@ The power-supplies in some older VDUs may buzz/squeel audibly when the brightnes
 turned way down. This may not be a major issue, in normal circumstances
 older VDUs are often not usable below 85-90% brightness.
 
-## Downloads
 
+## Downloads
 
 ### Pre-built Packages
 
@@ -257,7 +267,6 @@ package for arch-based systems:
  
  * Arch Linux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
  * Unofficial Arch, Fedora, and OpenSUSE built packages at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
-
 
 ### GitHub Zipapp or Download
 
@@ -352,6 +361,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 > grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
 > all the steps detailed in the links above.  
 
+
 ## Installing
 
 The script can self-install itself as desktop application in the current user's `$HOME\.local`
@@ -385,23 +395,17 @@ is likely to install some or all of the following, typically to these locations:
    /usr/share/man/man1/vdu_controls.1.gz
    ```
 
-Help
-----
 
-Detailed help can be accessed from the application's *main-menu*.  The manual
-page is baked in, but there is also a button to take you to the 
-[online help pages](https://digitaltrails.github.io/vdu_controls/)
+## Help
 
-Both brief help and detailed help can also be accessed via the command line:
-```
-% python3 vdu_controls.py --help
-% python3 vdu_controls.py --detailed-help
-% python3 vdu_controls.py --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
-# or if installed as an executable:
-% vdu_controls --help
-% vdu_controls --detailed-help
-% vdu_controls --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
-```
+Detailed help can be accessed from the application's *main-menu*.  The man-page
+is embedded in the application for offline use, but there is also a button to 
+take you to [online help](https://digitaltrails.github.io/vdu_controls/),
+which has the advantage of having tables-of-contents, text-search, and 
+additional help documents.
+
+
+## Customization
 
 Whether run from the desktop start-menu or run from the command line, ``vdu-controls`` behaviour 
 can be altered in a number of ways:
@@ -410,8 +414,9 @@ can be altered in a number of ways:
 * Command line options.
 * Configurations files in `$HOME/.config/vdu_controls/`
 
-See the *main-menu* or the  [online help](https://digitaltrails.github.io/vdu_controls/#help)
- for details.
+
+See the *main-menu* or the  [online help](https://digitaltrails.github.io/vdu_controls/#help) for details.
+
 
 ## Localization
 
@@ -448,10 +453,12 @@ To date, there hasn't been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
 be supported over the long term. 
 
+
 ## Bugs and Suggestions
 
 If you encounter a bug or issue, or wish to make a suggestion, you're most welcome to raise 
 it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
+
 
 ## Development
 
@@ -529,6 +536,7 @@ can run a ddcutil simulator.
 My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
 interpreter and python3 libraries are from the standard Tumbleweed repositories. 
 
+
 ## Acknowledgements
 
 * Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility and all the friendly help and assistance.
@@ -554,6 +562,7 @@ interpreter and python3 libraries are from the standard Tumbleweed repositories.
 ## Author
 
 Michael Hamilton
+
 
 ## Version History
 

@@ -37,6 +37,9 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
 
+extra_css:
+  - stylesheets/extra.css
+
 docs_dir: _build/mkdocs/input
 
 plugins:
@@ -55,6 +58,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Manual Page: manual.md
-  - Semi-Auto Howto: assets/ambient-howto.md
+  - Semi-Auto Howto: assets/semi-auto-howto.md
+  - Light-Meters Howto: assets/light-meters.md
   - Source Code: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md
