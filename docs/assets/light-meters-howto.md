@@ -166,10 +166,11 @@ If you don't wish to build an Arduino based solution, you
 may be able to use a webcam to achieve usable metering values. 
 
 !!! TIP "tip"
-    Personally, I'd say this is probably the harder of the two paths.
-    Getting it setup to work reliably all day can be fiddly.
+    Using a webcam is probably the harder of the two paths.
+    It can be fiddly to get it setup and then to get it to work reliably.
     The [semi-automatic alternative](/assets/semi-auto-howto) is probably
-    as good and far less hassle.
+    as good and far less hassle.  Building an Arduino meter seems easy in
+    comparison.
 
 I've developed three scripts that can uses a webcam frame grab
 to calculate a lux-like value:  
