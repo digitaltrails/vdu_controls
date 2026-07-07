@@ -633,6 +633,8 @@ Michael Hamilton
     (with a warning logged).  Contributed by Mohammed Elsayed Ahmed.
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * The protect NVRAM option has been made mandatory.
+  * The weather related Preset settings are only visible when the weather option 
+    is enabled.
   * A cascade-guard has been added to protect NVRAM from cascading writes  
     due to application, driver, or hardware bugs (or _cats on keyboards_).
     If the application or user sets a VDU feature more than 20 times in 65

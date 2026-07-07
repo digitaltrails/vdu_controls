@@ -18,9 +18,9 @@ class Release:
     https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
     <br/>_____________________________________________________________________________________________"""
     RELEASE_INFO = QT_TR_NOOP(
-                              '<h3><span style="color: #ea4335;">\u26A0</span> Proposed Changes - feedback required</h3>'
-                              'You may wish to comment on these proposed changes:'
-                              ' <ul><li>The <i>weather feature</i> may be removed from the next version.</b>'
+                              '<h3><span style="color: #ea4335;">\u26A0</span> Notable Changes - feedback requested</h3>'
+                              'You may wish to comment on these changes:'
+                              ' <ul><li>The <i>weather feature</i> is deprecated and may be removed from the next version.</b>'
                               ' If you rely on it, please comment on issue'
                               ' <a href="https://github.com/digitaltrails/vdu_controls/issues/133">#133</a>.'
                               ' <li>The <i>protect-nvram feature</i> has been made mandatory.</b>'
