@@ -263,10 +263,44 @@ older VDUs are often not usable below 85-90% brightness.
 Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR 
 package for arch-based systems:
 
- * OpenSUSE RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
- 
- * Arch Linux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
- * Unofficial Arch, Fedora, and OpenSUSE built packages at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
+#### Official openSUSE distributed package 
+
+OpenSUSE users can use zypper to install from the official openSUSE repo:
+```
+sudo zypper install vdu_controls` 
+```
+  
+#### Arch Linux community AUR
+
+There is a community AUR package, packaged for many years by Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)):
+
+  - [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+
+#### Unofficial Arch and Fedora packages
+
+These are all built by myself using _openSUSE Build Service_ by under my
+**mchnz** OBS-login.  These mchnz unofficial/community builds are only 
+subject to my tests and checks, no one else vets them.
+
+  - [https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Arch/binaries](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Arch/binaries)
+  - [https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries)
+
+> [!CAUTION]
+> As well as the unofficial/community builds made by **mchnz**, 
+> there are other unofficial/community vdu_controls builds made by other users
+> for unknown purposes.  All of these OBS builds are discoverable
+> by search. **It is exceptionally risky to use one of these
+> other OBS builds without establishing some confidence in 
+> its content and creator.**
+
+The collective ``vdu_controls`` mchnz OBS build status page is: 
+
+  - [https://build.opensuse.org/package/show/home:mchnz/vdu_controls](https://build.opensuse.org/package/show/home:mchnz/vdu_controls)
+
+
+
+
+
 
 ### GitHub Zipapp or Download
 
