@@ -2,7 +2,13 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-master_version_number=$(python3 -c 'from src.vdu_controls.constants import VDU_CONTROLS_VERSION;print(VDU_CONTROLS_VERSION)')
+master_version_number=$(cd src; python3 -c 'from vdu_controls.constants import VDU_CONTROLS_VERSION;print(VDU_CONTROLS_VERSION)' | tail -1)
+
+if [ -z "$master_version_number" ]
+then
+    echo "ERROR: failed to obtain version"
+    exit 1
+fi
 
 base_version=$(echo $master_version_number | sed s/-.*//)
 
@@ -11,8 +17,8 @@ echo "INFO: master_version_number=$master_version_number base_version=$base_vers
 echo "INFO: update PKGBUILD"
 sed -E --in-place "s/^pkgver=[0-9.]+/pkgver=$base_version/" PKGBUILD || exit 1
 
-echo "INFO: update setup.cfg"
-sed -E --in-place "s/^version = [0-9.]+/version = $base_version/" pyproject.toml || exit 1
+echo "INFO: update pyproject.toml"
+sed -E --in-place "s/^version = \"[0-9.]+\"/version = \"$base_version\"/" pyproject.toml || exit 1
 
 echo "INFO: update vdu_controls.spec"
 sed -E --in-place "s/^Version:( *)[0-9.]+/Version:\\1$base_version/" vdu_controls.spec || exit 1
