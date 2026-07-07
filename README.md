@@ -260,8 +260,8 @@ older VDUs are often not usable below 85-90% brightness.
 
 ### Pre-built Packages
 
-Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR 
-package for arch-based systems:
+An official package is available for **OpenSUSE**.  Community packages exist 
+for **archlinux** and **Fedora**.
 
 #### Official openSUSE distributed package 
 
@@ -270,13 +270,13 @@ OpenSUSE users can use zypper to install from the official openSUSE repo:
 sudo zypper install vdu_controls` 
 ```
   
-#### Arch Linux community AUR
+#### Arch Linux AUR community packages
 
 There is a community AUR package, packaged for many years by Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)):
 
   - [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
 
-#### Unofficial Arch and Fedora packages
+#### Arch and Fedora OBS community packages
 
 These are all built by myself using _openSUSE Build Service_ by under my
 **mchnz** OBS-login.  These mchnz unofficial/community builds are only 
@@ -293,16 +293,8 @@ subject to my tests and checks, no one else vets them.
 > other OBS builds without first establishing some confidence in 
 > its content and creator.**
 
-The collective ``vdu_controls`` mchnz OBS build status page is: 
 
-  - [https://build.opensuse.org/package/show/home:mchnz/vdu_controls](https://build.opensuse.org/package/show/home:mchnz/vdu_controls)
-
-
-
-
-
-
-### GitHub Zipapp or Download
+### Installing from a Zipapp or Source Download
 
 > [!WARNING]
 > These instructions are for versions >= 2.6.5.  For earlier versions,
