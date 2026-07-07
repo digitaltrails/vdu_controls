@@ -229,8 +229,22 @@ class MBox(QMessageBox):
         self.setText(msg)
         self.setInformativeText(info)
         self.setDetailedText(details)
-        # setOption() not available on deepin - and not needed anyway.
-        #self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
+
+        # DontUseNativeDialog is needed to prevent the close button on KDE
+        # dialogs from causing an immediate or delayed segfault.
+        # The real answer may be to find a way of preventing window manager close
+        # from acting on KDE dialog boxes.  Or possibly not allocating MBox on the
+        # call stack which can cause it to be collected before the KDE deleteLater
+        # tries to access it (which is the unproven theory behind the segfault).
+        #
+        # Many expletives over time wasted on this have been deleted from here.
+        #
+        # DontUseNativeDialog is not available on deepin, so check for that.
+        #
+        # TODO Add an environment-toggle and see if this is KDE only.
+        if hasattr(QMessageBox.Option, 'DontUseNativeDialog'):
+            self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
         if MBox.translating:
             self._translate_buttons_kludge()
 
