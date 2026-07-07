@@ -160,10 +160,16 @@ rules to create a fixed-name symlink to your Arduino device. For example:
 In `vdu_controls`, set the lux device to new fixed-name `/dev/arduino` instead 
 of `/dev/ttyUSB[0-9]`
 
-## Webcam approximate Lux metering
+## Webcam Approximate Lux metering
 
 If you don't wish to build an Arduino based solution, you 
 may be able to use a webcam to achieve usable metering values. 
+
+!!! TIP "tip"
+    Personally, I'd say this is probably the harder of the two paths.
+    Getting it setup to work reliably all day can be fiddly.
+    The [semi-automatic alternative](/assets/semi-auto-howto) is probably
+    as good and far less hassle.
 
 I've developed three scripts that can uses a webcam frame grab
 to calculate a lux-like value:  

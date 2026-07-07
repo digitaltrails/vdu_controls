@@ -59,6 +59,6 @@ nav:
   - Home: index.md
   - Manual Page: manual.md
   - Semi-Auto Howto: assets/semi-auto-howto.md
-  - Light-Meters Howto: assets/light-meters.md
+  - Light-Meters Howto: assets/light-meters-howto.md
   - Source Code: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md
