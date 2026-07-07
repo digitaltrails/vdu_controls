@@ -44,13 +44,19 @@ displays.
 
 In versions >= 2.4, the ambient-light-level slider has been combined with an 
 estimate of local solar-illumination to achieve **semi-automatic brightness 
-control** throughout the day. Adjusting the slider gives an indication of
+control** throughout the day. 
+
+Adjusting the slider gives an indication of
 your perceived indoor illumination.  This indoor value sets the ratio between 
 indoor-illumination and outdoor solar-illumination. Once the ratio is set,
 it is used to automatically update brightness as the day proceeds. 
+
 Should the cloud-cover or weather change, adjusting the slider revises the 
-ratio.  See the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/ambient-howto/) 
+ratio.  
+
+See the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/ambient-howto/) 
 for a brief tutorial.
+
 (Solar-illumination is estimated for a  location by using the local date-time 
 to determine a sun-angle, and from
 that estimates for illumination, and air-mass.)
@@ -85,8 +91,8 @@ the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 ### Configurable Layout 
 
 To further assist with adapting to different desktops, the Settings-Dialog 
-contains options for locating the main-toolbar at the top or bottom of the 
-main-window.  A futher option is provided for separating the status-line 
+contains options for locating the **main-toolbar** at the top or bottom of the 
+main-window.  A futher option is provided for separating the **status-line** 
 from the toolbar.
 
 ### Offline and Online Help
@@ -124,7 +130,7 @@ Starting with version 2.6, laptop panels are supported for brightness-only contr
 Laptop support is optional and controlled by the  __Settings__ > __vdu_control globals__ > __DDC options__ > __laptop panel__.
 
 The command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl) is used to emulate DDC control of brightness.
-Brightness control is widely available and packaged for many distros.
+Brightnessctl is widely available and packaged for many distros.
 
 ``vdu_controls`` will  react to laptop brightness-function-keys or 
 inactivity-dimming.  (The ``python3-pyudev`` library is employed to listen for
@@ -155,10 +161,11 @@ displays.
 
 ### VESA DDC
 
-Many display manufacturers implement the VESA DDC the **VESA** standard
-*Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
-DDC PC-Display communication commonly takes place over DisplayPort, HDMI, DVI, 
-or USB using i2c.  The GPU manufacturers provide DDC access in there drivers.
+Many display manufacturers implement *VESA DDC VCP*, the VESA standard
+*Display Data Channel* (DDC) *Virtual Control Panel*  (VCP) interface.
+DDC PC-to-Display DDC communication commonly takes place over DisplayPort, 
+HDMI, DVI, or USB using the i2c protocol.  The GPU manufacturers provide 
+DDC support in their drivers.
 
 ### DDC via *ddcutil-service* or *ddcutil* 
 
@@ -225,7 +232,7 @@ All that said, ``vdu_controls`` does include a number of features that reduce
 the frequency of writes to VDU NVRAM:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
- + Preset restoration only updates the VDU values that differ from its current values.
+ + Preset restoration only updates the VDU values that differ from the preset's target values.
  + Transitioning effects and transition controls have been disabled for version 2.6.5 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
@@ -269,6 +276,7 @@ OpenSUSE users can use zypper to install from the official openSUSE repo:
 ```
 sudo zypper install vdu_controls` 
 ```
+(I maintain the official openSUSE build.)
   
 #### Arch Linux AUR community packages
 
@@ -278,9 +286,9 @@ There is a community AUR package, packaged for many years by Mark Wagie ([yochan
 
 #### Arch and Fedora OBS community packages
 
-These are all built by myself using _openSUSE Build Service_ by under my
-**mchnz** OBS-login.  These mchnz unofficial/community builds are only 
-subject to my tests and checks, no one else vets them.
+I use the _openSUSE Build Service_ to build Arch and Fedora packages 
+by under my **mchnz** OBS-login.  These unofficial/community builds are only 
+subject to my tests and checks, no one else vets them, they have no official standing.
 
   - [https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Arch/binaries](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Arch/binaries)
   - [https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_44/binaries)
@@ -323,10 +331,10 @@ install itself into `$HOME/.local/` as runnable python-zipapp:
    % unzip vdu_controls.zip
    
    # Directly run the app from the source:
-   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py
+   % python3 vdu_controls-master/src/vdu_controls_main.py
    
    # Use the source to install itself as python zipapp:
-   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py --install
+   % python3 vdu_controls-master/src/vdu_controls_main.py --install
    ```
 
 Although it's easily runnable, you'll still need to ensure you have the 
@@ -425,9 +433,9 @@ is likely to install some or all of the following, typically to these locations:
 ## Help
 
 Detailed help can be accessed from the application's *main-menu*.  The man-page
-is embedded in the application for offline use, but there is also a button to 
-take you to [online help](https://digitaltrails.github.io/vdu_controls/),
-which has the advantage of having tables-of-contents, text-search, and 
+is embedded in the application for offline use. The application help also includes
+a button to take you to [online help](https://digitaltrails.github.io/vdu_controls/).
+The online help has the advantage of having tables-of-contents, text-search, and 
 additional help documents.
 
 
@@ -517,13 +525,12 @@ imports, for example:
    ```
 
 
-I don't normally use Python _pip_.
-I typically just assemble the source into a zipapp by running zipapp at the 
-top of the project hierarchy, for example:
+I don't normally use Python _pip_, building and distributing a zipapp is 
+a better fit for a system utility. The zipapp is typically built as follows:
 
 ```
 # Make a zipapp:
-python3 -m zipapp vdu_controls --output vdu_controls.pyz --main vdu_controls_main:main --python "/usr/bin/env python3"
+python3 -m zipapp src --output vdu_controls.pyz --main vdu_controls_main:main --python "/usr/bin/env python3"
 # Run the result:
 python3 vdu_controls.pyz
 ```
@@ -542,7 +549,7 @@ vdu_controls
 
 
 There are configuration files for the 
-[Pandoc](https://pandoc.org/)'s and [MkDocs](https://www.mkdocs.org/). There are util scripts that generate 
+[Pandoc](https://pandoc.org/) and [MkDocs](https://www.mkdocs.org/). There are util scripts that generate 
 pandoc output and the MkDocs site pages:
 ```
 % ./util/make-man
