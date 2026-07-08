@@ -112,8 +112,7 @@ system-tray icon. The  *main-menu* provides **ALT-_key_ shortcuts** for all menu
 to sufficient letters being available to support all user defined Presets).
 
 > [!TIP]
-> The online [vdu_controls manual](https://digitaltrails.github.io/vdu_controls/manual/) 
-> is also [directly available](https://digitaltrails.github.io/vdu_controls/manual/).
+> The [vdu_controls.1 man page](https://digitaltrails.github.io/vdu_controls/manual/) is available online.
 
 
 ### Sample Sceenshots
