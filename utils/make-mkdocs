@@ -51,6 +51,9 @@ mkdir -p "$INPUT_DIR"
 cp README.md "$INPUT_DIR/index.md"
 python3 utils/convert_alerts.py "$INPUT_DIR/index.md"
 
+# Add the changelog - so it is searchable
+cp CHANGELOG.md "$INPUT_DIR/changelog.md"
+
 # Pull in the help file as the "manual"
 cp src/vdu_controls/resources/docs/help.md "$INPUT_DIR/manual.md"
 
