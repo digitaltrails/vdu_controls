@@ -17,7 +17,7 @@ A control panel for external monitors (*Visual Display Units*).
 
 ## Description
 
-<img src="screenshots/ambient-slider-example.png" alt="vdu_controls v2.6" width="50%">
+<img src="screenshots/ambient-slider-example.png?v=1" alt="vdu_controls v2.6" width="50%">
 
 ``vdu_controls`` is a virtual control panel for external Visual Display Units 
 (VDUs, monitors, displays). It supports displays connected via DisplayPort, 
@@ -117,7 +117,7 @@ to sufficient letters being available to support all user defined Presets).
 
 ### Sample Sceenshots
 
-![Default](screenshots/Screenshot_Large-330.png)  ![Custom](screenshots/Screenshot_Small-227.png) 
+![Default](screenshots/Screenshot_Large-330.png?v=1)  ![Custom](screenshots/Screenshot_Small-227.png?v=1) 
 
 
 ![Custom](screenshots/Screenshot_tray-200.png) ![Custom](screenshots/Screenshot_settings-300.png)
