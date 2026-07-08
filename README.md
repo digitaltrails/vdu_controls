@@ -467,6 +467,9 @@ load a translation matching your system's locale if available.
 > [!CAUTION] 
 > The supplied translations should be regarded as samples.
 > They are unverified and may be incorrect.
+> 
+> To date, there hasn't been any expression of interest in the localization
+> features. The existing translations mainly remain for testing purposes.
 
 Where a supported locale is right-to-left oriented, layouts will be 
 reconfigured appropriately. 
@@ -490,9 +493,11 @@ The following locations are searched for localized translations:
   2. `/usr/share/vdu_controls/translations/`
   3. `zipapp-root/vdu_controls/resources/translations/`
 
-To date, there hasn't been any expression of interest in the localization
-features. The provided translations are all testing samples which may not
-be supported over the long term. 
+Both Qt `.ts` and `.qm` files can be used (`.ts` is plain-text, and `.qs`
+is a compiled binary format).  Because the translations are
+unvetted, I've only provided editable text `.ts` files.
+Anyone can easiliy make corrections to these text files without
+having to use Qt's language tools.
 
 
 ## Bugs and Suggestions
