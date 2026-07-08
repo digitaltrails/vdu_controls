@@ -11,14 +11,6 @@ A control panel for external monitors (*Visual Display Units*).
 > __[Preview 2.6.5-rc.3 is available](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.6.5-rc3).__
 > 
 
-<!-- mkdocs-exclude-start -->
-
-> [!TIP]
-> New documentation site is [https://digitaltrails.github.io/vdu_controls/](https://digitaltrails.github.io/vdu_controls/)
-
-<!-- mkdocs-exclude-end -->
-
-
 > [!TIP]
 > Laptop-panels are supported in version 2.6 (see [options](https://github.com/digitaltrails/vdu_controls#laptop-panel-brightness-controls) below).
 
@@ -49,6 +41,12 @@ displays.
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
 > be found under **System Settings** > **System** > **Energy Saving**.
 
+<!-- mkdocs-exclude-start -->
+
+> [!TIP]
+> Searchable documentation site is [https://digitaltrails.github.io/vdu_controls/](https://digitaltrails.github.io/vdu_controls/)
+
+<!-- mkdocs-exclude-end -->
 
 ### Semi-Automative Adjustment Throughout the Day
 
