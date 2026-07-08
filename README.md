@@ -44,7 +44,7 @@ displays.
 <!-- mkdocs-exclude-start -->
 
 > [!TIP]
-> New, searchable,  documentation site is [now available.](https://digitaltrails.github.io/vdu_controls/)
+> New documentation site [now available.](https://digitaltrails.github.io/vdu_controls/)
 
 <!-- mkdocs-exclude-end -->
 
