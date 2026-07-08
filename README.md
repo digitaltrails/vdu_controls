@@ -11,14 +11,17 @@ A control panel for external monitors (*Visual Display Units*).
 > __[Preview 2.6.5-rc.3 is available](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.6.5-rc3).__
 > 
 
+<!-- mkdocs-exclude-start -->
+
+> [!TIP]
+> New documentation site is [https://digitaltrails.github.io/vdu_controls/](https://digitaltrails.github.io/vdu_controls/)
+
+<!-- mkdocs-exclude-end -->
+
+
 > [!TIP]
 > Laptop-panels are supported in version 2.6 (see [options](https://github.com/digitaltrails/vdu_controls#laptop-panel-brightness-controls) below).
 
-> [!WARNING]
-> **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
-> time.  This may interfere with changes made via **vdu_controls**, including
-> *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
-> be found under **System Settings** > **System** > **Energy Saving**.
 
 ## Description
 
@@ -39,6 +42,13 @@ _one slider to rule them all_.  Each display's profile defines a curve mapping
 ambient light-level to display-brightness. Flat curves
 can be created for older displays and steeper ones for newer HDR 
 displays.
+
+> [!WARNING]
+> **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
+> time.  This may interfere with changes made via **vdu_controls**, including
+> *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
+> be found under **System Settings** > **System** > **Energy Saving**.
+
 
 ### Semi-Automative Adjustment Throughout the Day
 

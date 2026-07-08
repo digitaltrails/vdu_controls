@@ -48,7 +48,7 @@ cd "$PROJECT_DIR"
 mkdir -p "$INPUT_DIR"
 
 # Convert README → index.md by replacing github alerts by mkdoc ones.
-cp README.md "$INPUT_DIR/index.md"
+sed '/<!-- mkdocs-exclude-start -->/,/<!-- mkdocs-exclude-end -->/d' README.md > "$INPUT_DIR/index.md"
 python3 utils/convert_alerts.py "$INPUT_DIR/index.md"
 
 # Add the changelog - so it is searchable
