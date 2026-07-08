@@ -38,6 +38,7 @@ vdu_controls-$version/docs/_config.yml
 vdu_controls-$version/docs/conf.py
 vdu_controls-$version/docs/index.rst
 vdu_controls-$version/docs/make.bat
+vdu_controls-$version/packaging/vdu_controls.wrapper
 vdu_controls-$version/pyproject.toml
 vdu_controls-$version/screen-shots/Screenshot_Large-330.png
 vdu_controls-$version/screen-shots/Screenshot_Large.png

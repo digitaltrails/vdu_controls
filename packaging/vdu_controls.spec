@@ -24,11 +24,20 @@ License:        GPL-3.0-or-later
 Group:          System/GUI/Other
 URL:            https://github.com/digitaltrails/vdu_controls
 Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-BuildRequires:  coreutils
+
+# This forces the openSUSE macros to only target the main system interpreter
+%define python_flavors python3
+%define skip_python314 1
+%define skip_python311 1
+
 BuildRequires:  hicolor-icon-theme
 BuildRequires:  python3-devel
 BuildRequires:  python-rpm-macros
 BuildArch:      noarch
+
+# Define our private app code sub-directory
+%define app_subdir %{_datadir}/%{name}/app
+
 %if 0%{?suse_version}
 Requires:       ddcutil
 Requires:       noto-sans-math-fonts
@@ -66,30 +75,45 @@ Data Channel (DDC) Virtual Control Panel (VCP) standards.
 %autosetup
 
 %build
-python%{python3_version} -m zipapp src -o %{name}.pyz -m %{name}_main:main -p "%{_bindir}/python%{python3_version}"
+# Nothing to build – we only copy source files.
+# Translations are shipped as editable .ts files for end-user contributions.
 
 %install
+# Create the filesystem tree
 install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
                    %{buildroot}%{_datadir}/applications \
                    %{buildroot}%{_datadir}/%{name}/translations \
                    %{buildroot}%{_datadir}/%{name}/icons \
                    %{buildroot}%{_datadir}/%{name}/sample-scripts \
-                   %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
-install -m 0755 %{name}.pyz  %{buildroot}/%{_bindir}/%{name}
+                   %{buildroot}%{_datadir}/icons/hicolor/256x256/apps \
+                   %{buildroot}%{app_subdir}
+
+# Copy the source package into the private app directory
+cp -r src/vdu_controls %{buildroot}%{app_subdir}/
+# Copy the main script (if it's separate)
+install -m 0644 src/vdu_controls_main.py %{buildroot}%{app_subdir}/
+
+# Copy other assets
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 install -m 0644 src/%{name}/resources/icons/app/%{name}.svg \
                     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.svg
 install -m 0644 icons/* %{buildroot}%{_datadir}/%{name}/icons/
+# Install .ts files, editable by end users, app has code to use them directly.
 install -m 0644 translations/*.ts %{buildroot}%{_datadir}/%{name}/translations/
 install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/%{name}/sample-scripts/
 install -m 0644 docs/_build/man/%{name}.1 %{buildroot}%{_mandir}/man1/
 
-# This script is supposed to work with any python3 - so leave the shebang alone
-# %%if 0%{?suse_version}
-# %%python3_fix_shebang
-# %%endif
+# Byte-compile everything in the private app directory
+%{__python3} -m compileall -q -f %{buildroot}%{app_subdir}
 
+# Install the wrapper script
+install -p -m 0755 packaging/vdu_controls.wrapper %{buildroot}%{_bindir}/%{name}
+
+# Fix shebang to exact Python version (for openSUSE strictness)
+sed -i "s|/usr/bin/python3|/usr/bin/python%{python3_version}|" %{buildroot}%{_bindir}/%{name}
+
+# Make it easy for the user to find a range of icons
 %post
 ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 
@@ -99,22 +123,14 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %dir %{_datadir}/%{name}/icons
 %dir %{_datadir}/%{name}/translations
 %dir %{_datadir}/%{name}/sample-scripts
+%{app_subdir}/
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.svg
 %{_mandir}/man1/%{name}.1*
 %{_datadir}/%{name}/icons/*
-%{_datadir}/%{name}/translations/ar_SA.ts
-%{_datadir}/%{name}/translations/da_DK.ts
-%{_datadir}/%{name}/translations/de_DE.ts
-%{_datadir}/%{name}/translations/es_ES.ts
-%{_datadir}/%{name}/translations/fr_FR.ts
-%{_datadir}/%{name}/translations/mi_NZ.ts
-%{_datadir}/%{name}/translations/zh_CN.ts
-%{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
-%{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
-%{_datadir}/%{name}/sample-scripts/vlux_meter.py
-%{_datadir}/%{name}/sample-scripts/laptop-ddcutil-emulator.bash
+%{_datadir}/%{name}/translations/*.ts
+%{_datadir}/%{name}/sample-scripts/*
 %ghost %{_datadir}/%{name}/icons/system-icons
 
 %changelog
