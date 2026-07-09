@@ -524,7 +524,6 @@ src
 │   │   ├── icons
 │   │   │   └── app
 │   │   │       ├── *.{svg,png}
-└── vdu_controls_main.py
 ```
 The top `src` folder contains an entry point main for the
 application, `vdu_controls_main.py`, and a `vdu_controls` sub-folder.
@@ -542,7 +541,7 @@ a better fit for a system utility. The zipapp is typically built as follows:
 
 ```
 # Make a zipapp:
-python3 -m zipapp src --output vdu_controls.pyz --main vdu_controls_main:main --python "/usr/bin/env python3"
+python3 -m zipapp src --output vdu_controls.pyz --main vdu_controls.__main__:main --python "/usr/bin/env python3"
 # Run the result:
 python3 vdu_controls.pyz
 ```
