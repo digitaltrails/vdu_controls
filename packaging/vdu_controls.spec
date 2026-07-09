@@ -43,16 +43,13 @@ Requires:       ddcutil
 Requires:       noto-sans-math-fonts
 Requires:       noto-sans-symbols2-fonts
 Requires:       python3 >= 3.9
-%if 0%{?sle_version} > 150000 && 0%{?is_opensuse}
-Requires:       python3-qt5
-%else
 Requires:       python3-qt6
-%endif
 Recommends:     ddcutil-service
 Recommends:     python3-pyserial
 Recommends:     python3-pyudev
 Recommends:     brightnessctl
 %endif
+
 %if 0%{?fedora_version}
 %define ext_man *
 Requires:       ddcutil
