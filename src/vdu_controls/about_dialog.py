@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from platform import python_version
 from typing import TYPE_CHECKING
 
 import vdu_controls.logging as log
@@ -134,6 +135,7 @@ class _AboutTemplateData:
             platform: qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()};
             ddcutil-interface: {self.ddcutil_version_info_0}; 
             ddcutil: {self.ddcutil_version_info_1};
+            python: {python_version()};
             locale: {app_locale.get_locale_name()} 
             ({"translating" if app_locale.get_translating_locale() == app_locale.get_locale_name() else "not translating"}); 
             installed translations: {', '.join(app_locale.available_translations())};
