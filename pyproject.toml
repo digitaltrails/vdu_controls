@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-vdu_controls = "vdu_controls_main:main"
+vdu_controls = "vdu_controls.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

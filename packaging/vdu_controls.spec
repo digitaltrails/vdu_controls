@@ -35,9 +35,6 @@ BuildRequires:  python3-devel
 BuildRequires:  python-rpm-macros
 BuildArch:      noarch
 
-# Define our private app code sub-directory
-%define app_subdir %{_datadir}/%{name}/app
-
 %if 0%{?suse_version}
 Requires:       ddcutil
 Requires:       noto-sans-math-fonts
@@ -84,12 +81,9 @@ install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_datadir}/%{name}/icons \
                    %{buildroot}%{_datadir}/%{name}/sample-scripts \
                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps \
-                   %{buildroot}%{app_subdir}
 
 # Copy the source package into the private app directory
-cp -r src/vdu_controls %{buildroot}%{app_subdir}/
-# Copy the main script (if it's separate)
-install -m 0644 src/vdu_controls_main.py %{buildroot}%{app_subdir}/
+cp -r src/vdu_controls %{buildroot}%{_datadir}/%{name}
 
 # Copy other assets
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
@@ -102,7 +96,7 @@ install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/%{name}/sample-scripts/
 install -m 0644 docs/_build/man/%{name}.1 %{buildroot}%{_mandir}/man1/
 
 # Byte-compile everything in the private app directory
-%{__python3} -m compileall -q -f %{buildroot}%{app_subdir}
+%{__python3} -m compileall -q -f %{buildroot}%{_datadir}/%{name}
 
 # Install the wrapper script
 install -p -m 0755 packaging/vdu_controls.wrapper %{buildroot}%{_bindir}/%{name}
@@ -120,7 +114,6 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %dir %{_datadir}/%{name}/icons
 %dir %{_datadir}/%{name}/translations
 %dir %{_datadir}/%{name}/sample-scripts
-%{app_subdir}/
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.svg
@@ -128,6 +121,8 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/%{name}/icons/*
 %{_datadir}/%{name}/translations/*.ts
 %{_datadir}/%{name}/sample-scripts/*
+%{_datadir}/%{name}/vdu_controls
+
 %ghost %{_datadir}/%{name}/icons/system-icons
 
 %changelog

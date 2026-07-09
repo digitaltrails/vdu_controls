@@ -19,21 +19,36 @@ optdepends=(
   'python-pyserial: If you wish to use a serial-port lux metering device'
   'python-pyudev: Laptop panel support'
 )
+makedepends=(
+  'python-build'
+  'python-installer'
+  'python-wheel'
+  'python-setuptools'
+)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
-  python3 -m zipapp src -o $pkgname.pyz -m vdu_controls_main:main -p '/usr/bin/env python3'
+  python -m build --wheel --no-isolation
 }
 
 package() {
-  cd "$pkgname-$pkgver"
-  install -Dm755 "$pkgname.pyz" "$pkgdir/usr/bin/$pkgname"
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # Install the wheel to system site-packages
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  # The entry point script is automatically placed in /usr/bin/
+  # (assuming your pyproject.toml has [project.scripts])
+
+  # Install translations, icons, sample scripts to /usr/share/vdu_controls/
+  install -d "$pkgdir/usr/share/$pkgname"
   install -Dm644 translations/*.ts -t "$pkgdir/usr/share/$pkgname/translations/"
   install -Dm755 sample-scripts/* -t "$pkgdir/usr/share/$pkgname/sample-scripts/"
   install -Dm644 icons/* -t "$pkgdir/usr/share/$pkgname/icons/"
   install -Dm644 "docs/_build/man/$pkgname.1" -t "$pkgdir/usr/share/man/man1/"
-  install -Dm644 "src/$pkgname/resources/icons/app/$pkgname.svg" -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
+  install -Dm644 "src/$pkgname/resources/icons/app/$pkgname.svg" \
+                    "$pkgdir/usr/share/icons/hicolor/256x256/apps/$pkgname.svg"
   install -Dm644 "$pkgname.desktop" -t "$pkgdir/usr/share/applications/"
 }
