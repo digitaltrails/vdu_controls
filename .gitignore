@@ -2,3 +2,5 @@
 /translations/fr_FR.qm
 /translations/en_NZ.qm
 /docs/_build/
+/src/vdu_controls.egg-info/
+/src/.coverage
