@@ -28,8 +28,7 @@ class Release:
                               ' <a href="https://github.com/digitaltrails/vdu_controls/issues/132">#132</a>.'
                               '</ul>'
                               "<h3><span style='color: #2196F3;'>\U0001F6C8</span> What's new:</h3> Usability improvements and code refactoring, "
-                              'see the <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">'
-                              'online release notes</a> for details.'
+                              'see the release notes for details (link above).'
                               '<br/><br/>'
                               )
     @staticmethod
