@@ -338,10 +338,12 @@ install itself into `$HOME/.local/` as runnable python-zipapp:
    % unzip vdu_controls.zip
    
    # Directly run the app from the source:
-   % python3 vdu_controls-master/src/vdu_controls_main.py
+   % cd vdu_controls-master
+   % PYTHONPATH=src:$PYTHONPATH python3 -m vdu_controls
    
-   # Use the source to install itself as python zipapp:
-   % python3 vdu_controls-master/src/vdu_controls_main.py --install
+   # Use the source heirarchy to install itself as python zipapp:
+   % cd vdu_controls-master
+   % PYTHONPATH=src:$PYTHONPATH python3 -m vdu_controls --install
    ```
 
 Although it's easily runnable, you'll still need to ensure you have the 
