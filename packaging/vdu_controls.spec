@@ -26,7 +26,7 @@ URL:            https://github.com/digitaltrails/vdu_controls
 Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 # This forces the openSUSE macros to only target the main system interpreter
-%define python_flavors python3
+%define python_flavor python3
 %define skip_python314 1
 %define skip_python311 1
 
@@ -101,8 +101,19 @@ install -m 0644 docs/_build/man/%{name}.1 %{buildroot}%{_mandir}/man1/
 # Install the wrapper script
 install -p -m 0755 packaging/vdu_controls.wrapper %{buildroot}%{_bindir}/%{name}
 
-# Fix shebang to exact Python version (for openSUSE strictness)
-sed -i "s|/usr/bin/python3|/usr/bin/python%{python3_version}|" %{buildroot}%{_bindir}/%{name}
+# Distro-specific Native Shebang Fixing Routine
+%if 0%{?suse_version}
+# openSUSE: Targets binary dir implicitly
+%python3_fix_shebang
+# Fix the samples too
+%python3_fix_shebang_path %{buildroot}%{_datadir}/%{name}/sample-scripts/*
+%endif
+
+%if 0%{?fedora_version}
+# Fedora: Requires explicit paths/globs appended to the macro
+%py3_shebang_fix %{buildroot}%{_bindir}/%{name}
+%py3_shebang_fix %{buildroot}%{_datadir}/%{name}/sample-scripts/*
+%endif
 
 # Make it easy for the user to find a range of icons
 %post
