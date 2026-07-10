@@ -23,6 +23,8 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
     icon_dir = Path.home() / '.local' / 'share' / 'vdu_controls'
     bin_dir = Path.home() / '.local' / 'bin'
 
+    log.set_syslog(False)
+
     if not desktop_dir.exists():
         log.error(f"No desktop directory is present:{desktop_dir.as_posix()}"
                   " Cannot proceed - is this a non-standard desktop?")
@@ -53,14 +55,17 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         log.warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
 
     origin_script_path = Path(sys.argv[0])
-    if origin_script_path.name == "vdu_controls_main.py":
+    if origin_script_path.name == "__main__.py" and origin_script_path.parent.name == 'vdu_controls':
         import zipapp
         log.info(f"Creating zipapp {installed_script_path.as_posix()}")
-        zipapp.create_archive(origin_script_path.parent, target=installed_script_path,
-                              main='vdu_controls_main:main', interpreter=sys.executable)
-    else:
-        log.info(f"Copying {sys.argv[0]} to  {installed_script_path.as_posix()}")
+        zipapp.create_archive(origin_script_path.parent.parent, target=installed_script_path,
+                              main='vdu_controls.__main__:main', interpreter=sys.executable)
+    elif origin_script_path.name.encode(".pyz"):
+        log.info(f"Copying existing zipapp {sys.argv[0]} to  {installed_script_path.as_posix()}")
         shutil.copy2(sys.argv[0], installed_script_path)
+    else:
+        log.error("Unrecognized installable")
+        sys.exit(0)
     log.info(f"chmod u+rwx {installed_script_path.as_posix()}")
     os.chmod(installed_script_path, stat.S_IRWXU)
 
