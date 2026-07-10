@@ -334,16 +334,16 @@ If you want to use the latest source from master, it can be run directly, or it 
 install itself into `$HOME/.local/` as runnable python-zipapp:
 
    ``` 
+   # Download and unzip which creates a directory called vdu_controls-master
    % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
    % unzip vdu_controls.zip
+   % ls vdu_controls-master
    
-   # Directly run the app from the source:
-   % cd vdu_controls-master
-   % PYTHONPATH=src:$PYTHONPATH python3 -m vdu_controls
+   # Directly run the app from the vdu_controls-master source:
+   % PYTHONPATH=vdu_controls-master/src:$PYTHONPATH python3 -m vdu_controls
    
-   # Use the source heirarchy to install itself as python zipapp:
-   % cd vdu_controls-master
-   % PYTHONPATH=src:$PYTHONPATH python3 -m vdu_controls --install
+   # Use the vdu_controls-master source heirarchy to install itself as python zipapp:
+   % PYTHONPATH=vdu_controls-master/src:$PYTHONPATH python3 -m vdu_controls --install
    ```
 
 Although it's easily runnable, you'll still need to ensure you have the 
