@@ -534,9 +534,8 @@ src
 │   │   │   └── app
 │   │   │       ├── *.{svg,png}
 ```
-The top `src` folder contains an entry point main for the
-application, `vdu_controls_main.py`, and a `vdu_controls` sub-folder.
-The sub-folder serves to provide a unique prefix for the application's own 
+
+The `vdu_controls` sub-folder serves to provide a unique prefix for the application's own 
 imports, for example: 
 
    ```
@@ -544,9 +543,8 @@ imports, for example:
    from vdu_controls.ddcutil_qdbus.py import DdcutilDBusImpl
    ```
 
-
 I don't normally use Python _pip_, building and distributing a zipapp is 
-a better fit for a system utility. The zipapp is typically built as follows:
+a good fit for a system utility. The zipapp is typically built as follows:
 
 ```
 # Make a zipapp:
