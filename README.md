@@ -331,19 +331,26 @@ The asset  `vdu_controls.pyz` is a runnable zip:
    ```
 
 If you want to use the latest source from master, it can be run directly, or it can 
-install itself into `$HOME/.local/` as runnable python-zipapp:
-
-   ``` 
-   # Download and unzip which creates a directory called vdu_controls-master
+install itself into `$HOME/.local/` as runnable python-zipapp.  Here's how
+to download it, check that it works, and install it `$HOME/.local`
+    
+1. Download and unzip which creates a directory called vdu_controls-master
+   ```
    % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
    % unzip vdu_controls.zip
    % ls vdu_controls-master
-   
+   ```
+2. Directly run the app from the vdu_controls-master source.
+   ```
    # Directly run the app from the vdu_controls-master source:
    % PYTHONPATH=vdu_controls-master/src:$PYTHONPATH python3 -m vdu_controls
+   ```
    
-   # Use the vdu_controls-master source heirarchy to install itself as python zipapp:
+3. Use the vdu_controls-master source heirarchy to install itself as python zipapp:
+   ```
    % PYTHONPATH=vdu_controls-master/src:$PYTHONPATH python3 -m vdu_controls --install
+   % $HOME/.local/bin/vdu_controls
+   # Should also now be in the desktop menu (might require a logout/login)
    ```
 
 Although it's easily runnable, you'll still need to ensure you have the 
