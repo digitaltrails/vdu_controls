@@ -5,6 +5,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Changelog
 
 ## Unreleased <small>(master)</small>
+- Assign window-role properties to make it easier to assign 
+  positions to different windows in KDE/Plasma Wayland.
+- Fix broken link in release notes.
+
+## Version 2.6.5 <small>(2026-07-10)</small>
 
 - The Light-Metering-Dialog includes two profile starter-templates.
       One for older monitors and one for newer monitors.
