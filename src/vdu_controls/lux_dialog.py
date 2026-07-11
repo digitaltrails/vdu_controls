@@ -91,6 +91,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
         self.setWindowTitle(tr('Light-Metering'))
+        self.setWindowRole('light-metering-dialog')
         self.main_controller: VduAppController = main_controller
         self.lux_profiles_map: Dict[VduStableId, List[LuxPoint]] = {}
         self.range_restrictions_map: Dict[VduStableId, Tuple[int, int]] = {}

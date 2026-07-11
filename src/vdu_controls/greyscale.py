@@ -27,7 +27,7 @@ GREY_SCALE_SVG = f'''
 </svg>
 '''.encode()
 
-class GreyScaleDialog(SubWinDialog):
+class GrayScaleDialog(SubWinDialog):
     """
     Creates a dialog with a grey scale VDU calibration image.
     Non-model. Have as many as you like - one per VDU.
@@ -40,10 +40,11 @@ class GreyScaleDialog(SubWinDialog):
 
     def __init__(self) -> None:
         super().__init__()
-        GreyScaleDialog._active_list.append(self)
+        GrayScaleDialog._active_list.append(self)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        self.setWindowTitle(tr('Grey Scale Reference'))
+        self.setWindowTitle(tr('Gray Scale Reference'))
+        self.setWindowRole('gray-scale-dialog')
         self.setModal(False)
         svg_widget = QSvgWidget()
         renderer = svg_widget.renderer()
@@ -51,7 +52,7 @@ class GreyScaleDialog(SubWinDialog):
         renderer.load(GREY_SCALE_SVG)
         svg_widget.setMinimumSize(dpx(300), dpx(200))
         svg_widget.setToolTip(tr(
-            'Grey Scale Reference for VDU adjustment.\n\n'
+            'Gray Scale Reference for VDU adjustment.\n\n'
             'Set contrast toward the maximum (for HDR monitors\n'
             'try something lower such as 70%) and adjust brightness\n'
             'until as many rectangles as possible can be perceived.\n\n'
@@ -65,5 +66,5 @@ class GreyScaleDialog(SubWinDialog):
         self.activateWindow()
 
     def closeEvent(self, event) -> None:
-        GreyScaleDialog._active_list.remove(self)
+        GrayScaleDialog._active_list.remove(self)
         event.accept()

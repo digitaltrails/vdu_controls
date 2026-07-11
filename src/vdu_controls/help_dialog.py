@@ -26,6 +26,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         qt_markdown = self.load_help_text()
 
         self.setWindowTitle(tr('Help'))
+        self.setWindowRole('help-dialog')
         layout = QVBoxLayout()
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)

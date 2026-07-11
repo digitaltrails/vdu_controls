@@ -64,6 +64,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     def __init__(self, main_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
+        self.setWindowRole('settings-dialog')
         self.setLayout(widget_layout := QVBoxLayout())
         self.tabs_widget = QTabWidget(self)
         widget_layout.addWidget(self.tabs_widget)

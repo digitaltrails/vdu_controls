@@ -284,6 +284,7 @@ class ChoiceBox(QDialog):
     def __init__(self, title: str, choices: List[str], pixmap: QPixmap | None = None,  parent = None):
         super().__init__(parent)
         self.setWindowTitle(title)
+        self.setWindowRole('choice-box')
         self.selected_item_number: int = -1
         horizontal_layout = QHBoxLayout()
         self.setLayout(horizontal_layout)

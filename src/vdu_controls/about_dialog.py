@@ -165,6 +165,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         super().__init__()
         self.main_controller = main_controller
         self.setWindowTitle(tr('About'))
+        self.setWindowRole('about-dialog')
         self.setTextFormat(Qt.TextFormat.AutoText)
         self.setText(tr('About vdu_controls'))
         icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)

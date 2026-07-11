@@ -36,7 +36,7 @@ from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONT
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
-from vdu_controls.greyscale import GreyScaleDialog
+from vdu_controls.greyscale import GrayScaleDialog
 from vdu_controls.help_dialog import HelpDialog
 from vdu_controls.icon_utils import ThemeType, create_pixmap_from_svg_bytes
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
@@ -1060,6 +1060,7 @@ class VduAppWindow(QMainWindow):
         #set_gui_thread(app.thread())
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
+        self.setWindowRole('main-window')
         self.qt_version_key = self.objectName() + "_qt_version"
         self.qt_geometry_key = self.objectName() + "_geometry"
         self.qt_state_key = self.objectName() + "_window_state"
@@ -1084,7 +1085,7 @@ class VduAppWindow(QMainWindow):
         menu_callables = {
             FixedItemKey.CONTROL_PANEL: partial(self.show_main_window, True),
             FixedItemKey.PRESETS: self.main_controller.show_presets_dialog,  # Gnome tray doesn't provide a way to bring up the main app.
-            FixedItemKey.GREY_SCALE: GreyScaleDialog,
+            FixedItemKey.GREY_SCALE: GrayScaleDialog,
             FixedItemKey.SETTINGS_DIALOG: self.main_controller.edit_config,
             FixedItemKey.REFRESH: self.main_controller.start_refresh,
             FixedItemKey.ABOUT_DIALOG: partial(AboutDialog.show_dialog, self.main_controller),
@@ -1191,7 +1192,7 @@ class VduAppWindow(QMainWindow):
         if get_app_instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
-            if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
+            if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GrayScaleDialog):
                 if top_level_widget.isVisible():
                     return False  # A dialog is showing - definitely active
         return True  # inactive and no dialogs are active
@@ -1658,6 +1659,7 @@ def main() -> None:
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
     assert app is not None
+    app.setApplicationName('vdu_controls')
     app_thread = app.thread()
     assert app_thread is not None
     gui_misc.set_gui_thread(app_thread)
