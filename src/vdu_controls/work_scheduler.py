@@ -121,7 +121,7 @@ class ScheduleWorker(WorkerThread):
     _scheduler_lock = threading.RLock()
 
     @staticmethod
-    def get_instance():
+    def get_instance() -> ScheduleWorker:
         with ScheduleWorker._scheduler_lock:
             if ScheduleWorker._instance is None or ScheduleWorker._instance.isFinished():
                 ScheduleWorker._instance = ScheduleWorker()

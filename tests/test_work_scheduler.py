@@ -207,6 +207,7 @@ def test_schedule_worker_singleton():
     # Calling get_instance after stop should create new instance
     ScheduleWorker.shutdown()
     # Whether it actually ran or not, isRunning should be false.
+    assert ScheduleWorker._instance is not None
     assert not ScheduleWorker._instance.isRunning()
     worker3 = ScheduleWorker.get_instance()
     assert not worker3.isFinished()
