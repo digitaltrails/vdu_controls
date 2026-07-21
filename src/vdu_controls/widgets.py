@@ -242,7 +242,7 @@ class MBox(QMessageBox):
         # DontUseNativeDialog is not available on deepin, so check for that.
         #
         # TODO Add an environment-toggle and see if this is KDE only.
-        if hasattr(QMessageBox.Option, 'DontUseNativeDialog'):
+        if hasattr(QMessageBox, 'Option') and hasattr(QMessageBox.Option, 'DontUseNativeDialog'):
             self.setOption(QMessageBox.Option.DontUseNativeDialog, True)
         self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
         if MBox.translating:
