@@ -8,6 +8,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 - Assign window-role properties to make it easier to assign 
   positions to different windows in KDE/Plasma Wayland.
 - Fix broken link in release notes.
+- Fix for Qt < 6.6 - QMessageBox.Option and setOption() only exist in Qt >= 6.6
 
 ## Version 2.6.5 <small>(2026-07-10)</small>
 
