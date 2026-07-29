@@ -48,11 +48,13 @@ displays.
 
 <!-- mkdocs-exclude-end -->
 
-### Semi-Automative Adjustment Throughout the Day
+### Automatic Adjustment Throughout the Day
 
 In versions >= 2.4, the ambient-light-level slider has been combined with an 
 estimate of local solar-illumination to achieve **semi-automatic brightness 
 control** throughout the day. 
+
+
 
 Adjusting the slider gives an indication of
 your perceived indoor illumination.  This indoor value sets the ratio between 
@@ -62,7 +64,7 @@ it is used to automatically update brightness as the day proceeds.
 Should the cloud-cover or weather change, adjusting the slider revises the 
 ratio.  
 
-See the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/ambient-howto/) 
+See the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/semi-auto-howto/) 
 for a brief tutorial.
 
 (Solar-illumination is estimated for a  location by using the local date-time 
