@@ -28,12 +28,13 @@ Controls include brightness,
 contrast, and audio - with additional options available in the 
 *Settings-Dialog*.
 
-A single **ambient-light-level slider** can simultaneously
-adjust _all_ displays, each following its own custom profile:
-_one slider to rule them all_.  Each display's profile defines a curve mapping 
-ambient light-level to display-brightness. Flat curves
-can be created for older displays and steeper ones for newer HDR 
-displays.
+> [!TIP]
+> A single **ambient-light-level slider** can simultaneously
+> adjust brightness for _all_ displays. 
+> 
+> Each display can have its own custom brightness profile.
+>
+> Quick start: see the [Semi-Auto Howto](https://digitaltrails.github.io/vdu_controls/assets/semi-auto-howto/)
 
 > [!WARNING]
 > **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
@@ -43,8 +44,6 @@ displays.
 
 <!-- mkdocs-exclude-start -->
 
-> [!TIP]
-> New documentation site [now available.](https://digitaltrails.github.io/vdu_controls/)
 
 <!-- mkdocs-exclude-end -->
 
