@@ -18,6 +18,7 @@ Each display's brightness is periodically updated by matching the estimated indo
 ## How to enable it
 1. **Settings Dialog**: set your geographic **location**  by using the _Detect_ button &#x2460;.
 ![Screenshot_Ambient_Location-small](images/ambient-1.png)
+![Screenshot_Ambient_Meter_and_Profile-small](images/ambient-2.png) 
 2. **Light Metering Dialog**: set the light-meter  to **Semi-automatic geolocated** &#x2461;.
 3. Setup **Profile** for each display:
    1. Pick a display &#x2462; .
@@ -26,7 +27,7 @@ Each display's brightness is periodically updated by matching the estimated indo
    4. Save the profiles &#x2465;
    5. Repeat for each display.
 
-![Screenshot_Ambient_Meter_and_Profile-small](images/ambient-2.png) 
+
 
 Older displays usually have quite limited backlights, their effective operating brightness 
 might vary from 80% to 100%.  From night to day, they often work best with a fairly flat 
