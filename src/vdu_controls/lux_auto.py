@@ -306,7 +306,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
     def stop(self) -> None:
         super().stop()
         assert gui_misc.is_running_in_gui_thread()
-        self._lux_dialog_message_qtsignal.disconnect()
+        try:
+            self._lux_dialog_message_qtsignal.disconnect()
+        except TypeError:
+            pass  # No connected, or already disconnected
         log.info("LuxAuto: stopped on request")
 
 

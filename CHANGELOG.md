@@ -9,6 +9,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
   positions to different windows in KDE/Plasma Wayland.
 - Fix broken link in release notes.
 - Fix for Qt < 6.6 - QMessageBox.Option and setOption() only exist in Qt >= 6.6
+- Fix a possible set_vcp cascade when switching the ambient-slider from a 
+  physical hardware lux-meter - such as an Arduino - to manual lux input.
 
 ## Version 2.6.5 <small>(2026-07-10)</small>
 

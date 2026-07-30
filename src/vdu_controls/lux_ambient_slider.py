@@ -8,9 +8,10 @@ from functools import partial
 
 from typing import Dict, TYPE_CHECKING
 
+from vdu_controls import logging as log
 from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
 from vdu_controls.qt_imports import QFont
-from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
+from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox, QMouseEvent
 
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC, DF_PLACES
 from vdu_controls.app_locale import tr
@@ -119,24 +120,25 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
 
         def _lux_slider_change(new_value: int) -> None:
             actual_value = round(10 ** (new_value / 1000))
-            self.set_current_value(actual_value, self.slider)
-            self.new_lux_value_qtsignal.emit(actual_value)
+            self._set_current_value(actual_value, self.slider)
 
         self.slider.valueChanged.connect(_lux_slider_change)
 
         def _lux_slider_moved(new_value: int) -> None:
+            if not self.controller.lux_meter.has_semi_auto_capability and self.controller.lux_auto_brightness_worker is not None:
+                self.controller.lux_auto_brightness_worker.stop()
             new_lux_value = round(10 ** (new_value / 1000))
-            self.set_current_value(new_lux_value, self.slider)
+            self._set_current_value(new_lux_value, self.slider)
 
         self.slider.sliderMoved.connect(_lux_slider_moved)
 
         def _lux_input_field_changed() -> None:
-            self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
+            self._set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
         self.lux_input_field.valueChanged.connect(_lux_input_field_changed)
 
         def _input_field_editing_finished():
-            self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
+            self._set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
         self.lux_input_field.editingFinished.connect(_input_field_editing_finished)
 
@@ -156,16 +158,25 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
             metered_value = controller.lux_meter.get_value()
             if metered_value is not None:
                 value = round(metered_value)
-        self.set_current_value(value)  # don't trigger side-effects.
+        self._set_current_value(value, self)  # don't trigger side-effects.
 
-    def set_current_value(self, value: int, source: QWidget | None = None) -> None:
-        # log.debug("set_current_value ", value, source, self.in_flux)
-        icon_changed = False
+    def set_current_value(self, value: int) -> None:
+        log.debug(f"LuxAmbientSlider: set_current_value {value=} {self.in_flux=}") if log.debug_enabled else None
+
         if not self.in_flux and value != self.current_value:
             try:
-                if source is None:
-                    self.blockSignals(True)
-                self.in_flux = True
+                self.blockSignals(True)  # External source, doesn't want to be signaled about its own change.
+                self._set_current_value(value, None)
+            finally:
+                self.blockSignals(False)
+
+    def _set_current_value(self, value: int, source: QWidget | None) -> None:
+        log.debug(f"LuxAmbientSlider: _set_current_value {value=} {self.in_flux=} {source=}") if log.debug_enabled else None
+        icon_changed = False
+        # If not already handled or not in the process of being handled
+        if value != self.current_value and not self.in_flux:
+            try:
+                self.in_flux = True  # Stop any cascade
                 for zone in self.zones:
                     if zone.min_lux < value <= zone.max_lux:
                         if self.current_zone != zone:
@@ -184,14 +195,15 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
                         LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value, semi_auto_source)
-            finally:
-                self.in_flux = False
-                if source is None:
-                    self.blockSignals(False)
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
                 daylight_factor = 1.0 if LuxMeterSemiAutoDevice.daylight_factor is None else LuxMeterSemiAutoDevice.daylight_factor
                 self.update_label_df(daylight_factor)
+                if source is not None:  # Change comes form internal widget - need to signal the rest of the app
+                    log.debug("LuxAmbientSlider: signal new value")
+                    self.new_lux_value_qtsignal.emit(self.current_value)
+            finally:
+                self.in_flux = False
 
     def update_label_df(self, daylight_factor: float):
         self.label.update_text(sub_text=tr("lux &nbsp;&nbsp; (DF={})").format(
