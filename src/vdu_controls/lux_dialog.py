@@ -846,6 +846,7 @@ class LuxProfileWidget(QLabel):
         if margin <= mouse_x <= self.width() - margin and margin <= mouse_y <= self.height() - margin:
             x = clamp(mouse_x, self.x_origin, self.x_origin + self.plot_width)
             y = clamp(mouse_y, self.y_origin - self.plot_height, self.y_origin)
+            point_text = ''
             match = self.find_close_to(x - self.x_origin, self.y_origin - y, self.current_vdu_sid)
             if match[0] is not None:  # Existing Point: snap to position for deleting the point under the mouse.
                 x, y, lux, brightness, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
@@ -857,6 +858,7 @@ class LuxProfileWidget(QLabel):
                         painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
                     painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + dpx(2), y)
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
+                    point_text = tr("click to remove this point")
                 else:  # Existing Preset point: vertical line; plus removal hint, a red triangle below axis
                     painter.setPen(QPen(Qt.GlobalColor.red if mouse_y > self.y_origin else Qt.GlobalColor.white, 2))
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
@@ -866,6 +868,8 @@ class LuxProfileWidget(QLabel):
                     if mouse_y > self.y_origin:  # Remove-Preset hint
                         painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                         painter.drawText(x + dpx(5), self.y_origin - dpx(17), tr("Click remove preset at {} lux").format(lux))
+                    else:
+                        point_text = point_preset_name
             else:  # Potential new Point - show precise position for adding a new point
                 lux, brightness = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
@@ -878,8 +882,11 @@ class LuxProfileWidget(QLabel):
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
                     painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                     painter.drawText(x + 10, self.y_origin - dpx(17), tr("Click to add preset at {} lux").format(lux))
+                else:
+                    point_text = tr("click to add a point here")
             painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
-            painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_preset_name}")  # Tooltip lux and percent
+            if point_text:
+                painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_text}")  # Tooltip lux and percent
 
         painter.end()
         self.setPixmap(pixmap)
