@@ -520,12 +520,17 @@ This chart is resizable. </source>
 </context><context>
     <name>HelpDialog</name>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="28" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="136" />
         <source>Help</source>
         <translation>帮助</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="47" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="145" />
+        <source>Manual Page</source>
+        <translation>手册页</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="146" />
         <source>Online Help</source>
         <translation>在线帮助</translation>
     </message>
@@ -982,35 +987,92 @@ Ei 的估算值由半自动测光选项使用。</translation>
         <translation>亮度百分比</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="861" />
+        <source>click to remove this point</source>
+        <translation>单击以删除该点</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="870" />
         <source>Click remove preset at {} lux</source>
         <translation>单击删除 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="884" />
         <source>Click to add preset at {} lux</source>
         <translation>单击以添加 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="886" />
+        <source>click to add a point here</source>
+        <translation>单击此处添加点</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="927" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="911" />
         <source>No displays available.</source>
         <translation>没有可用的显示器。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="944" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>选择要在 {} lux 下附加的预设</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>There are no Presets.</source>
         <translation>没有预置项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>使用预置对话框创建一些。</translation>
+    </message>
+</context><context>
+    <name>OnlineHelpViewer</name>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="105" />
+        <source>VDU Controls Online Help</source>
+        <translation>VDU 控制在线帮助</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="106" />
+        <source>Links to the most up‑to‑date documentation, tutorials, and support:</source>
+        <translation>最新文档、教程和支持的链接：</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="118" />
+        <source>General Help</source>
+        <translation>一般帮助</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="119" />
+        <source>Semi-Auto Howto</source>
+        <translation>半自动操作指南</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="120" />
+        <source>Navigable Manual page</source>
+        <translation>可导航的手册页面</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="121" />
+        <source>Change Log</source>
+        <translation>变更日志</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="122" />
+        <source>Releases</source>
+        <translation>发布</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="123" />
+        <source>Issues</source>
+        <translation>问题</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="124" />
+        <source>License</source>
+        <translation>执照</translation>
     </message>
 </context><context>
     <name>Preset</name>

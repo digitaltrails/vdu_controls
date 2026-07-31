@@ -520,12 +520,17 @@ Ka taea te rahi te rahi o tenei tūtohi.</translation>
 </context><context>
     <name>HelpDialog</name>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="28" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="136" />
         <source>Help</source>
         <translation>Āwhina</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="47" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="145" />
+        <source>Manual Page</source>
+        <translation>Whārangi ā-ringa</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="146" />
         <source>Online Help</source>
         <translation>Āwhina ipurangi</translation>
     </message>
@@ -983,35 +988,92 @@ Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</tr
         <translation>Kanapa %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="861" />
+        <source>click to remove this point</source>
+        <translation>paatohia ki te tango i tenei waahi</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="870" />
         <source>Click remove preset at {} lux</source>
         <translation>Pāwhiri ki te tango i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="884" />
         <source>Click to add preset at {} lux</source>
         <translation>Pāwhiri ki te tāpiri i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="886" />
+        <source>click to add a point here</source>
+        <translation>paatohia ki te taapiri i tetahi tohu ki konei</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="927" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="911" />
         <source>No displays available.</source>
         <translation>Karekau he whakaaturanga e waatea ana.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="944" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>Tīpakohia he Tatūkē hei āpiti ki {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>There are no Presets.</source>
         <translation>Kāore he Tautapanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Whakamahia te Pārongo Tautapanga hei waihanga i ētahi.</translation>
+    </message>
+</context><context>
+    <name>OnlineHelpViewer</name>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="105" />
+        <source>VDU Controls Online Help</source>
+        <translation>VDU Mana Awhina Online</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="106" />
+        <source>Links to the most up‑to‑date documentation, tutorials, and support:</source>
+        <translation>Hononga ki nga tuhinga hou, akoranga, me te tautoko:</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="118" />
+        <source>General Help</source>
+        <translation>Āwhina Whānui</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="119" />
+        <source>Semi-Auto Howto</source>
+        <translation>Semi-Aunoa Howto</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="120" />
+        <source>Navigable Manual page</source>
+        <translation>Navigable Manual page</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="121" />
+        <source>Change Log</source>
+        <translation>Rangitaki Huri</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="122" />
+        <source>Releases</source>
+        <translation>Tukunga</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="123" />
+        <source>Issues</source>
+        <translation>Nga take</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="124" />
+        <source>License</source>
+        <translation>Raihana</translation>
     </message>
 </context><context>
     <name>Preset</name>

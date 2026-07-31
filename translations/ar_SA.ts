@@ -510,12 +510,17 @@ This chart is resizable. </source>
 </context><context>
     <name>HelpDialog</name>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="28" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="136" />
         <source>Help</source>
         <translation>مساعدة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="47" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="145" />
+        <source>Manual Page</source>
+        <translation>الصفحة اليدوية</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="146" />
         <source>Online Help</source>
         <translation>مساعدة عبر الإنترنت</translation>
     </message>
@@ -973,35 +978,92 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
         <translation>السطوع %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="861" />
+        <source>click to remove this point</source>
+        <translation>انقر لإزالة هذه النقطة</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="870" />
         <source>Click remove preset at {} lux</source>
         <translation>انقر لإزالة الإعداد المسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="884" />
         <source>Click to add preset at {} lux</source>
         <translation>انقر لإضافة إعداد مسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="886" />
+        <source>click to add a point here</source>
+        <translation>انقر لإضافة نقطة هنا</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="927" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="911" />
         <source>No displays available.</source>
         <translation>.ﺔﺣﺎﺘﻣ ﺽﺮﻋ ﺕﺎﺷﺎﺷ ﺪﺟﻮﻳ ﻻ﻿</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="944" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>حدد إعدادًا مسبقًا لإرفاقه عند {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>There are no Presets.</source>
         <translation>لا توجد إعدادات مسبقة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>استخدم حوار الإعدادات المسبقة لإنشاء بعضها.</translation>
+    </message>
+</context><context>
+    <name>OnlineHelpViewer</name>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="105" />
+        <source>VDU Controls Online Help</source>
+        <translation>تعليمات VDU للتحكم عبر الإنترنت</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="106" />
+        <source>Links to the most up‑to‑date documentation, tutorials, and support:</source>
+        <translation>روابط لأحدث الوثائق والبرامج التعليمية والدعم:</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="118" />
+        <source>General Help</source>
+        <translation>مساعدة عامة</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="119" />
+        <source>Semi-Auto Howto</source>
+        <translation>كيفية شبه تلقائية</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="120" />
+        <source>Navigable Manual page</source>
+        <translation>صفحة دليل قابلة للملاحة</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="121" />
+        <source>Change Log</source>
+        <translation>تغيير السجل</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="122" />
+        <source>Releases</source>
+        <translation>الإصدارات</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="123" />
+        <source>Issues</source>
+        <translation>مشاكل</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="124" />
+        <source>License</source>
+        <translation>رخصة</translation>
     </message>
 </context><context>
     <name>Preset</name>

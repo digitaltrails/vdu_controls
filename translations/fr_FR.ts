@@ -520,12 +520,17 @@ Ce graphique est redimensionnable.</translation>
 </context><context>
     <name>HelpDialog</name>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="28" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="136" />
         <source>Help</source>
         <translation>Aide</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/help_dialog.py" line="47" />
+        <location filename="../src/vdu_controls/help_dialog.py" line="145" />
+        <source>Manual Page</source>
+        <translation>Page de manuel</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="146" />
         <source>Online Help</source>
         <translation>Aide en ligne</translation>
     </message>
@@ -983,35 +988,92 @@ Les estimations de Ei sont utilisées par l'option de mesure semi-automatique.</
         <translation>Luminosité %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="868" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="861" />
+        <source>click to remove this point</source>
+        <translation>cliquez pour supprimer ce point</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="870" />
         <source>Click remove preset at {} lux</source>
         <translation>Cliquez pour supprimer le préréglage à {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="884" />
         <source>Click to add preset at {} lux</source>
         <translation>Cliquez pour ajouter un préréglage à {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="920" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="904" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="886" />
+        <source>click to add a point here</source>
+        <translation>cliquez pour ajouter un point ici</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="927" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="911" />
         <source>No displays available.</source>
         <translation>Aucun affichage disponible.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="937" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="944" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>Sélectionnez un préréglage à attacher à {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>There are no Presets.</source>
         <translation>Il n'y a aucun préréglage.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="953" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="960" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Utilisez la boîte de dialogue des préréglages pour en créer.</translation>
+    </message>
+</context><context>
+    <name>OnlineHelpViewer</name>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="105" />
+        <source>VDU Controls Online Help</source>
+        <translation>Aide en ligne des commandes VDU</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="106" />
+        <source>Links to the most up‑to‑date documentation, tutorials, and support:</source>
+        <translation>Liens vers la documentation, les didacticiels et l'assistance les plus récents :</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="118" />
+        <source>General Help</source>
+        <translation>Aide générale</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="119" />
+        <source>Semi-Auto Howto</source>
+        <translation>Comment faire pour le semi-automatique</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="120" />
+        <source>Navigable Manual page</source>
+        <translation>Page de manuel navigable</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="121" />
+        <source>Change Log</source>
+        <translation>Journal des modifications</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="122" />
+        <source>Releases</source>
+        <translation>Sorties</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="123" />
+        <source>Issues</source>
+        <translation>Problèmes</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/help_dialog.py" line="124" />
+        <source>License</source>
+        <translation>Licence</translation>
     </message>
 </context><context>
     <name>Preset</name>
