@@ -63,5 +63,6 @@ nav:
   - Changelog: changelog.md
   - Downloads: index.html#downloads
   - Releases: https://github.com/digitaltrails/vdu_controls/releases
+  - Issues: https://github.com/digitaltrails/vdu_controls/issues
   - Source Code: https://github.com/digitaltrails/vdu_controls
   - License: LICENSE.md
