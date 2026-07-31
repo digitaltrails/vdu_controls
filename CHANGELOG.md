@@ -5,6 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Changelog
 
 ## Unreleased <small>(master)</small>
+- Enhanced Help-Dialog, added TOC, added a separate page of online links.
+- Improved hover tips on Light-Metering dialog's plot.
 - Assign window-role properties to make it easier to assign 
   positions to different windows in KDE/Plasma Wayland.
 - Fix broken link in release notes.

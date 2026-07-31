@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -71,3 +72,12 @@ class GeoLocation:
             return NotImplemented  # don't attempt to compare against unrelated types
         return self.latitude == other.latitude and self.longitude == other.longitude and \
             self.place_name == other.place_name
+
+
+def generate_slug(text: str) -> str:
+    # 1. Strip accents (é -> e) and drop non-ASCII
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+
+    # 2. Lowercase, strip punctuation, collapse spaces/dashes
+    text = re.sub(r'[^\w\s-]', '', text).lower().strip()
+    return re.sub(r'[-\s]+', '-', text)
