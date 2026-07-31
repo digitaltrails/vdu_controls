@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 site_name: vdu_controls
 site_description: Manuals and user guides for vdu_controls
-copyright: 'Copyright 2021-2026 Contributors to vdu_controls.<br/>This site collects anonymous usage statistics in aggregated form.)'
+copyright: 'Copyright 2021-2026 Contributors to vdu_controls.<br/>This site collects anonymous usage statistics in aggregated form.'
 
 theme:
   name: material
