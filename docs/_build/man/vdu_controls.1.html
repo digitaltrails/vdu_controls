@@ -597,6 +597,120 @@ for non-DDC devices. For example, you might add a brightness control for
 a keyboard-backlight, or for case-LED’s. To use it you would have to
 create a script that emulates the basic <strong>ddcutil</strong> command
 set (see included sample script).</p>
+<h2 id="ambient-light-levels-and-lightlux-metering">Ambient Light Levels
+and Light/Lux Metering</h2>
+<p>The default UI includes an <strong>ambient-light slider</strong>
+which will simultaneously adjust all VDUs. The ambient-light slider is
+set to indicate the local lighting condition, such as sunny, cloudy,
+dawn, or dusk.</p>
+<p>Each display’s brightness is adjusted to suit the ambient conditions
+by consulting the display’s custom profile. Newer displays, with very
+bright backlights, can be provided with a steep profile, for example,
+brightness might be set to range from 10% at night to 90% in full
+daylight. Older displays, that often are only viable at 80% or more
+brightness, can be provided with flatter profiles, for example, ranging
+from 80% to 100%.</p>
+<p>As well as manually dragging the ambient-light slider, the
+slider-value can be adjusted semi-automatically based on location and
+time, or fully-automatically by hardware light-metering.</p>
+<p>The <strong>Light-Metering</strong> dialog provides options for
+setting up light-metering, adjustment intervals, and per-display
+lux/brightness profiles. The Light-Metering dialog additionally provides
+a rolling display of light levels and VDU brightness levels.</p>
+<h3 id="semi-automatic-brightness-adjustment">Semi-Automatic Brightness
+Adjustment</h3>
+<p>If light-metering is set to <strong>Semi-Automatic</strong>, the
+application periodically adjusts display brightness in proportion to
+estimated-sunlight as the day proceeds.</p>
+<p>When in semi-automatic mode, set the ambient-light-level slider to
+indicate your current lighting condition. This establishes the
+<em>Daylight-Factor</em> (<strong>DF</strong>), a baseline proportion of
+your lighting versus estimated-sunlight.</p>
+<p>The Daylight-Factor is applied to the estimated-sunlight at each
+periodic adjustment. If conditions change - perhaps it clouds over -
+adjust the slider to establish a new Daylight-Factor.</p>
+<p>The estimated lighting trajectory is shown in the <em>Light-Metering
+dialog</em>, along with the estimate of indoor lux
+(<strong>Lux</strong>), <em>Estimate of outdoor lux</em>
+(<strong>Eo</strong>) and the <em>Daylight-Factor</em>
+(<strong>DF</strong>).</p>
+<h3 id="fully-automatic-brightness-adjustment">Fully Automatic
+Brightness Adjustment</h3>
+<p><strong>Fully-automatic ambient-light level adjustment</strong>
+requires setting up a hardware lux metering device. Periodically metered
+values can then be used to update display brightness based on each
+display’s profile. A metering device may be a serial-device, a UNIX FIFO
+(named-pipe), or an executable (script or program):</p>
+<ul>
+<li>A serial-device must periodically supply one floating-point
+lux-value terminated by a carriage-return newline.</li>
+<li>A FIFO must periodically supply one floating-point lux-value
+terminated by a newline.</li>
+<li>An executable must supply one floating-point lux-value reading
+terminated by a newline each time it is run.</li>
+</ul>
+<p>Possible hardware devices include:</p>
+<ul>
+<li>An Arduino with a GY-30/BH1750 lux meter writing to a usb
+serial-port.</li>
+<li>A webcam periodically sampled to produce approximate lux values.
+Values might be estimated by analyzing image content or image settings
+that contribute to exposure, such as ISO values, apertures, and shutter
+speed.</li>
+<li>Solar charging related devices that provide a readout that can be
+converted to an estimate of lighting conditions.</li>
+<li>Weather stations that measure solar intensity.</li>
+</ul>
+<p>Further information on various lux metering options, as well as
+instructions for constructing and programming an Arduino with a
+GY-30/BH1750, can be found at:</p>
+<p>https://digitaltrails.github.io/vdu_controls/assets/light-meters-howto/</p>
+<p>Example scripts for mapping a webcam’s average-brightness to
+approximate lux values are included in
+<strong>/usr/share/vdu_controls/sample-scripts/</strong>, or they can
+also be downloaded from the following location:</p>
+<p>https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts</p>
+<p>The examples include <strong>vlux_meter.py</strong>, a beta-release
+Qt-GUI python-script that meters from a webcam and writes to a FIFO
+(<strong>$HOME/.cache/vlux_fifo</strong>). Controls are included for
+mapping image-brightness to lux mappings, and for defining a crop from
+which to sample brightness values. The script optionally runs in the
+system-tray.</p>
+<p>The examples may require customizing for your own webcam and lighting
+conditions.</p>
+<p>If ambient light level controls are not required, the
+<em>Settings-Dialog</em> includes an option to disable and hide
+them.</p>
+<h3 id="lux-metering-and-brightness-adjustments">Lux Metering and
+brightness adjustments</h3>
+<p>The auto-brightness adjustment feature includes several measures to
+reduce the number of changes passed to the VDU:</p>
+<ul>
+<li>Lux/Brightness Profiles may be altered for local conditions so that
+brightness levels remain constant over set ranges of lux values (night,
+day, and so forth).</li>
+<li>Adjustments are only made at intervals of one or more minutes
+(default is 10 minutes).</li>
+<li>The adjustment task passes lux values through a smoothing low-pass
+filter.</li>
+<li>When a VDU brightness profile is set to interpolate, changes
+specified by the curve will only be applied when they cross a minimum
+threshold (default 10%).</li>
+<li>A VDU brightness profile may be set to stair-step with no
+interpolation of intermediate values.</li>
+</ul>
+<p>When ambient light conditions are fluctuating, for example, due to
+passing clouds, automatic adjust can be manually suspended. The
+main-panel, <em>main-menu</em>, and light-metering dialog each contain
+controls for toggling Auto/Manual. Additionally, moving the manual
+lux-slider turns off automatic adjustment.</p>
+<p>The Light-metering dialog includes an option to enable
+auto-brightness interpolation. This option will enable the calculation
+of values between steps in the profiles. To avoid small fluctuating
+changes, interpolation won’t result in brightness changes less than 10%.
+During interpolation, if a lux value is found to be close to any
+attached-preset, the preset values will be preferred over interpolated
+ones.</p>
 <h2 id="presets">Presets</h2>
 <p>A named <em>Preset</em> can be used to save the current VDU settings
 for later recall. Any number of presets can be created for different
@@ -745,107 +859,13 @@ If some other activity has changed a VDU&#39;s settings, trigger vdu_controls to
     kill -HUP $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)</code></pre>
 <p>Any other signals will be handled normally (in many cases they will
 result in process termination).</p>
-<h2 id="ambient-light-levels-and-lightlux-metering">Ambient Light Levels
-and Light/Lux Metering</h2>
-<p>The default UI includes an <strong>ambient-light slider</strong>
-which will simultaneously adjust all VDUs according to custom VDU
-profiles. As well as manual adjustment, the slider-value can adjust
-semi-automatically based on geolocation and local-datetime, or
-fully-automatically by hardware light-metering.</p>
-<p>The <strong>Light-Metering</strong> dialog provides options for
-setting up light-metering, adjustment intervals, and per-VDU
-lux/brightness profiles. The metering dialog additionally provides a
-rolling display of current metered light level and VDU brightness
-levels.</p>
-<p><strong>Semi-automatic ambient-light level adjustment</strong>
-periodically adjusts the light-level in proportion to the estimated
-sunlight for your geolocation. Use the ambient-light-level slider to
-indicate your current lighting condition. This establishes a baseline
-from which the application will periodically reestimate your
-ambient-light-level in proportion to the estimated sunlight for your
-location. If conditions change, adjust the slider to alter the baseline
-proportion. The estimated trajectory is plotted in the
-<em>Light-Metering dialog</em>, along with the <em>Estimate of outdoor
-lux</em> (<strong>Eo</strong>) and the <em>Daylight-Factor</em>
-(<strong>DF</strong>) - the baseline ratio of indoor to outdoor lux.</p>
-<p><strong>Fully-automatic ambient-light level adjustment</strong>
-requires setting up a hardware lux metering device. A metering device
-may be a serial-device, a UNIX FIFO (named-pipe), or an executable
-(script or program):</p>
-<ul>
-<li>A serial-device must periodically supply one floating-point
-lux-value terminated by a carriage-return newline.</li>
-<li>A FIFO must periodically supply one floating-point lux-value
-terminated by a newline.</li>
-<li>An executable must supply one floating-point lux-value reading
-terminated by a newline each time it is run.</li>
-</ul>
-<p>Possible hardware devices include:</p>
-<ul>
-<li>An Arduino with a GY-30/BH1750 lux meter writing to a usb
-serial-port.</li>
-<li>A webcam periodically sampled to produce approximate lux values.
-Values might be estimated by analyzing image content or image settings
-that contribute to exposure, such as ISO values, apertures, and shutter
-speed.</li>
-</ul>
-<p>Further information on various lux metering options, as well as
-instructions for constructing and programming an Arduino with a
-GY-30/BH1750, can be found at:</p>
-<pre><code>https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md</code></pre>
-<p>Example scripts for mapping a webcam’s average-brightness to
-approximate lux values are included in
-<strong>/usr/share/vdu_controls/sample-scripts/</strong>, or they can
-also be downloaded from the following location:</p>
-<pre><code>https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.</code></pre>
-<p>The examples include <strong>vlux_meter.py</strong>, a beta-release
-Qt-GUI python-script that meters from a webcam and writes to a FIFO
-(<strong>$HOME/.cache/vlux_fifo</strong>). Controls are included for
-mapping image-brightness to lux mappings, and for defining a crop from
-which to sample brightness values. The script optionally runs in the
-system-tray.</p>
-<p>The examples may require customizing for your own webcam and lighting
-conditions.</p>
-<p>If ambient light level controls are not required, the
-<em>Settings-Dialog</em> includes an option to disable and hide
-them.</p>
-<h3 id="lux-metering-and-brightness-adjustments">Lux Metering and
-brightness adjustments</h3>
-<p>The auto-brightness adjustment feature includes several measures to
-reduce the number of changes passed to the VDU:</p>
-<ul>
-<li>Lux/Brightness Profiles may be altered for local conditions so that
-brightness levels remain constant over set ranges of lux values (night,
-day, and so forth).</li>
-<li>Adjustments are only made at intervals of one or more minutes
-(default is 10 minutes).</li>
-<li>The adjustment task passes lux values through a smoothing low-pass
-filter.</li>
-<li>When a VDU brightness profile is set to interpolate, changes
-specified by the curve will only be applied when they cross a minimum
-threshold (default 10%).</li>
-<li>A VDU brightness profile may be set to stair-step with no
-interpolation of intermediate values.</li>
-</ul>
-<p>When ambient light conditions are fluctuating, for example, due to
-passing clouds, automatic adjust can be manually suspended. The
-main-panel, <em>main-menu</em>, and light-metering dialog each contain
-controls for toggling Auto/Manual. Additionally, moving the manual
-lux-slider turns off automatic adjustment.</p>
-<p>The Light-metering dialog includes an option to enable
-auto-brightness interpolation. This option will enable the calculation
-of values between steps in the profiles. To avoid small fluctuating
-changes, interpolation won’t result in brightness changes less than 10%.
-During interpolation, if a lux value is found to be close to any
-attached-preset, the preset values will be preferred over interpolated
-ones.</p>
 <h3 id="saving-a-daylight-factor-in-a-preset">Saving a Daylight-Factor
 in a Preset</h3>
-<p>The Preset-Dialog allows a Daylight-Factor to be manually entered and
-saved as part of a Preset. A Preset can be created to save only the
-Daylight Factor and nothing else. This provides a way to save and recall
-favourite Daylight-Factors for use with semi-automatic brightness
-adjustment.</p>
+<p>The Preset-Dialog allows a Light-Metering Daylight-Factor to be
+manually entered and saved as part of a Preset. A Preset can be created
+to save only the Daylight Factor and nothing else. This provides a way
+to save and recall favourite Daylight-Factors for use with
+semi-automatic brightness adjustment.</p>
 <h3 id="lightlux-metering-and-triggering-presets">Light/Lux Metering and
 Triggering Presets</h3>
 <p>The Light-Metering Dialog includes the ability to set a Preset to
