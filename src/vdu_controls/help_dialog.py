@@ -53,7 +53,13 @@ class MarkdownHelpViewer(QWidget):
     def load_markdown(self):
         # Do a bit of preprocessing to fix breaks so qt processes the markdown correctly
         help_text = app_locale.load_docs_text(constants.HELP_FILENAME)
-        qt_markdown = re.sub(r"\n\n", r"\n<br/>\n\n", help_text, flags=re.MULTILINE)
+        #qt_markdown = re.sub(r"\n\n", r"\n<br/>\n\n", help_text, flags=re.MULTILINE)
+        qt_markdown = help_text
+        # Improve paragraph spacing.
+        # Ugly, but setting css disables dark/ligh theme changes, so we do this instead.
+        qt_markdown = re.sub(r"\n\n([^\s])", r"\n<br/>\n\n\1", qt_markdown, flags=re.MULTILINE)
+        # Improve header spacing
+        qt_markdown = re.sub(r'^((#{1,6})\s+(.*))$', r"<br/>\n\1\n", qt_markdown, flags=re.MULTILINE)
 
         html_with_anchors, headings = self.parse_headings(qt_markdown)
         self.text_browser.setMarkdown(html_with_anchors)
