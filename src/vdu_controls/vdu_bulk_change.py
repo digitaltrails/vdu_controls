@@ -13,7 +13,7 @@ from vdu_controls.vdu_controls_config import ConfOpt
 from vdu_controls.vdu_controller import VcpSetterOrigin
 
 from vdu_controls.ddcutil_aggregator import VduStableId
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.work_scheduler import WorkerThread
 

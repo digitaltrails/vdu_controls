@@ -9,7 +9,7 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, TYPE_CHECKING, cast
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 import vdu_controls.weather_util as weather_util
 from vdu_controls.app_locale import tr, translate_option
 from vdu_controls.config_ini import ConfIni

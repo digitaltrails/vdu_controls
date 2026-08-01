@@ -21,7 +21,7 @@ from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.scaling import dpx, desktop_font_height
 from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin, \
     ValidatingPlainTextEdit

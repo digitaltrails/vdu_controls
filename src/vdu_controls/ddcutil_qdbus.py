@@ -6,7 +6,7 @@ import time as sys_time
 from threading import Lock
 from typing import Dict, Tuple, Callable, List
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
     VcpValue, DdcCapabilities, VcpTypeInfo

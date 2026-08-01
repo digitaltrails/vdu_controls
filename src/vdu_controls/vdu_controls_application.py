@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Callable, cast, Optional, Iterator
 
 import vdu_controls.gui_misc as gui_misc
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 import vdu_controls.svg as svg
 import vdu_controls.weather_util as weather_util
 from vdu_controls import weather_util as weather_utils, app_locale

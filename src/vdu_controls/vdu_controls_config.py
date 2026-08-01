@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Dict, Any
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, cast
 
 import vdu_controls.gui_misc as gui_misc
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue

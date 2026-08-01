@@ -17,7 +17,7 @@ from vdu_controls.qt_imports import QObject, pyqtSignal
 from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged, MIN_DF_ADJUSTED_LUX, DF_MIN
 
 from vdu_controls.app_locale import tr
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.misc import zoned_now, GeoLocation
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread

@@ -6,7 +6,7 @@ import os
 from platform import python_version
 from typing import TYPE_CHECKING
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \

@@ -12,7 +12,7 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, List, Tuple, TYPE_CHECKING, cast
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination, DF_PLACES

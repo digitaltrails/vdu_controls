@@ -8,7 +8,7 @@ import time as sys_time
 from threading import Lock
 from typing import Dict, List, Tuple
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
     COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities, VcpTypeInfo

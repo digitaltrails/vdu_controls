@@ -8,7 +8,7 @@ from functools import partial
 
 from typing import Dict, TYPE_CHECKING
 
-from vdu_controls import logging as log
+from vdu_controls import app_logging as log
 from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
 from vdu_controls.qt_imports import QFont
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox, QMouseEvent

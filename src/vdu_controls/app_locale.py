@@ -55,7 +55,7 @@ from importlib.resources import files as resources_files
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.misc import LocalStrEnum
 from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.widgets import MBox
 
 # Places in the filesystem:

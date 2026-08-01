@@ -6,7 +6,7 @@ import os
 from decimal import Decimal
 from typing import Callable, Any, Tuple, Dict, Type, TypeVar, List
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
 from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes, StdPixmap, si
 from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,

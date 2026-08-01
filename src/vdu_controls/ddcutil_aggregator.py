@@ -8,7 +8,7 @@ from collections import defaultdict, deque
 from typing import List, Dict, Callable, Tuple, NewType, DefaultDict
 import time as sys_time
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import VcpValue, DdcutilServiceNotFound, DdcutilInterface, VcpTypeInfo, DdcutilSetterRateExceeded
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl

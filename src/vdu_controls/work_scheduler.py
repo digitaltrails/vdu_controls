@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Callable, List, Dict
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.misc import zoned_now
 
 from vdu_controls.qt_imports import QThread, pyqtSignal

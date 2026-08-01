@@ -20,7 +20,7 @@ from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFI
 from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, \
     SIMPLE_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.misc import proper_name
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.work_scheduler import WorkerThread

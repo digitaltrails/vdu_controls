@@ -10,7 +10,7 @@ import textwrap
 from pathlib import Path
 
 from vdu_controls.constants import APPNAME
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 
 

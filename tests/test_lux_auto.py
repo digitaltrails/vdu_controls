@@ -31,7 +31,7 @@ def patch_external_dependencies():
         'vdu_controls.gui_misc',
         is_running_in_gui_thread=MagicMock(return_value=True),
     ), patch.multiple(
-        'vdu_controls.logging',
+        'vdu_controls.app_logging.py',
         info=MagicMock(),
         debug=MagicMock(),
         error=MagicMock(),

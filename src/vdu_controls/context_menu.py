@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import IntEnum, auto
 from typing import List, Callable, TYPE_CHECKING, Tuple, Dict
 
-from vdu_controls import logging as log
+from vdu_controls import app_logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.preset import Preset

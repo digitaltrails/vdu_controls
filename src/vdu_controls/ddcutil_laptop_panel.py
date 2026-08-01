@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import List, Callable, Dict
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities, \
     VcpTypeInfo

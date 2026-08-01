@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.resources import files as resources_files
 
-import vdu_controls.logging as log
+import vdu_controls.app_logging as log
 from vdu_controls.qt_imports import QColor
 
 
