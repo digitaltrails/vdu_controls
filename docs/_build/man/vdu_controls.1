@@ -204,93 +204,45 @@ See \f[B]LIMITATIONS\f[R] for further details.
 .SS Configuration
 Configuration changes can be made via the \f[I]Settings\-Dialog\f[R] or
 by editing the config\-files.
-.SS Settings Menu and Config files
+.SS Settings Menu and Configuration
 The \f[I]Settings\-Dialog\f[R] features a tab for editing common/default
 settings as well as tabs specific to each VDU.
-The config files are named according to the following scheme:
-.IP \(bu 2
-Application wide default config:
-\f[B]$HOME/.config/vdu_controls/vdu_controls.conf\f[R]
-.IP \(bu 2
-VDU model and serial number config:
-\f[B]$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\f[R]
-.IP \(bu 2
-VDU model\-only config:
-\f[B]$HOME/.config/vdu_controls/<model>.conf\f[R] (deprecated, no longer
-created).
+.SS DBUS ddcutil\-service
+When available, \f[B]vdu_controls\f[R] defaults to interacting with VDUs
+via the DBUS \f[B]ddcutil\-service\f[R] service rather than the
+\f[B]ddcutil\f[R] command.
+With some older monitors, the \f[B]ddcutil\f[R] command can take a
+couple of seconds to handshake a connection each time it is run.
+The service caches connections and should be both faster and more
+reliable than the command.
+.PD 0
+.P
+.PD
+Whether to use the service can be controlled by the \f[B]DBUS
+client\f[R] checkbox in the \f[I]Settings\-Dialog\f[R].
 .PP
-The VDU\-specific config files can be used to:
-.IP \(bu 2
-Correct manufacturer built\-in metadata.
-.IP \(bu 2
-Customize which controls are to be provided for each VDU.
-.IP \(bu 2
-Define a user\-friendly label for each VDU.
-.IP \(bu 2
-Set optimal \f[B]ddcutil\f[R] DDC parameters for each VDU.
-.PP
-The config files are in INI\-format divided into a number of sections as
-outlined below::
-.IP
-.EX
-[vdu\-controls\-globals]
-# The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
-system\-tray\-enabled = yes|no
-splash\-screen\-enabled = yes|no
-translations\-enabled = yes|no
-weather\-enabled = yes|no
-schedule\-enabled = yes|no
-lux\-options\-enabled = yes|no
-warnings\-enabled = yes|no
-debug\-enabled = yes|no
-syslog\-enabled = yes|no
-
-[vdu\-controls\-widgets]
-# Yes/no for each of the control options that vdu_controls normally provides by default.
-brightness = yes|no
-contrast = yes|no
-audio\-volume = yes|no
-audio\-mute = yes|no
-audio\-treble = yes|no
-audio\-bass = yes|no
-audio\-mic\-volume = yes|no
-input\-source = yes|no
-power\-mode = yes|no
-osd\-language = yes|no
-
-# Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two\-digit hex values.
-enable\-vcp\-codes = NN, NN, NN
-
-# User friendly VDU name
-vdu_name = My Main Monitor (on the right)
-
-[ddcutil\-parameters]
-# Useful values appear to be >=0.1
-sleep\-multiplier = 0.5
-
-[ddcutil\-capabilities]
-# The (possibly edited) output from \(dqddcutil \-\-display N capabilities\(dq with leading spaces retained.
-capabilities\-override =
-.EE
-.PP
-Config files can only be used to enable and alter definitions of VCP
-codes supported by \f[B]ddcutil\f[R].
-Unsupported manufacturer\-specific features should only be enabled with
-caution; some may have irreversible consequences, including bricking the
-hardware.
-.PP
-As well as using the \f[B]Settings\f[R], config files may also be
-created by the command line option::
-.IP
-.EX
-vdu_controls \-\-create\-config\-files
-.EE
-.PP
-which will create initial templates based on the currently connected
-VDUs.
-.PP
-The config files are completely optional, they need not be used if the
-default options are found to be adequate.
+\f[B]vdu_controls\f[R] can use the service to monitor for DPMS events
+and VDU connectivity events, including power\-cycling VDUs or
+hot\-plugging cable connections.
+The reliability and timeliness of event detection can vary depending on
+the hardware involved (GPU model, GPU driver, VDU model, and type of
+connector\-cable).
+In some cases, the service polling for DPMS or connection status may
+wake some VDU models.
+Both \f[B]ddcutil\-service\f[R] or \f[B]libddcutil\f[R] offer options
+for finer control over which events are detected and how.
+Whether to enable events in \f[B]vdu_controls\f[R] is controlled by the
+\f[B]DBUS events\f[R] checkbox in the \f[I]Settings\-Dialog\f[R].
+.SS Laptop\-Panel brightness control
+Starting with version 2.6, laptop panels are supported for
+brightness\-only control.
+When laptop support is enabled, the widely available command line
+utility \f[B]brightnessctl\f[R] is used to emulate DDC control of
+brightness (https://github.com/Hummer12007/brightnessctl).
+Additionally, \f[B]vdu_controls\f[R] will react to laptop
+brightness\-function\-keys or inactivity\-dimming by using the
+\f[B]python3\-pyudev\f[R] library to monitor udev for
+\f[I]brightness\f[R] events.
 .SS Adding value restrictions to a VDU\(cqs capabilities override
 In some cases, a VDU\(cqs DDC reported minimums and maximums may be
 incorrect or overstated.
@@ -345,42 +297,6 @@ Feature: 15 (Picture Mode *refresh*)
 With this annotation, when ever \f[I]Picture Mode\f[R] is altered,
 vdu_controls will reload all configuration files and refresh all control
 values from the VDUs.
-.SS DBUS ddcutil\-service
-When available, \f[B]vdu_controls\f[R] defaults to interacting with VDUs
-via the DBUS \f[B]ddcutil\-service\f[R] service rather than the
-\f[B]ddcutil\f[R] command.
-With some older monitors, the \f[B]ddcutil\f[R] command can take a
-couple of seconds to handshake a connection each time it is run.
-The service caches connections and should be both faster and more
-reliable than the command.
-.PD 0
-.P
-.PD
-Whether to use the service can be controlled by the \f[B]DBUS
-client\f[R] checkbox in the \f[I]Settings\-Dialog\f[R].
-.PP
-\f[B]vdu_controls\f[R] can use the service to monitor for DPMS events
-and VDU connectivity events, including power\-cycling VDUs or
-hot\-plugging cable connections.
-The reliability and timeliness of event detection can vary depending on
-the hardware involved (GPU model, GPU driver, VDU model, and type of
-connector\-cable).
-In some cases, the service polling for DPMS or connection status may
-wake some VDU models.
-Both \f[B]ddcutil\-service\f[R] or \f[B]libddcutil\f[R] offer options
-for finer control over which events are detected and how.
-Whether to enable events in \f[B]vdu_controls\f[R] is controlled by the
-\f[B]DBUS events\f[R] checkbox in the \f[I]Settings\-Dialog\f[R].
-.SS Laptop\-Panel brightness control
-Starting with version 2.6, laptop panels are supported for
-brightness\-only control.
-When laptop support is enabled, the widely available command line
-utility \f[B]brightnessctl\f[R] is used to emulate DDC control of
-brightness (https://github.com/Hummer12007/brightnessctl).
-Additionally, \f[B]vdu_controls\f[R] will react to laptop
-brightness\-function\-keys or inactivity\-dimming by using the
-\f[B]python3\-pyudev\f[R] library to monitor udev for
-\f[I]brightness\f[R] events.
 .SS DDC emulation for special cases
 The \f[B]ddcutil\-emulator\f[R] option is provided for handling special
 cases.
@@ -690,16 +606,16 @@ monitors\(rq.
 For example:
 .IP
 .EX
-Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
+  Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
 
     ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq
 
-Combine this with kill to trigger a preset change::
+  Combine this with kill to trigger a preset change::
 
     kill \-40 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
     kill \-41 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
 
-If some other activity has changed a VDU\(aqs settings, trigger vdu_controls to update its UI::
+  If some other activity has changed a VDU\(aqs settings, trigger vdu_controls to update its UI::
 
     kill \-HUP $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
 .EE
@@ -746,10 +662,97 @@ If you wish to use the two together, design your lux/brightness profile
 steps to match the brightness levels of specific presets.
 For example, give a full\-sun preset and a corresponding step in a
 lux/brightness Profile the same brightness value.
-.SS Lux Metering Internal Parameters
-The following internal constants can be altered by manually editing
-\f[B]\(ti/.config/vdu_controls/AutoLux.conf\f[R].
-They guide the various metering and auto\-adjustment heuristics::
+.SS Configuration files
+The config files are named according to the following scheme:
+.IP \(bu 2
+Application wide default config:
+\f[B]$HOME/.config/vdu_controls/vdu_controls.conf\f[R]
+.IP \(bu 2
+VDU model and serial number config:
+\f[B]$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\f[R]
+.IP \(bu 2
+VDU model\-only config:
+\f[B]$HOME/.config/vdu_controls/<model>.conf\f[R] (deprecated, no longer
+created).
+.PP
+The VDU\-specific config files can be used to:
+.IP \(bu 2
+Correct manufacturer built\-in metadata.
+.IP \(bu 2
+Customize which controls are to be provided for each VDU.
+.IP \(bu 2
+Define a user\-friendly label for each VDU.
+.IP \(bu 2
+Set optimal \f[B]ddcutil\f[R] DDC parameters for each VDU.
+.PP
+The config files are in INI\-format divided into a number of sections as
+outlined below::
+.IP
+.EX
+  [vdu\-controls\-globals]
+  # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+  system\-tray\-enabled = yes|no
+  splash\-screen\-enabled = yes|no
+  translations\-enabled = yes|no
+  weather\-enabled = yes|no
+  schedule\-enabled = yes|no
+  lux\-options\-enabled = yes|no
+  warnings\-enabled = yes|no
+  debug\-enabled = yes|no
+  syslog\-enabled = yes|no
+
+  [vdu\-controls\-widgets]
+  # Yes/no for each of the control options that vdu_controls normally provides by default.
+  brightness = yes|no
+  contrast = yes|no
+  audio\-volume = yes|no
+  audio\-mute = yes|no
+  audio\-treble = yes|no
+  audio\-bass = yes|no
+  audio\-mic\-volume = yes|no
+  input\-source = yes|no
+  power\-mode = yes|no
+  osd\-language = yes|no
+
+  # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two\-digit hex values.
+  enable\-vcp\-codes = NN, NN, NN
+
+  # User friendly VDU name
+  vdu_name = My Main Monitor (on the right)
+
+  [ddcutil\-parameters]
+  # Useful values appear to be >=0.1
+  sleep\-multiplier = 0.5
+
+  [ddcutil\-capabilities]
+  # The (possibly edited) output from \(dqddcutil \-\-display N capabilities\(dq with leading spaces retained.
+  capabilities\-override =
+.EE
+.PP
+Config files can only be used to enable and alter definitions of VCP
+codes supported by \f[B]ddcutil\f[R].
+Unsupported manufacturer\-specific features should only be enabled with
+caution; some may have irreversible consequences, including bricking the
+hardware.
+.PP
+As well as using the \f[B]Settings\f[R], config files may also be
+created by the command line option::
+.IP
+.EX
+vdu_controls \-\-create\-config\-files
+.EE
+.PP
+which will create initial templates based on the currently connected
+VDUs.
+.PP
+The config files are completely optional, they need not be used if the
+default options are found to be adequate.
+.PP
+Light metering has its own config file
+\f[B]$HOME/.config/vdu_controls/AutoLux.conf\f[R].
+The Light\-Metering Dialog can be used to update many of these.
+The following internal constants can only be altered by manually editing
+the file:
 .IP
 .EX
   [lux\-meter]
@@ -1085,6 +1088,9 @@ Location for Qt/desktop state such as the past window sizes and locations.
 .TP
 \f[B]/usr/share/vdu_controls\f[R]
 Location for system\-wide icons, sample\-scripts, and translations.
+.TP
+\f[B]$HOME/.config/vdu_controls/AutoLux.conf\f[R]
+Lux metering related config, including several parameters that adjust hardware meter sampling.
 .SS Reporting Bugs
 https://github.com/digitaltrails/vdu_controls/issues
 .SS GNU License
