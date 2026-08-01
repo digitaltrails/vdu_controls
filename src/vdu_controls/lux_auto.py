@@ -229,8 +229,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if not lux_meter.has_manual_capability:  # Update the smoother every n seconds, but not at the start or end of the period.
                 if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
                     if metered_lux := lux_meter.get_value():  # Update the smoothing while sleeping
+                        smoothed_lux = self.smoother.smooth(metered_lux)
                         self.status_message(
-                            f"{SUN_SYMBOL} {self.lux_summary(metered_lux, self.smoother.smooth(metered_lux))}", timeout=3000)
+                            f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}", timeout=3000)
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
 

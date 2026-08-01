@@ -22,6 +22,8 @@ from vdu_controls.misc import zoned_now, GeoLocation
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread
 
+DAYLIGHT_FACTOR_FILENAME = "lux_daylight_factor.txt"
+
 
 class LuxMeterDevice(QObject):
     new_lux_value_qtsignal = pyqtSignal(int)
@@ -273,7 +275,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         if LuxMeterSemiAutoDevice.daylight_factor is None or abs(LuxMeterSemiAutoDevice.daylight_factor - daylight_factor) >= DF_MIN:
             if persist:
                 if CONFIG_DIR_PATH.exists():
-                    persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
+                    persisted_path = CONFIG_DIR_PATH.joinpath(DAYLIGHT_FACTOR_FILENAME)
                     log.debug(f"LuxSemiAuto: save {daylight_factor=:0.6f} to {persisted_path.as_posix()}") if log.debug_enabled else None
                     persisted_path.write_text(f"{daylight_factor:.6f}")
             LuxMeterSemiAutoDevice.daylight_factor = float(daylight_factor)
