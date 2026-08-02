@@ -1181,7 +1181,7 @@ class VduAppWindow(QMainWindow):
             splash_screen = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
-            Release.release_notes()
+            Release.release_notes(from_version=main_config.ini_content.get_version())
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
         if not DdcutilPanelImpl.is_available():

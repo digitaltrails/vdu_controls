@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from vdu_controls.constants import VDU_CONTROLS_VERSION
+from typing import Tuple
+
+from vdu_controls.constants import VDU_CONTROLS_VERSION, VDU_CONTROLS_VERSION_TUPLE
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import create_icon_from_svg_bytes
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt
@@ -11,6 +13,7 @@ from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 from vdu_controls.widgets import MBox, MIcon, MBtn
 
 class Release:
+    SHOW_ON_MAJOR_RELEASE_ONLY = True
     RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}")
     RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
     RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
@@ -32,7 +35,10 @@ class Release:
                               '<br/><br/>'
                               )
     @staticmethod
-    def release_notes():
+    def release_notes(from_version: Tuple[int, int, int]) -> None:
+        minor_release = VDU_CONTROLS_VERSION_TUPLE[0] == from_version[0] and VDU_CONTROLS_VERSION_TUPLE[1] == from_version[1]
+        if minor_release and Release.SHOW_ON_MAJOR_RELEASE_ONLY:
+            return
         release_alert = MBox(
             MIcon.Information,
             msg=Release.RELEASE_ANNOUNCEMENT.format(WELCOME=tr(Release.RELEASE_WELCOME, Release.__name__).format(VDU_CONTROLS_VERSION),
