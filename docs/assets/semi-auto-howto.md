@@ -53,7 +53,7 @@ The _Light Metering Dialog_ live plots the illumination
 estimates, including the computed indoor __Lux__, the estimated outdoor lux __Eo__, and the
 Daylight-Factor __DF__. &#x2462;
 
-> [!TIP]
-> The _Preset Dialog_ can be used to save a Daylight-Factor (DF) in a Preset.  For example, 
-> you could set up _Cloudy-DF_ and _Sunny-DF_ Presets.  (The DF can be the only thing in a 
-> preset, you need not include any display controls or features.) 
+!!! TIP "tip"
+    The _Preset Dialog_ can be used to save a Daylight-Factor (DF) in a Preset.  For example, 
+    you could set up _Cloudy-DF_ and _Sunny-DF_ Presets.  (The DF can be the only thing in a 
+    preset, you need not include any display controls or features.) 
