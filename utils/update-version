@@ -15,13 +15,15 @@ base_version=$(echo $master_version_number | sed s/-.*//)
 echo "INFO: master_version_number=$master_version_number base_version=$base_version"
 
 echo "INFO: update PKGBUILD"
-sed -E --in-place "s/^pkgver=[0-9.]+/pkgver=$base_version/" PKGBUILD || exit 1
+sed -E --in-place "s/^pkgver=[0-9.]+/pkgver=$base_version/" packaging/PKGBUILD || exit 1
 
 echo "INFO: update pyproject.toml"
 sed -E --in-place "s/^version = \"[0-9.]+\"/version = \"$base_version\"/" pyproject.toml || exit 1
 
 echo "INFO: update vdu_controls.spec"
-sed -E --in-place "s/^Version:( *)[0-9.]+/Version:\\1$base_version/" vdu_controls.spec || exit 1
+sed -E --in-place "s/^Version:( *)[0-9.]+/Version:\\1$base_version/" packaging/vdu_controls.spec || exit 1
 
+echo "INFO: update help.md"
+sed -E --in-place "s/^footer:( *)[0-9.]+/Version:\\1$base_version/" src/vdu_controls/resources/docs/help.md || exit 1
 
 

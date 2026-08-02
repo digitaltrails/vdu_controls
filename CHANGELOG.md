@@ -4,16 +4,18 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -->
 # Changelog
 
-## Unreleased <small>(master)</small>
+## Version 2.6.6 <small>(2026-08-03)</small>
+
+- Ambient-light slider now works properly at night.
+- More sensibly handle transition to night for semi-auto mode.
 - Enhanced Help-Dialog, added TOC, added a separate tab of online links.
 - Improved hover tips on Light-Metering dialog's plot.
 - Assign window-role properties to make it easier to assign 
   positions to different windows in KDE/Plasma Wayland.
-- More sensibly handle transition to night for semi-auto mode.
-- Fix broken link in release notes.
 - Fix for Qt < 6.6 - QMessageBox.Option and setOption() only exist in Qt >= 6.6
 - Fix a possible set_vcp cascade when switching the ambient-slider from a 
   physical hardware lux-meter - such as an Arduino - to manual lux input.
+- Fix broken link in release notes.
 
 ## Version 2.6.5 <small>(2026-07-10)</small>
 

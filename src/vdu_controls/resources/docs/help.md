@@ -4,7 +4,7 @@
 title: VDU_CONTROLS
 section: 1
 header: vdu_controls Manual
-footer: vdu_controls 2.6.5
+footer: vdu_controls 2.6.6
 ---
 
 # vdu_controls - a DDC control panel for monitors
