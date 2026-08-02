@@ -108,8 +108,8 @@ class MsgDestination(_Enum):
     COUNTDOWN = 1
 
 
-PRESET_SIGNAL_MIN = 40
-PRESET_SIGNAL_MAX = 55
+PRESET_SIGNAL_MIN = int(getenv_logged('VDU_CONTROLS_PRESET_SIGNAL_MIN', '40'))
+PRESET_SIGNAL_MAX = int(getenv_logged('VDU_CONTROLS_PRESET_SIGNAL_MIN', '55'))
 
 # On Plasma Wayland, the system tray may not be immediately available at login - so keep trying for...
 SYSTEM_TRAY_WAIT_SECONDS = 20
@@ -134,7 +134,7 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 60 (Input Source)')
 
 # Minimum DF-adjusted Lux-value, when lux is below this, DF will no longer be updated (not enough daylight).
-MIN_DF_ADJUSTED_LUX = 100
+LUX_SEMI_AUTO_MIN = int(getenv_logged("LUX_SEMI_AUTO_MIN", '20'))
 
 # Lowest Daylight factor the user can dial in using the slider
 DF_MIN = 0.00001

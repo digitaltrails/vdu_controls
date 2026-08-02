@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 - Improved hover tips on Light-Metering dialog's plot.
 - Assign window-role properties to make it easier to assign 
   positions to different windows in KDE/Plasma Wayland.
+- More sensibly handle transition to night for semi-auto mode.
 - Fix broken link in release notes.
 - Fix for Qt < 6.6 - QMessageBox.Option and setOption() only exist in Qt >= 6.6
 - Fix a possible set_vcp cascade when switching the ambient-slider from a 

@@ -14,7 +14,7 @@ from typing import Tuple
 
 from vdu_controls.qt_imports import QObject, pyqtSignal
 
-from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged, MIN_DF_ADJUSTED_LUX, DF_MIN
+from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged, LUX_SEMI_AUTO_MIN, DF_MIN
 
 from vdu_controls.app_locale import tr
 import vdu_controls.app_logging as log
@@ -188,6 +188,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     location: GeoLocation | None = None
     daylight_factor: float | None = None
     status_message: str = ''
+    too_dark: bool = False
 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
@@ -198,9 +199,18 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def get_value(self) -> float | None:
         if location := LuxMeterSemiAutoDevice.get_location():
             df_adjusted_lux = calc_solar_lux(zoned_now(), location, LuxMeterSemiAutoDevice.get_daylight_factor())
-            if df_adjusted_lux >= MIN_DF_ADJUSTED_LUX:
+            if df_adjusted_lux >= LUX_SEMI_AUTO_MIN:
+                self.too_dark = False
+                log.debug(f"LuxMeterSemiAutoDevice: updating value from {df_adjusted_lux=}") if log.debug_enabled else None
                 self.set_current_value(df_adjusted_lux)  # adjusted by DF - only use if in daylight
-            # else: too dark - just accept what the user has input unadjusted by DF.
+            else: # too dark - just accept what the user has input unadjusted by DF.
+                if not self.too_dark:
+                    # First time it gets too_dark today - set to min. After that
+                    # it must be the user altering the meter, so just accept whatever
+                    # the user has already set and don't further alter the value.
+                    self.set_current_value(LUX_SEMI_AUTO_MIN)
+                self.too_dark = True
+                log.debug(f"LuxMeterSemiAutoDevice: too dark to update value {df_adjusted_lux=}") if log.debug_enabled else None
         return self.current_value
 
     def set_current_value(self, new_value: float) -> None:
