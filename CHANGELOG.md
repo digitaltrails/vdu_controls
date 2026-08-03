@@ -4,7 +4,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -->
 # Changelog
 
-## Version 2.6.6 <small>(2026-08-03)</small>
+## Version 2.6.7 <small>(2026-08-03)</small>
 
 - Ambient-light slider now works properly at night.
 - More sensibly handle transition to night for semi-auto mode.
@@ -16,6 +16,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 - Fix a possible set_vcp cascade when switching the ambient-slider from a 
   physical hardware lux-meter - such as an Arduino - to manual lux input.
 - Fix broken link in release notes.
+- Fix restart after settings change.
 
 ## Version 2.6.5 <small>(2026-07-10)</small>
 
