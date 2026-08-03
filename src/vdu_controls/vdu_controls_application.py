@@ -1732,11 +1732,14 @@ def main() -> None:
     if rc == EXIT_CODE_FOR_RESTART:
         reverse_force_xwayland()
         rc = 0
-        log.info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
-        restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
+        app_exec_name = 'vdu_controls'
+        args = app.arguments()[1:]
+        log.info(f"Trying to restart - this only works if {app_exec_name} is executable and on your PATH): ", )
+        restart_status = QProcess.startDetached(app_exec_name, args)
         if not restart_status:
-            MBox(MIcon.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
-                 info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
+            log.error(f"Restart failed: {app_exec_name=} {args=}")
+            MBox(MIcon.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app_exec_name),
+                 info=tr("This is probably because {} is not executable or is not on your PATH.").format(app_exec_name),
                  buttons=MBtn.Close).exec()
     sys.exit(rc)
 
