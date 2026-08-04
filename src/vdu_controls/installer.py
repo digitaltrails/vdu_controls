@@ -60,11 +60,11 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         log.info(f"Creating zipapp {installed_script_path.as_posix()}")
         zipapp.create_archive(origin_script_path.parent.parent, target=installed_script_path,
                               main='vdu_controls.__main__:main', interpreter=sys.executable)
-    elif origin_script_path.name.encode(".pyz"):
+    elif origin_script_path.name.endswith(".pyz"):
         log.info(f"Copying existing zipapp {sys.argv[0]} to  {installed_script_path.as_posix()}")
         shutil.copy2(sys.argv[0], installed_script_path)
     else:
-        log.error("Unrecognized installable")
+        log.error(f"Unrecognized installable: {origin_script_path}")
         sys.exit(0)
     log.info(f"chmod u+rwx {installed_script_path.as_posix()}")
     os.chmod(installed_script_path, stat.S_IRWXU)
