@@ -4,6 +4,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -->
 # Changelog
 
+## Version 2.6.8 <small>(2026-08-05)</small> 
+- Fix Qt session restoration state - set executable to be wrapper-script.
+- Fix gnome QTextBrowser external http link following.
+- Remove current working directory from python path (prevent accidental imports).
+
 ## Version 2.6.7 <small>(2026-08-03)</small>
 
 - Ambient-light slider now works properly at night.

@@ -2,10 +2,11 @@
 .\"
 .TH "VDU_CONTROLS" "1" "" "vdu_controls 2.6.7" "vdu_controls Manual"
 .SS NAME
-vdu_controls \- a DDC control panel for monitors
+vdu_controls \- a DDC control panel for displays
 .PP
-A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs
-(\f[I]Visual Display Units\f[R]).
+A control panel for DisplayPort, DVI, HDMI, or USB\-connected displays
+(\f[I]Visual Display Units\f[R]), with some limited support for
+laptop\-panels.
 .SS Synopsis:
 .IP
 .EX
@@ -211,7 +212,7 @@ settings as well as tabs specific to each VDU.
 When available, \f[B]vdu_controls\f[R] defaults to interacting with VDUs
 via the DBUS \f[B]ddcutil\-service\f[R] service rather than the
 \f[B]ddcutil\f[R] command.
-With some older monitors, the \f[B]ddcutil\f[R] command can take a
+With some older displays, the \f[B]ddcutil\f[R] command can take a
 couple of seconds to handshake a connection each time it is run.
 The service caches connections and should be both faster and more
 reliable than the command.
@@ -598,11 +599,11 @@ The guess may not be accurate and may vary over time.
 .SS Presets \- remote control
 UNIX/Linux signals may be used to cause \f[B]vdu_controls\f[R] to
 restore a preset or to initiate a refresh of the application from the
-connected monitors.
+connected displays.
 Signals in the range 40 to 55 correspond to first to last presets (if
 any are defined).
 Additionally, SIGHUP can be used to initiate \(lqRefresh settings from
-monitors\(rq.
+displays\(rq.
 For example:
 .IP
 .EX

@@ -180,9 +180,10 @@
 <h1 class="title">VDU_CONTROLS</h1>
 </header>
 <h2>NAME</h2>
-<p>vdu_controls - a DDC control panel for monitors</p>
-<p>A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs
-(<em>Visual Display Units</em>).</p>
+<p>vdu_controls - a DDC control panel for displays</p>
+<p>A control panel for DisplayPort, DVI, HDMI, or USB-connected displays
+(<em>Visual Display Units</em>), with some limited support for
+laptop-panels.</p>
 <h2 id="synopsis">Synopsis:</h2>
 <pre><code>        vdu_controls
                      [--help|-h] [--about] [--detailed-help]
@@ -450,7 +451,7 @@ common/default settings as well as tabs specific to each VDU.</p>
 <h3 id="dbus-ddcutil-service">DBUS ddcutil-service</h3>
 <p>When available, <strong>vdu_controls</strong> defaults to interacting
 with VDUs via the DBUS <strong>ddcutil-service</strong> service rather
-than the <strong>ddcutil</strong> command. With some older monitors, the
+than the <strong>ddcutil</strong> command. With some older displays, the
 <strong>ddcutil</strong> command can take a couple of seconds to
 handshake a connection each time it is run. The service caches
 connections and should be both faster and more reliable than the
@@ -773,9 +774,9 @@ may not be accurate and may vary over time.</p>
 <h3 id="presets---remote-control">Presets - remote control</h3>
 <p>UNIX/Linux signals may be used to cause <strong>vdu_controls</strong>
 to restore a preset or to initiate a refresh of the application from the
-connected monitors. Signals in the range 40 to 55 correspond to first to
+connected displays. Signals in the range 40 to 55 correspond to first to
 last presets (if any are defined). Additionally, SIGHUP can be used to
-initiate “Refresh settings from monitors”. For example:</p>
+initiate “Refresh settings from displays”. For example:</p>
 <pre><code>  Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
 
     ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39;
