@@ -1619,6 +1619,22 @@ def get_app_instance() -> QApplication:
     return app_instance
 
 
+def fix_session_restoration_path(sys_args: List[str]) -> List[str]:
+    """
+    Ensure that sys.argv[0] points to the wrapper script (blah/bin/vdu_controls)
+    instead of the full path to __main__.py. This fixes session restoration
+    on all desktop environments (KDE, GNOME, XFCE, LXQt, etc.) by ensuring
+    the session manager saves the correct restart command.
+    """
+    # Prefer the environment variable set by the wrapper.
+    wrapper = getenv_logged("VDU_CONTROLS_WRAPPER", '')
+    if wrapper:
+        log.info(f"Wrapper script in use. Session restart executable: VDU_CONTROLS_WRAPPER={wrapper}.")
+        return [ wrapper ] + sys_args[1:]
+    log.info(f"Not started by wrapper script. Session restart executable: {sys.argv[0]}")
+    return sys_args
+
+
 def main() -> None:
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -1657,7 +1673,8 @@ def main() -> None:
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
-    app = QApplication(sys.argv)
+    restartable_argv = fix_session_restoration_path(sys.argv)
+    app = QApplication(restartable_argv)
     assert app is not None
     app.setApplicationName('vdu_controls')
     app_thread = app.thread()
@@ -1668,7 +1685,7 @@ def main() -> None:
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
 
-    log.info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
+    log.info(f"{APPNAME} {VDU_CONTROLS_VERSION} {restartable_argv[0]}  ")
     log.info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
     log.info(f"desktop: {getenv_logged('XDG_CURRENT_DESKTOP', default='unknown')}; "
              f"session-type: {getenv_logged('XDG_SESSION_TYPE', default='unknown')}; "

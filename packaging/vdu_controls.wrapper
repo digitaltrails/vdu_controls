@@ -1,5 +1,8 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+
+# Pass script name for use in session restoration.
+export VDU_CONTROLS_WRAPPER="$(realpath "$0")"
 export PYTHONPATH="/usr/share/vdu_controls:${PYTHONPATH}"
 exec /usr/bin/python3 -m vdu_controls "$@"
