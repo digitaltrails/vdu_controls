@@ -2,19 +2,23 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import subprocess
+from functools import partial
+
 from vdu_controls import constants
 
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_HELP_URL
-from vdu_controls.misc import generate_slug
+from vdu_controls.misc import generate_slug, is_gnome
 from vdu_controls.qt_imports import (
     QVBoxLayout, QSize, QTextBrowser,
-    QUrl, QDesktopServices,
+    QUrl, QDesktopServices, QTimer,
     QDialogButtonBox, QTabWidget, QWidget, QHBoxLayout, QListWidget, QListWidgetItem, Qt, QSplitter,
 )
 from vdu_controls.scaling import dpx
 from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin
 import vdu_controls.app_locale as app_locale
+import vdu_controls.app_logging as log
 import re
 
 class MarkdownHelpViewer(QWidget):
@@ -100,8 +104,13 @@ class OnlineHelpViewer(QTextBrowser):
         super().__init__()
         self.setReadOnly(True)
         self.setViewportMargins(dpx(40), dpx(40), dpx(25), dpx(15))
-        self.setOpenExternalLinks(True)
         self.setHtml(self.localized_text())
+        if is_gnome():
+            self.setOpenLinks(False)
+            self.setOpenExternalLinks(False)
+            self.anchorClicked.connect(self.gnome_open_url_safely)
+        else:
+            self.setOpenExternalLinks(True)
 
     def localized_text(self):
         # Doing this dynamically to more easily get translations
@@ -129,6 +138,24 @@ class OnlineHelpViewer(QTextBrowser):
                  (tr("Issues"), "https://github.com/digitaltrails/vdu_controls/issues"),
                  (tr("License"), "https://digitaltrails.github.io/vdu_controls/LICENSE/"),
                  ]
+
+    # Fix for browser opening - safer for gnome if running
+    # under xwayland.
+    @staticmethod
+    def gnome_open_url_safely(url: QUrl):
+        log.debug("OnlineHelpViewer: Using gnome url open")
+        def _open_url_with_xdg(url: QUrl):
+            try:
+                # Start xdg-open as a detached process
+                subprocess.Popen(['xdg-open', url.toString()],
+                                 stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+            except Exception as e:
+                print(f"Failed to open URL: {e}")
+
+        # Use a single-shot timer to prevent event loop reentrancy
+        QTimer.singleShot(0, partial(_open_url_with_xdg, url))
+
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 

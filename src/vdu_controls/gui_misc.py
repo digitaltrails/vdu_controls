@@ -12,6 +12,7 @@ def set_gui_thread(thread: QThread):
     assert gui_thread is None
     gui_thread = thread
 
+
 def is_running_in_gui_thread() -> bool:
     # print(f">>>>>>>>>>>>>>>>>>>>>Checking if GUI thread is running... {QThread.currentThread()} {gui_thread}")
     assert gui_thread is not None

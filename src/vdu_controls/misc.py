@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import os
 import re
 import sys
 import unicodedata
@@ -81,3 +82,8 @@ def generate_slug(text: str) -> str:
     # 2. Lowercase, strip punctuation, collapse spaces/dashes
     text = re.sub(r'[^\w\s-]', '', text).lower().strip()
     return re.sub(r'[-\s]+', '-', text)
+
+def is_gnome():
+    # Check environment variables
+    desktop = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
+    return 'gnome' in desktop or 'unity' in desktop  # Unity also uses GNOME bits
