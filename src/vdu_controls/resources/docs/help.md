@@ -7,9 +7,10 @@ header: vdu_controls Manual
 footer: vdu_controls 2.6.7
 ---
 
-# vdu_controls - a DDC control panel for monitors
+# vdu_controls - a DDC control panel for displays
 
-A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs (*Visual Display Units*).
+A control panel for DisplayPort, DVI, HDMI, or USB-connected displays (*Visual Display Units*),
+with some limited support for laptop-panels.
 
 ## Synopsis:
 
@@ -192,7 +193,7 @@ tabs specific to each VDU.
 ### DBUS ddcutil-service
 
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
-service rather than the ``ddcutil`` command.  With some older monitors, the ``ddcutil`` command 
+service rather than the ``ddcutil`` command.  With some older displays, the ``ddcutil`` command 
 can take a couple of seconds to handshake a connection each time it is run.  The service caches 
 connections and should be both faster and more reliable than the command.  
 Whether to use the service can be controlled by the ``DBUS client`` checkbox in the *Settings-Dialog*.
@@ -493,9 +494,9 @@ external IP address.  The guess may not be accurate and may vary over time.
 ### Presets - remote control
 
 UNIX/Linux signals may be used to cause ``vdu_controls`` to restore a preset or to initiate a
-refresh of the application from the connected monitors.  Signals in the range 40 to 55 correspond to
+refresh of the application from the connected displays.  Signals in the range 40 to 55 correspond to
 first to last presets (if any are defined).  Additionally, SIGHUP can be used to initiate "Refresh
-settings from monitors".  For example:
+settings from displays".  For example:
 
       Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
 
