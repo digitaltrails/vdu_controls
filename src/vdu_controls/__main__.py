@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import sys
 
+# Prevent stray vdu_controls in current working folder from being pulled in
+sys.path = [p for p in sys.path if p not in ('', '.')]
+
 from vdu_controls.vdu_controls_application import main
 
 if __name__ == '__main__':
