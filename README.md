@@ -12,7 +12,7 @@ A control panel for external monitors (*Visual Display Units*).
 > 
 
 > [!TIP]
-> Laptop-panels are supported in version 2.6 (see [options](https://github.com/digitaltrails/vdu_controls#laptop-panel-brightness-controls) below).
+> Laptop-panels are supported in version 2.6 ([see below](#laptop-panel-brightness-controls)).
 
 
 ## Description
