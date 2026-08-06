@@ -2,8 +2,8 @@
 
 ![Screenshot_Ambient_Intro-small](images/ambient-0.png){ width="300" }
 
-In versions 2.4, the _ambient-light-level_ slider has been combined with an estimate 
-of local solar-illumination to achieve *semi-automatic brightness control* throughout the 
+In version 2.4, the _ambient-light-level_ slider has been combined with an estimate 
+of solar-illumination to achieve *semi-automatic brightness control* throughout the 
 day. 
 
 Adjusting the slider sets the ratio between indoor-illumination and outdoor 
