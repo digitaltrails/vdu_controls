@@ -14,7 +14,7 @@ import vdu_controls.app_logging as log
 from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 
 
-def install_as_desktop_application(uninstall: bool = False) -> None:
+def install_as_desktop_application(python_script_name: str, uninstall: bool = False) -> None:
     """
     Self install this script in the current Linux user's bin directory
     and desktop applications->settings menu.
@@ -54,15 +54,16 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
     if installed_script_path.exists():
         log.warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
 
-    origin_script_path = Path(sys.argv[0])
+    script_path_str = python_script_name
+    origin_script_path = Path(script_path_str)
     if origin_script_path.name == "__main__.py" and origin_script_path.parent.name == 'vdu_controls':
         import zipapp
         log.info(f"Creating zipapp {installed_script_path.as_posix()}")
         zipapp.create_archive(origin_script_path.parent.parent, target=installed_script_path,
                               main='vdu_controls.__main__:main', interpreter=sys.executable)
     elif origin_script_path.name.endswith(".pyz"):
-        log.info(f"Copying existing zipapp {sys.argv[0]} to  {installed_script_path.as_posix()}")
-        shutil.copy2(sys.argv[0], installed_script_path)
+        log.info(f"Copying existing zipapp {script_path_str} to  {installed_script_path.as_posix()}")
+        shutil.copy2(script_path_str, installed_script_path)
     else:
         log.error(f"Unrecognized installable: {origin_script_path}")
         sys.exit(0)

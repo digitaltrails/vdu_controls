@@ -1619,20 +1619,24 @@ def get_app_instance() -> QApplication:
     return app_instance
 
 
-def fix_session_restoration_path(sys_args: List[str]) -> List[str]:
+def edit_session_restoration_path() -> str:
     """
-    Ensure that sys.argv[0] points to the wrapper script (blah/bin/vdu_controls)
+    if VDU_CONTROLS_WRAPPER is set, ensure that sys.argv[0] points to the
+    wrapper script defined by the env variable (blah/bin/vdu_controls)
     instead of the full path to __main__.py. This fixes session restoration
     on all desktop environments (KDE, GNOME, XFCE, LXQt, etc.) by ensuring
     the session manager saves the correct restart command.
+
+    Return: original python sys.argv[0] for use by the --install option
     """
     # Prefer the environment variable set by the wrapper.
     wrapper = getenv_logged("VDU_CONTROLS_WRAPPER", '')
+    python_script_name = sys.argv[0]
+    log.info(f"ArgvEdit: {python_script_name=}")
     if wrapper:
-        log.info(f"Wrapper script in use. Session restart executable: VDU_CONTROLS_WRAPPER={wrapper}.")
-        return [ wrapper ] + sys_args[1:]
-    log.info(f"Not started by wrapper script. Session restart executable: {sys.argv[0]}")
-    return sys_args
+        log.info(f"ArgvEdit: session restart executable: VDU_CONTROLS_WRAPPER={wrapper}.")
+        sys.argv[0] = wrapper
+    return python_script_name
 
 
 def main() -> None:
@@ -1673,8 +1677,10 @@ def main() -> None:
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
-    restartable_argv = fix_session_restoration_path(sys.argv)
-    app = QApplication(restartable_argv)
+    log.info(f"Original: {sys.argv=}")
+    python_script_name = edit_session_restoration_path()
+    app = QApplication(sys.argv)
+    log.info(f"Final: {sys.argv=}")
     assert app is not None
     app.setApplicationName('vdu_controls')
     app_thread = app.thread()
@@ -1685,7 +1691,7 @@ def main() -> None:
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
 
-    log.info(f"{APPNAME} {VDU_CONTROLS_VERSION} {restartable_argv[0]}  ")
+    log.info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
     log.info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
     log.info(f"desktop: {getenv_logged('XDG_CURRENT_DESKTOP', default='unknown')}; "
              f"session-type: {getenv_logged('XDG_SESSION_TYPE', default='unknown')}; "
@@ -1706,10 +1712,10 @@ def main() -> None:
     if args.create_config_files:
         main_config.write_file(default_config_path)
     if args.install:
-        install_as_desktop_application()
+        install_as_desktop_application(python_script_name)
         sys.exit()
     if args.uninstall:
-        install_as_desktop_application(uninstall=True)
+        install_as_desktop_application(python_script_name, uninstall=True)
         sys.exit()
     if args.detailed_help:
         print(app_locale.load_docs_text(HELP_FILENAME))
