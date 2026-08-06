@@ -4,6 +4,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -->
 # Changelog
 
+## Unreleased 2.6.9
+- Fix Qt session restoration state (X11 only feature) - really fix this time.
+
 ## Version 2.6.8 <small>(2026-08-05)</small> 
 - Fix Qt session restoration state - set executable to be wrapper-script.
 - Fix gnome QTextBrowser external http link following.
