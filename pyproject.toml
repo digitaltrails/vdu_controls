@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdu_controls"
-version = "2.6.9"
+version = "2.6.10"
 description = "Visual Display Unit virtual control panel"
 requires-python = ">=3.9"
 dependencies = [
