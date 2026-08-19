@@ -261,6 +261,12 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         sub_group=SubGroup.USER_INTERFACE,
         help=QT_TR_NOOP('Show tick marks on control-sliders.'))
 
+    VARLINK_CLIENT_ENABLED = ConfOptDef(
+        conf_name='valink-client-enabled', default_value="no",
+        ui_label=QT_TR_NOOP('varlink client'),
+        sub_group=SubGroup.DDC,
+        help=QT_TR_NOOP('Use the varlink ddcutil server if available.'))
+
     DBUS_CLIENT_ENABLED = ConfOptDef(
         conf_name='dbus-client-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('dbus client'),

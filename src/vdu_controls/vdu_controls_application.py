@@ -404,6 +404,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         try:
             self.ddcutil = DdcutilAggregator(common_args=self.main_config.get_ddcutil_extra_args(),
                                              prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
+                                             prefer_varlink_client=self.main_config.is_set(ConfOpt.VARLINK_CLIENT_ENABLED),
                                              connected_vdus_changed_callback=change_handler)
             if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
                 if DdcutilPanelImpl.is_available():

@@ -15,7 +15,7 @@ from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.ddcutil_qdbus import DdcutilDBusImpl
-
+from vdu_controls.ddcutil_varlink import DdcutilVarlinkImpl
 
 VduStableId = NewType('VduStableId', str)
 
@@ -35,12 +35,21 @@ class DdcutilAggregator(DdcutilInterface):
     _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
+                 prefer_varlink_client: bool = False,
                  connected_vdus_changed_callback: Callable | None = None) -> None:
         super().__init__()
         self.common_args = common_args
         self.ddcutil_emulators_by_edid: Dict[str, DdcutilInterface] = {}
-        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl  # The service-interface implementations are duck-typed.
-        if prefer_dbus_client:
+        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl | DdcutilVarlinkImpl | None = None # The service-interface implementations are duck-typed.
+
+        if prefer_varlink_client:
+            try:
+                self.ddcutil_impl = DdcutilVarlinkImpl(self.common_args, callback=connected_vdus_changed_callback)
+            except DdcutilServiceNotFound:
+                log.warning("Failed to initialize DdcutilVarlinkImpl, falling back to dbus")
+                prefer_varlink_client = False
+
+        if not prefer_varlink_client and prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
             except DdcutilServiceNotFound:
