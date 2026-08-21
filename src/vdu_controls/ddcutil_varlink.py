@@ -113,9 +113,12 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         # Connect and sanity check
         for try_count in range(1, 5):
             try:
-                self._connect_to_service()
+                self._reconnect_to_service()
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
+                # Start event subscription if callback provided
+                if self.listener_callback is not None:
+                    self._start_event_subscription()
                 break
             except Exception as e:
                 log.error(f"Varlink sanity check try {try_count}: {e}")
@@ -131,7 +134,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         if self.listener_callback is not None:
             self._start_event_subscription()
 
-    def _connect_to_service(self) -> None:  # TODO rename to _reconnect_to_service?
+    def _reconnect_to_service(self) -> None:  # TODO rename to _reconnect_to_service?
         try:
             if self._connection:
                 self._connection.close()
@@ -259,13 +262,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     @locked_and_handled
     def refresh_connection(self):
-        try:
-            self._stub.GetServiceInterfaceVersion()
-        except Exception:
-            log.error("Varlink connection lost, reconnecting...")
-            self._connect_to_service()
-            if self.listener_callback is not None:
-                self._start_event_subscription()
+        log.error("Varlink: reconnecting.")
+        self._reconnect_to_service()
+        if self.listener_callback is not None:
+            self._start_event_subscription()
 
     # ----------------------------------------------------------------------
     # Event subscription
@@ -277,16 +277,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             self._stop_event.set()
             self._event_thread.join(timeout=1.0)
         self._stop_event.clear()
-
-        # TODO use _recreate_event_connection
-        # Create a separate connection for events
-        try:
-            self._event_connection = Client(self.varlink_socket)
-            self._event_stub = self._event_connection.open(self.service_name)
-        except Exception as e:
-            log.error(f"Failed to create event connection: {e}")
-            return
-
         self._event_thread = threading.Thread(target=self._event_loop, daemon=True)
         self._event_thread.start()
 
@@ -294,7 +284,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         log.debug("Varlink: event loop started")
         while not self._stop_event.is_set():
             try:
-                self._recreate_event_connection()
+                self._reconnect_event_connection()
 
                 # Subscribe with use_polling=False (event-driven)
                 with self._service_lock:
@@ -313,7 +303,8 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 if not self._stop_event.wait(2.0):
                     continue
 
-    def _recreate_event_connection(self) -> None:
+    def _reconnect_event_connection(self) -> None:
+        log.info("Varlink: reconnecting event-connection")
         try:
             if self._event_connection:
                 self._event_connection.close()
@@ -321,8 +312,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             pass
         self._event_connection = Client(self.varlink_socket)
         self._event_stub = self._event_connection.open(self.service_name)
-        log.info("Varlink: reconnected event-connection")
-
 
     def _handle_event(self, event_wrapper) -> None:
         log.info(f"Varklink: handling event: {event_wrapper=}")
