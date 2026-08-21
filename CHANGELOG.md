@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 ## Version 2.6.10-beta1
 
-- Optional use of ddcutil-varlink, a varlink interface to libddcutil.
+- Optional experimental use of ddcutil-varlink, a varlink interface to libddcutil.
 
 ## Version 2.6.9
 - Fix Qt session restoration state (X11 only feature) - really fix this time.

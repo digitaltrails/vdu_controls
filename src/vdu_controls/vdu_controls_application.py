@@ -379,7 +379,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def create_ddcutil(self):
 
-        if self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED) and self.main_config.is_set(ConfOpt.DBUS_EVENTS_ENABLED):
+        main_config = self.main_config
+        if (main_config.is_set(ConfOpt.VARLINK_CLIENT_ENABLED) or
+                (main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED)
+                 and main_config.is_set(ConfOpt.DBUS_EVENTS_ENABLED))):
 
             def _vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 values_only = False
@@ -402,19 +405,19 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             change_handler = None  # This will force disabling the eventing/polling inside the server, not just the client.
 
         try:
-            self.ddcutil = DdcutilAggregator(common_args=self.main_config.get_ddcutil_extra_args(),
-                                             prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
-                                             prefer_varlink_client=self.main_config.is_set(ConfOpt.VARLINK_CLIENT_ENABLED),
+            self.ddcutil = DdcutilAggregator(common_args=main_config.get_ddcutil_extra_args(),
+                                             prefer_dbus_client=main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
+                                             prefer_varlink_client=main_config.is_set(ConfOpt.VARLINK_CLIENT_ENABLED),
                                              connected_vdus_changed_callback=change_handler)
-            if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
+            if main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
                 if DdcutilPanelImpl.is_available():
                     self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl(callback=change_handler))
                 else:  # If no user saved conf file, set laptop support to off to prevent unnecessary warnings
-                    if self.main_config.file_path is None:  # No user saved conf file
-                        self.main_config.ini_content.set(ConfOpt.LAPTOP_PANEL_ENABLED.conf_section, ConfOpt.LAPTOP_PANEL_ENABLED.conf_name, 'no')
-            if emulator := self.main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
-                                                            ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
-                common_args = self.main_config.get_ddcutil_extra_args()
+                    if main_config.file_path is None:  # No user saved conf file
+                        main_config.ini_content.set(ConfOpt.LAPTOP_PANEL_ENABLED.conf_section, ConfOpt.LAPTOP_PANEL_ENABLED.conf_name, 'no')
+            if emulator := main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
+                                                  ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
+                common_args = main_config.get_ddcutil_extra_args()
                 log.info(f"add_ddcutil_emulator: {emulator} {common_args}")
                 self.ddcutil.add_ddcutil_emulator(DdcutilEmulatorImpl(emulator, common_args))
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:

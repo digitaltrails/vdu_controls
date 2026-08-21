@@ -8,13 +8,9 @@ import os
 import time
 import time as sys_time
 import threading
-from traceback import print_stack
-from types import SimpleNamespace
+
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from threading import Lock
-
-# TODO make these imports conditional on using varlink
-from varlink import Client, VarlinkError
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -22,31 +18,41 @@ from vdu_controls.ddcutil_abstract import (
     DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface,
     DdcDetectedAttributes, VcpValue, DdcCapabilities, VcpTypeInfo
 )
-from vdu_controls.misc import intV  # may be unused
+
+# Only import when checking - if the user isn't use varlink, don't require it.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from varlink import Client, VarlinkError
+
+_Client = None
+_VarlinkError = None
 
 
-def to_namespace(data):
-    """Recursively converts Varlink objects, dictionaries, and lists into SimpleNamespaces."""
-    if hasattr(data, "as_dict") and callable(getattr(data, "as_dict")):
-        log.debug("to_namespace as_dict")
-        data = data.as_dict()
-    if isinstance(data, dict):
-        log.debug("to_namespace dict")
-        return SimpleNamespace(data)
-    elif isinstance(data, list):
-        log.debug("to_namespace recursive")
-        return [to_namespace(branch) for branch in data]
-    return data
+def _lazy_load_client_class():
+    global _Client
+    if _Client is None:
+        from varlink import Client
+        _Client = Client
+    return _Client
+
+
+def _lazy_load_varlinkerror_class():
+    global _VarlinkError
+    if _VarlinkError is None:
+        from varlink import VarlinkError
+        _VarlinkError = VarlinkError
+    return _VarlinkError
+
 
 def locked_and_handled(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
+        VarlinkError = _lazy_load_varlinkerror_class()
         try:
             log.debug(f"Varlink: {func.__name__}")
             for attempt in range(0, 2):
                 try:
                     with self._service_lock:
-                        print_stack()
                         log.debug(f"Varlink: {func.__name__} obtained lock")
                         return func(self, *args, **kwargs)
                 except BrokenPipeError as e:
@@ -56,7 +62,7 @@ def locked_and_handled(func):
             raise RuntimeError(f"Varlink {func.__name__} Configuration locked")
         except VarlinkError as e:
             error_name = e.error()
-            log.error(f"Varlink error: {func.__name__} {error_name}, params: {to_namespace(e.parameters())}")
+            log.error(f"Varlink error: {func.__name__} {error_name}, params: {e.parameters()}")
             if error_name == 'com.ddcutil.DdcutilInterface.DisplayNotFound':
                 raise DdcutilDisplayNotFound(f"Varlink error: {func.__name__} {str(e)}")
             elif error_name in ('com.ddcutil.DdcutilInterface.DdcError',
@@ -101,6 +107,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self.listener_callback: Optional[Callable] = callback
 
         # Connection used by normal method calls
+        Client = _lazy_load_client_class()
         self._connection: Optional[Client] = None
         self._stub: Optional[Any] = None
 
@@ -134,13 +141,14 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         if self.listener_callback is not None:
             self._start_event_subscription()
 
-    def _reconnect_to_service(self) -> None:  # TODO rename to _reconnect_to_service?
+    def _reconnect_to_service(self) -> None:
         try:
             if self._connection:
                 self._connection.close()
         except:
             pass
         try:
+            Client = _lazy_load_client_class()
             self._connection = Client(self.varlink_socket)
             self._stub = self._connection.open(self.service_name)
         except (ConnectionRefusedError, FileNotFoundError) as e:
@@ -191,20 +199,19 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         result_map = self._stub.Detect(include_offline)
         result_list = []
         for disp_map in result_map['displays']:
-            d = to_namespace(disp_map)
             attrs = DdcDetectedAttributes(
-                display_number=str(d.display_number),
-                usb_bus=str(d.usb_bus),
-                usb_device=str(d.usb_device),
-                manufacturer_id=str(d.mfg_id),
-                model_name=str(d.model_name),
-                serial_number=str(d.serial_number),
-                product_code=str(d.product_code),
-                edid_txt=str(d.edid_base64),
-                binary_serial_number=str(d.edid_serial_number)
+                display_number=str(disp_map['display_number']),
+                usb_bus=str(disp_map['usb_bus']),
+                usb_device=str(disp_map['usb_device']),
+                manufacturer_id=str(disp_map['mfg_id']),
+                model_name=str(disp_map['model_name']),
+                serial_number=str(disp_map['serial_number']),
+                product_code=str(disp_map['product_code']),
+                edid_txt=str(disp_map['edid_base64']),
+                binary_serial_number=str(disp_map['edid_serial_number'])
             )
             result_list.append(attrs)
-            self._display_map[attrs.edid_txt] = d.display_number
+            self._display_map[attrs.edid_txt] = disp_map['display_number']
         return result_list
 
     @locked_and_handled
@@ -282,6 +289,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     def _event_loop(self) -> None:
         log.debug("Varlink: event loop started")
+        VarlinkError = _lazy_load_varlinkerror_class()
         while not self._stop_event.is_set():
             try:
                 self._reconnect_event_connection()
@@ -310,6 +318,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 self._event_connection.close()
         except:
             pass
+        Client = _lazy_load_client_class()
         self._event_connection = Client(self.varlink_socket)
         self._event_stub = self._event_connection.open(self.service_name)
 

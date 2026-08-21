@@ -49,7 +49,7 @@ class DdcutilAggregator(DdcutilInterface):
                 log.warning(f"Failed to initialize DdcutilVarlinkImpl, falling back to dbus: {e}")
                 prefer_varlink_client = False
 
-        if not prefer_varlink_client and prefer_dbus_client:
+        if not prefer_varlink_client and prefer_dbus_client: # varlink not preferred or varlink failed to initialize
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
             except DdcutilServiceNotFound:
