@@ -45,8 +45,8 @@ class DdcutilAggregator(DdcutilInterface):
         if prefer_varlink_client:
             try:
                 self.ddcutil_impl = DdcutilVarlinkImpl(self.common_args, callback=connected_vdus_changed_callback)
-            except DdcutilServiceNotFound:
-                log.warning("Failed to initialize DdcutilVarlinkImpl, falling back to dbus")
+            except DdcutilServiceNotFound as e:
+                log.warning(f"Failed to initialize DdcutilVarlinkImpl, falling back to dbus: {e}")
                 prefer_varlink_client = False
 
         if not prefer_varlink_client and prefer_dbus_client:
@@ -166,14 +166,17 @@ class DdcutilAggregator(DdcutilInterface):
     def query_capabilities(self, vdu_number: str) -> str:
         edid_txt = self.get_edid_txt(vdu_number)
         capabilities = self._impl(edid_txt).get_capabilities(edid_txt)
-        if capabilities.capabilities_str:  # The service supplies pre-assembled capabilities text.
+        if capabilities.capabilities_str:  # The command supplies pre-assembled capabilities text.
             return capabilities.capabilities_str
         model = capabilities.model
         mccs_major = capabilities.mccs_major
         mccs_minor = capabilities.mccs_minor
         capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
         for feature_id, feature in capabilities.features.items():
-            feature_code = f"{int.from_bytes(feature_id, 'big'):02X}"
+            if isinstance(feature_id, bytes):  # From Dbus
+                feature_code = f"{int.from_bytes(feature_id, 'big'):02X}"
+            else:  # From varlink
+                feature_code = feature_id
             feature_name = feature[0]
             feature_values = feature[2]
             capability_text += f"   Feature: {feature_code} ({feature_name})\n"
@@ -186,7 +189,10 @@ class DdcutilAggregator(DdcutilInterface):
                 else:
                     capability_text += "      Values:\n"
                     for value_id, value_name in feature_values.items():
-                        value_code = f"{int.from_bytes(value_id, 'big'):02X}"
+                        if isinstance(value_id, bytes):  # From Dbus
+                            value_code = f"{int.from_bytes(value_id, 'big'):02X}"
+                        else:  # From varlink
+                            value_code = value_id
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 

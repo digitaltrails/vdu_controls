@@ -2,10 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import functools
 import json
 import os
+import time
 import time as sys_time
 import threading
+from traceback import print_stack
 from types import SimpleNamespace
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from threading import Lock
@@ -25,12 +28,50 @@ from vdu_controls.misc import intV  # may be unused
 def to_namespace(data):
     """Recursively converts Varlink objects, dictionaries, and lists into SimpleNamespaces."""
     if hasattr(data, "as_dict") and callable(getattr(data, "as_dict")):
+        log.debug("to_namespace as_dict")
         data = data.as_dict()
     if isinstance(data, dict):
-        return SimpleNamespace(**{k: to_namespace(v) for k, v in data.items()})
+        log.debug("to_namespace dict")
+        return SimpleNamespace(data)
     elif isinstance(data, list):
-        return [to_namespace(i) for i in data]
+        log.debug("to_namespace recursive")
+        return [to_namespace(branch) for branch in data]
     return data
+
+def locked_and_handled(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            log.debug(f"Varlink: {func.__name__}")
+            for attempt in range(0, 2):
+                try:
+                    with self._service_lock:
+                        print_stack()
+                        log.debug(f"Varlink: {func.__name__} obtained lock")
+                        return func(self, *args, **kwargs)
+                except BrokenPipeError as e:
+                    log.warning(f"Varlink error: {func.__name__} connection lost, refreshing connection, {str(e)}")
+                    time.sleep(2)
+                    self.refresh_connection()
+            raise RuntimeError(f"Varlink {func.__name__} Configuration locked")
+        except VarlinkError as e:
+            error_name = e.error()
+            log.error(f"Varlink error: {func.__name__} {error_name}, params: {to_namespace(e.parameters())}")
+            if error_name == 'com.ddcutil.DdcutilInterface.DisplayNotFound':
+                raise DdcutilDisplayNotFound(f"Varlink error: {func.__name__} {str(e)}")
+            elif error_name in ('com.ddcutil.DdcutilInterface.DdcError',
+                                'com.ddcutil.DdcutilInterface.DetectError'):
+                raise ValueError(f"Varlink error: {func.__name__} {str(e)}")
+            elif error_name == 'com.ddcutil.DdcutilInterface.ConfigurationLocked':
+                raise RuntimeError(f"Varlink error: {func.__name__} Configuration locked")
+            else:
+                raise ValueError(f"Varlink error: {func.__name__} Varlink error: {e}")
+        except Exception as e:
+            # --- your error handling here ---
+            log.error(f"Varlink error: Error in {func.__name__}: {e}")
+            raise
+    return wrapper
+
 
 
 class DdcutilVarlinkImpl(DdcutilInterface):
@@ -58,8 +99,15 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         self.common_args = env_args + (common_args if common_args else [])
         self.listener_callback: Optional[Callable] = callback
+
+        # Connection used by normal method calls
         self._connection: Optional[Client] = None
         self._stub: Optional[Any] = None
+
+        # Event‐specific connection and stub
+        self._event_connection: Optional[Client] = None
+        self._event_stub: Optional[Any] = None
+
         self._display_map: Dict[str, int] = {}  # edid_base64 -> display_number
 
         # Connect and sanity check
@@ -83,35 +131,17 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         if self.listener_callback is not None:
             self._start_event_subscription()
 
-    def _connect_to_service(self) -> None:
+    def _connect_to_service(self) -> None:  # TODO rename to _reconnect_to_service?
+        try:
+            if self._connection:
+                self._connection.close()
+        except:
+            pass
         try:
             self._connection = Client(self.varlink_socket)
             self._stub = self._connection.open(self.service_name)
         except (ConnectionRefusedError, FileNotFoundError) as e:
             raise DdcutilServiceNotFound(f"Cannot connect to varlink service: {e}")
-
-    def _call(self, method: str, *args, **kwargs) -> Any:
-        """
-        Low‑level varlink call with error conversion.
-        Returns the result as a SimpleNamespace (via to_namespace).
-        """
-        with self._service_lock:
-            try:
-                func = getattr(self._stub, method)
-                result = func(*args, **kwargs)
-                return to_namespace(result)
-            except VarlinkError as e:
-                error_name = e.error()
-                log.error(f"Varlink error: {error_name}, params: {to_namespace(e.parameters())}")
-                if error_name == 'com.ddcutil.DdcutilInterface.DisplayNotFound':
-                    raise DdcutilDisplayNotFound(str(e))
-                elif error_name in ('com.ddcutil.DdcutilInterface.DdcError',
-                                    'com.ddcutil.DdcutilInterface.DetectError'):
-                    raise ValueError(str(e))
-                elif error_name == 'com.ddcutil.DdcutilInterface.ConfigurationLocked':
-                    raise RuntimeError("Configuration locked")
-                else:
-                    raise ValueError(f"Varlink error: {e}")
 
     def _resolve_display_identifier(self, edid_txt: str) -> Tuple[Optional[int], Optional[str]]:
         """
@@ -128,30 +158,37 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     # Public API (matching DdcutilInterface)
     # ----------------------------------------------------------------------
 
+    @locked_and_handled
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float) -> None:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        self._call("SetSleepMultiplier", display_num, edid_b64, sleep_multiplier, None)
+        self._stub.SetSleepMultiplier( display_num, edid_b64, sleep_multiplier, None)
 
+    @locked_and_handled
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]) -> None:
         log.debug("set_vdu_specific_args not implemented for varlink")
 
+    @locked_and_handled
     def get_ddcutil_version_string(self) -> str:
-        res = self._call("GetDdcutilVersion")
-        return res.version
+        res = self._stub.GetDdcutilVersion()
+        return res['version']
 
+    @locked_and_handled
     def get_interface_version_string(self) -> str:
-        res = self._call("GetServiceInterfaceVersion")
-        return f"{res.version} (Varlink ddcutil-service)"
+        res = self._stub.GetServiceInterfaceVersion()
+        return f"{res['version']} (Varlink ddcutil-service)"
 
+    @locked_and_handled
     def _get_status_values(self) -> Dict[int, str]:
         # Not exposed; return empty dict.
         return {}
 
+    @locked_and_handled
     def detect(self, flags: int) -> List[DdcDetectedAttributes]:
         include_offline = bool(flags & 1)
-        res = self._call("Detect", include_offline)
+        result_map = self._stub.Detect(include_offline)
         result_list = []
-        for d in res.displays:
+        for disp_map in result_map['displays']:
+            d = to_namespace(disp_map)
             attrs = DdcDetectedAttributes(
                 display_number=str(d.display_number),
                 usb_bus=str(d.usb_bus),
@@ -167,49 +204,63 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             self._display_map[attrs.edid_txt] = d.display_number
         return result_list
 
+    @locked_and_handled
     def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._call("GetCapabilitiesMetadata", display_num, edid_b64, None)
-        # Convert commands and capabilities arrays to strings for compatibility
-        commands_str = ', '.join(f"{item.key}:{item.value}" for item in res.commands)
-        capabilities_str = ', '.join(f"{item.key}:{item.value.feature_name}" for item in res.capabilities)
+        res = self._stub.GetCapabilitiesMetadata(display_num, edid_txt, None)
+
+        def convert_feature_values(values):
+            if values:
+                return {feature_value: value_name for feature_value, value_name in values.items() }
+            return values
+
+        capabilities = {feature_code:
+                            (feature['feature_name'],
+                             feature['feature_description'],
+                             convert_feature_values(feature['values'])) for feature_code, feature in res['capabilities'].items()}
         return DdcCapabilities(
-            res.model_name,
-            res.mccs_major,
-            res.mccs_minor,
-            commands_str,
-            capabilities_str,
+            res['model_name'],
+            res['mccs_major'],
+            res['mccs_minor'],
+            res['commands'],
+            capabilities,
             ''   # extra field not used
         )
 
+    @locked_and_handled
     def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:
         key = (edid_txt, vcp_code_int)
         if key in self._metadata_cache:
             return self._metadata_cache[key]
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._call("GetVcpMetadata", display_num, edid_b64, vcp_code_int, None)
+        res = self._stub.GetVcpMetadata(display_num, edid_b64, vcp_code_int, None)
         info = VcpTypeInfo(res.is_complex, res.is_continuous)
         self._metadata_cache[key] = info
         return info
 
+    @locked_and_handled
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        self._call("SetVcp", display_num, edid_b64, vcp_code_int, new_value_int, None, None)
+        self._stub.SetVcp(display_num, edid_b64, vcp_code_int, new_value_int, None, None)
 
+    @locked_and_handled
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._call("GetMultipleVcp", display_num, edid_b64, vcp_code_int_list, None)
+        res = self._stub.GetMultipleVcp(display_num, edid_b64, vcp_code_int_list, None)
+        #res = self._stub(GetMultipleVcp", display_num, edid_b64, vcp_code_int_list, None)
         result = []
-        for v in res.values:
-            result.append(VcpValue(v.vcp_code, v.current, v.maximum, None))
+        for v in res["values"]:
+            result.append(VcpValue(v['vcp_code'], v['current'], v['maximum'], None))
         return result
 
+    @locked_and_handled
     def vcp_info(self):
         pass
 
+    @locked_and_handled
     def refresh_connection(self):
         try:
-            self._call("GetServiceInterfaceVersion")
+            self._stub.GetServiceInterfaceVersion()
         except Exception:
             log.error("Varlink connection lost, reconnecting...")
             self._connect_to_service()
@@ -221,21 +272,35 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     # ----------------------------------------------------------------------
 
     def _start_event_subscription(self) -> None:
+        log.info("Varlink: _start_event_subscription")
         if self._event_thread is not None and self._event_thread.is_alive():
             self._stop_event.set()
             self._event_thread.join(timeout=1.0)
         self._stop_event.clear()
+
+        # TODO use _recreate_event_connection
+        # Create a separate connection for events
+        try:
+            self._event_connection = Client(self.varlink_socket)
+            self._event_stub = self._event_connection.open(self.service_name)
+        except Exception as e:
+            log.error(f"Failed to create event connection: {e}")
+            return
+
         self._event_thread = threading.Thread(target=self._event_loop, daemon=True)
         self._event_thread.start()
 
     def _event_loop(self) -> None:
+        log.debug("Varlink: event loop started")
         while not self._stop_event.is_set():
             try:
-                if self._stub is None:
-                    self._connect_to_service()
+                self._recreate_event_connection()
+
                 # Subscribe with use_polling=False (event-driven)
-                event_stream = self._stub.Subscribe(False, _more=True)
+                with self._service_lock:
+                    event_stream = self._event_stub.Subscribe(False, _more=True)
                 for raw_event in event_stream:
+                    log.debug(f"Varlink: received event {raw_event}") if log.debug_enabled else None
                     if self._stop_event.is_set():
                         break
                     self._handle_event(raw_event)
@@ -244,15 +309,27 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 if not self._stop_event.wait(2.0):
                     continue
             except Exception as e:
-                log.error(f"Unexpected error in event loop: {e}")
+                log.error(f"Varlink: unexpected error in event loop: {e}")
                 if not self._stop_event.wait(2.0):
                     continue
 
-    def _handle_event(self, raw_event) -> None:
-        ev = to_namespace(raw_event)
-        event_obj = ev.event
-        kind = event_obj.kind
-        data = event_obj.data
+    def _recreate_event_connection(self) -> None:
+        try:
+            if self._event_connection:
+                self._event_connection.close()
+        except:
+            pass
+        self._event_connection = Client(self.varlink_socket)
+        self._event_stub = self._event_connection.open(self.service_name)
+        log.info("Varlink: reconnected event-connection")
+
+
+    def _handle_event(self, event_wrapper) -> None:
+        log.info(f"Varklink: handling event: {event_wrapper=}")
+
+        event = event_wrapper["event"]
+        kind = event["kind"]
+        data = event["data"]
 
         if kind == 'service_initialized':
             log.info("Service initialized event")
@@ -285,35 +362,44 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     # Additional varlink methods (not in abstract, but available)
     # ----------------------------------------------------------------------
 
+    @locked_and_handled
     def get_capabilities_string(self, edid_txt: str) -> str:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._call("GetCapabilitiesString", display_num, edid_b64, None)
-        return res.capabilities_text
+        res = self._stub.GetCapabilitiesString(display_num, edid_b64, None)
+        return res['capabilities_text']
 
+    @locked_and_handled
     def get_ddcutil_dynamic_sleep(self) -> bool:
-        res = self._call("GetDdcutilDynamicSleep")
-        return res.enabled
+        res = self._stub.GetDdcutilDynamicSleep()
+        return res['enabled']
 
+    @locked_and_handled
     def set_ddcutil_dynamic_sleep(self, enabled: bool) -> None:
-        self._call("SetDdcutilDynamicSleep", enabled)
+        self._stub.SetDdcutilDynamicSleep(enabled)
 
+    @locked_and_handled
     def get_ddcutil_output_level(self) -> int:
-        res = self._call("GetDdcutilOutputLevel")
-        return res.level
+        res = self._stub.GetDdcutilOutputLevel()
+        return res['level']
 
+    @locked_and_handled
     def set_ddcutil_output_level(self, level: int) -> None:
-        self._call("SetDdcutilOutputLevel", level)
+        self._stub.SetDdcutilOutputLevel( level)
 
+    @locked_and_handled
     def get_service_poll_interval(self) -> int:
-        res = self._call("GetServicePollInterval")
-        return res.seconds
+        res = self._stub.GetServicePollInterval()
+        return res['seconds']
 
+    @locked_and_handled
     def set_service_poll_interval(self, seconds: int) -> None:
-        self._call("SetServicePollInterval", seconds)
+        self._stub.SetServicePollInterval( seconds)
 
+    @locked_and_handled
     def get_service_poll_cascade_interval(self) -> float:
-        res = self._call("GetServicePollCascadeInterval")
-        return res.seconds
+        res = self._stub.GetServicePollCascadeInterval()
+        return res['seconds']
 
+    @locked_and_handled
     def set_service_poll_cascade_interval(self, seconds: float) -> None:
-        self._call("SetServicePollCascadeInterval", seconds)
+        self._stub.SetServicePollCascadeInterval( seconds)
