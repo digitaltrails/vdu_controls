@@ -296,7 +296,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
                 # Subscribe with use_polling=False (event-driven)
                 with self._service_lock:
-                    event_stream = self._event_stub.Subscribe(False, _more=True)
+                    event_stream = self._event_stub.Subscribe(True, _more=True)
                 for raw_event in event_stream:
                     log.debug(f"Varlink: received event {raw_event}") if log.debug_enabled else None
                     if self._stop_event.is_set():
