@@ -269,10 +269,14 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     @locked_and_handled
     def refresh_connection(self):
-        log.error("Varlink: reconnecting.")
-        self._reconnect_to_service()
-        if self.listener_callback is not None:
-            self._start_event_subscription()
+        try:
+            self._stub.GetServiceInterfaceVersion()
+            log.debug("refresh_connection: existing varlink connection is still OK.") if log.debug_enabled else None
+        except Exception:
+            log.error("refresh_connection: varlink connection lost, reconnecting...")
+            self._connect_to_service()
+            if self.listener_callback is not None:
+                self._start_event_subscription()
 
     # ----------------------------------------------------------------------
     # Event subscription
