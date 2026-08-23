@@ -123,9 +123,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 self._reconnect_to_service()
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
-                # Start event subscription if callback provided
-                if self.listener_callback is not None:
-                    self._start_event_subscription()
                 break
             except Exception as e:
                 log.error(f"Varlink sanity check try {try_count}: {e}")
