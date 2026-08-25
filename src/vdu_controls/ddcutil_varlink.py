@@ -225,7 +225,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         for try_count in range(1, 5):
             try:
                 self._reconnect_to_service()
-                self._reconnect_to_service()
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
                 break
@@ -273,8 +272,9 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         try:
             if self._stub is not None:
                 self._stub.close()
+                log.debug("Varlink: closed normal connection")
         except Exception as e:
-            log.warning(f"Varlink: Error closing existing connection: {e}")
+            log.warning(f"Varlink: Error closing existing normal connection: {e}")
         try:
             Client = _lazy_load_client_class()
             self._connection = Client(self.varlink_socket)
