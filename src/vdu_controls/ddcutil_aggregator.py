@@ -40,7 +40,7 @@ class DdcutilAggregator(DdcutilInterface):
         super().__init__()
         self.common_args = common_args
         self.ddcutil_emulators_by_edid: Dict[str, DdcutilInterface] = {}
-        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl | DdcutilVarlinkImpl | None = None # The service-interface implementations are duck-typed.
+        self.ddcutil_impl: DdcutilInterface
 
         if prefer_varlink_client:
             try:

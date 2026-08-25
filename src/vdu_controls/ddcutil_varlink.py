@@ -89,7 +89,7 @@ def serialized_retry(func):
             else:
                 raise ValueError(f"Varlink error: {func.__name__} Varlink error: {e}")
         except BrokenPipeError as e:
-            log.critical(f"Varlink error: {func.__name__} failed permanently after {VARLINK_MAX_RETRIES} retries.")
+            log.error(f"Varlink error: {func.__name__} failed permanently after {VARLINK_MAX_RETRIES} retries.")
             raise RuntimeError(f"Varlink {func.__name__} connection failed permanently") from e
         except Exception as e:
             log.error(f"Varlink error: Error in {func.__name__}: {e}")
@@ -208,22 +208,23 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         )
         env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         self.common_args = env_args + (common_args if common_args else [])
-        self.listener_callback: Optional[Callable] = callback
+        self.listener_callback: Callable | None = callback
 
         # Connection used by normal method calls
         Client = _lazy_load_client_class()
-        self._connection: Optional[Client] = None
-        self._stub: Optional[Any] = None
+        self._connection: Client | None = None
+        self._stub: Any | None = None
 
         # Event‐specific connection and stub
-        self._event_connection: Optional[Client] = None
-        self._event_stub: Optional[Any] = None
+        self._event_connection: Client | None = None
+        self._event_stub: Any | None = None
 
         self._display_map: Dict[str, int] = {}  # edid_base64 -> display_number
 
         # Connect and sanity check
         for try_count in range(1, 5):
             try:
+                self._reconnect_to_service()
                 self._reconnect_to_service()
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
@@ -249,7 +250,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     def close(self):
         """Explicitly release resources when the class is being replaced or destroyed."""
         log.info("ParentService starting close.")
-        if hasattr(self, 'listener') and self.listener:
+        if DdcutilVarlinkImpl._event_listener is not None:
             # This triggers the socket closure and joins the thread immediately
             DdcutilVarlinkImpl._event_listener.stop()
             DdcutilVarlinkImpl._event_listener = None
@@ -270,10 +271,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     def _reconnect_to_service(self) -> None:
         try:
-            if self._connection:
-                self._connection.close()
-        except:
-            pass
+            if self._stub is not None:
+                self._stub.close()
+        except Exception as e:
+            log.warning(f"Varlink: Error closing existing connection: {e}")
         try:
             Client = _lazy_load_client_class()
             self._connection = Client(self.varlink_socket)
@@ -281,7 +282,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         except (ConnectionRefusedError, FileNotFoundError) as e:
             raise DdcutilServiceNotFound(f"Cannot connect to varlink service: {e}")
 
-    def _resolve_display_identifier(self, edid_txt: str) -> Tuple[Optional[int], Optional[str]]:
+    def _resolve_display_identifier(self, edid_txt: str) -> Tuple[int | None, str | None]:
         """
         Convert the public EDID string (assumed to be base64) or a numeric display number
         into (display_number, edid_base64) for varlink methods.
@@ -475,9 +476,5 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
         elif kind == 'vcp_changed':
             log.debug("VCP changed event (ignored)")
-
-        elif kind == 'stream_closed':
-            log.info("Stream closed by server")
-            self._stop_event.set()
 
 

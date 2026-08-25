@@ -125,7 +125,9 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
         self.slider.valueChanged.connect(_lux_slider_change)
 
         def _lux_slider_moved(new_value: int) -> None:
-            if not self.controller.lux_meter.has_semi_auto_capability and self.controller.lux_auto_brightness_worker is not None:
+            if (self.controller.lux_meter is not None and
+                    not self.controller.lux_meter.has_semi_auto_capability
+                    and self.controller.lux_auto_brightness_worker is not None):
                 self.controller.lux_auto_brightness_worker.stop()
             new_lux_value = round(10 ** (new_value / 1000))
             self._set_current_value(new_lux_value, self.slider)
