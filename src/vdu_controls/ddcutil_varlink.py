@@ -5,12 +5,13 @@ from __future__ import annotations
 import functools
 import json
 import os
+import threading
 import time
 import time as sys_time
-import threading
-
-from typing import Dict, Tuple, Callable, List, Optional, Any
 from threading import Lock
+from typing import Dict, Tuple, Callable, List, Optional, Any
+# Only import when checking - if the user isn't use varlink, don't require it.
+from typing import TYPE_CHECKING
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -19,8 +20,6 @@ from vdu_controls.ddcutil_abstract import (
     DdcDetectedAttributes, VcpValue, DdcCapabilities, VcpTypeInfo
 )
 
-# Only import when checking - if the user isn't use varlink, don't require it.
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from varlink import Client, VarlinkError
 
@@ -52,10 +51,13 @@ def locked_and_handled(func):
             log.debug(f"Varlink: {func.__name__}")
             for attempt in range(0, 2):
                 try:
+                    # varlink is inherently parallel. Avoid any overlapping calls by our threads,
+                    # serialize our own use by enforcing a lock.
                     with self._service_lock:
                         log.debug(f"Varlink: {func.__name__} obtained lock")
                         return func(self, *args, **kwargs)
                 except BrokenPipeError as e:
+                    # Detect a service restart and automatically reconnect.
                     log.warning(f"Varlink error: {func.__name__} connection lost, refreshing connection, {str(e)}")
                     time.sleep(2)
                     self.refresh_connection()
@@ -79,6 +81,94 @@ def locked_and_handled(func):
     return wrapper
 
 
+class VarlinkListener:
+    def __init__(self, varlink_socket, service_name, callback: Callable):
+        self._callback = callback
+        self.varlink_socket = varlink_socket
+        self.service_name = service_name
+
+        # Thread management
+        self._stop_event = threading.Event()
+        self._thread = None
+
+        # State tracking and synchronization
+        self._service_lock = threading.Lock()
+        self._active_service = None
+
+    def start(self):
+        """Starts the background listening thread."""
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        """Signals the loop to stop and tears down the socket connection immediately."""
+        self._stop_event.set()
+
+        # Intercept the blocking socket read by closing it from this thread
+        with self._service_lock:
+            if self._active_service is not None:
+                try:
+                    # Closing the service handle drops the blocking generator in the other thread
+                    self._active_service.close()
+                except Exception:
+                    pass  # Ignore errors caused by double-closing or race conditions
+
+        # Wait for the background thread to finish execution cleanly
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=5.0)
+        log.debug("VarlinkListener stopped")
+
+    def _run_loop(self):
+        """The main loop executing in the background thread."""
+        VarlinkError = _lazy_load_varlinkerror_class()
+        log.debug("VarlinkListener started")
+        while not self._stop_event.is_set():
+            try:
+                Client = _lazy_load_client_class()
+                with Client(self.varlink_socket) as connection:
+                    with connection.open(self.service_name) as service:
+
+                        # Cache the handle so the stop() method can access it
+                        with self._service_lock:
+                            if self._stop_event.is_set():
+                                break
+                            self._active_service = service
+                            event_stream = service.Subscribe(True, _more=True)
+
+                        # This loop blocks until a new event arrives OR service.close() is called
+                        for raw_event in event_stream:
+                            if log.debug_enabled:
+                                log.debug(f"Varlink: received event {raw_event}")
+
+                            if self._stop_event.is_set():
+                                break
+                            self._handle_event(raw_event)
+
+            except (VarlinkError, OSError, ConnectionError) as e:
+                # If we are stopping, this exception is expected (caused by service.close())
+                if self._stop_event.is_set():
+                    break
+
+                log.error(f"Event stream connection error: {e}")
+                if not self._stop_event.wait(2.0):
+                    continue
+
+            except Exception as e:
+                log.error(f"Varlink: unexpected error in event loop: {e}")
+                if not self._stop_event.wait(2.0):
+                    continue
+
+            finally:
+                # Always clear the handle when exiting the connection context
+                with self._service_lock:
+                    self._active_service = None
+
+        log.info("Varlink background thread has successfully exited.")
+
+    def _handle_event(self, raw_event):
+        self._callback(raw_event)
+
 
 class DdcutilVarlinkImpl(DdcutilInterface):
     """
@@ -86,11 +176,8 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     """
 
     _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
-    _current_connected_displays_changed_handler: Optional[Callable] = None
-    _current_service_initialization_handler: Optional[Callable] = None
     _service_lock = Lock()
-    _event_thread: Optional[threading.Thread] = None
-    _stop_event = threading.Event()
+    _event_listener: VarlinkListener | None = None
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -136,8 +223,33 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
         # Start event subscription if callback provided
         if self.listener_callback is not None:
-            self._start_event_subscription()
+            if DdcutilVarlinkImpl._event_listener is not None:
+                DdcutilVarlinkImpl._event_listener.stop()
+            DdcutilVarlinkImpl._event_listener = VarlinkListener(self.varlink_socket, self.service_name, self._handle_event)
+            DdcutilVarlinkImpl._event_listener.start()
+            #self._start_event_subscription()
 
+    def close(self):
+        """Explicitly release resources when the class is being replaced or destroyed."""
+        log.info("ParentService starting close.")
+        if hasattr(self, 'listener') and self.listener:
+            # This triggers the socket closure and joins the thread immediately
+            DdcutilVarlinkImpl._event_listener.stop()
+            DdcutilVarlinkImpl._event_listener = None
+        log.info("ParentService closed cleanly.")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __del__(self):
+        """Fallback mechanism if close() was forgotten by the caller."""
+        try:
+            self.close()
+        except Exception:
+            pass
     def _reconnect_to_service(self) -> None:
         try:
             if self._connection:
@@ -269,97 +381,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         try:
             self._stub.GetServiceInterfaceVersion()
             log.debug("refresh_connection: existing varlink connection is still OK.") if log.debug_enabled else None
-        except Exception:
+        except (Exception, BrokenPipeError):
             log.error("refresh_connection: varlink connection lost, reconnecting...")
-            self._connect_to_service()
-            if self.listener_callback is not None:
-                self._start_event_subscription()
-
-    # ----------------------------------------------------------------------
-    # Event subscription
-    # ----------------------------------------------------------------------
-
-    def _start_event_subscription(self) -> None:
-        log.info("Varlink: _start_event_subscription")
-        if self._event_thread is not None and self._event_thread.is_alive():
-            self._stop_event.set()
-            self._event_thread.join(timeout=1.0)
-        self._stop_event.clear()
-        self._event_thread = threading.Thread(target=self._event_loop, daemon=True)
-        self._event_thread.start()
-
-    def _event_loop(self) -> None:
-        log.debug("Varlink: event loop started")
-        VarlinkError = _lazy_load_varlinkerror_class()
-        while not self._stop_event.is_set():
-            try:
-                self._reconnect_event_connection()
-
-                # Subscribe with use_polling=False (event-driven)
-                with self._service_lock:
-                    event_stream = self._event_stub.Subscribe(True, _more=True)
-                for raw_event in event_stream:
-                    log.debug(f"Varlink: received event {raw_event}") if log.debug_enabled else None
-                    if self._stop_event.is_set():
-                        break
-                    self._handle_event(raw_event)
-            except VarlinkError as e:
-                log.error(f"Event stream error: {e}")
-                if not self._stop_event.wait(2.0):
-                    continue
-            except Exception as e:
-                log.error(f"Varlink: unexpected error in event loop: {e}")
-                if not self._stop_event.wait(2.0):
-                    continue
-
-    def _reconnect_event_connection(self) -> None:
-        log.info("Varlink: reconnecting event-connection")
-        try:
-            if self._event_connection:
-                self._event_connection.close()
-        except:
-            pass
-        Client = _lazy_load_client_class()
-        self._event_connection = Client(self.varlink_socket)
-        self._event_stub = self._event_connection.open(self.service_name)
-
-    def _handle_event(self, event_wrapper) -> None:
-        log.info(f"Varklink: handling event: {event_wrapper=}")
-
-        event = event_wrapper["event"]
-        kind = event["kind"]
-        data = event["data"]
-
-        if kind == 'service_initialized':
-            log.info("Service initialized event")
-            if DdcutilVarlinkImpl._current_service_initialization_handler:
-                DdcutilVarlinkImpl._current_service_initialization_handler('', -1, 0)
-            if self.listener_callback:
-                self.listener_callback('', -1, 0)
-
-        elif kind == 'connected_displays_changed':
-            log.info("Connected displays changed event")
-            try:
-                details = json.loads(data)
-                event_type = details['event_type']
-                flags = details['flags']
-                if DdcutilVarlinkImpl._current_connected_displays_changed_handler:
-                    DdcutilVarlinkImpl._current_connected_displays_changed_handler(event_type, flags, 0)
-                if self.listener_callback:
-                    self.listener_callback(event_type, flags, 0)
-            except Exception as e:
-                log.error(f"Error parsing connected_displays_changed data: {e}")
-
-        elif kind == 'vcp_changed':
-            log.debug("VCP changed event (ignored)")
-
-        elif kind == 'stream_closed':
-            log.info("Stream closed by server")
-            self._stop_event.set()
-
-    # ----------------------------------------------------------------------
-    # Additional varlink methods (not in abstract, but available)
-    # ----------------------------------------------------------------------
+            time.sleep(5)
+            self._reconnect_to_service()
 
     @locked_and_handled
     def get_capabilities_string(self, edid_txt: str) -> str:
@@ -402,3 +427,39 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     @locked_and_handled
     def set_service_poll_cascade_interval(self, seconds: float) -> None:
         self._stub.SetServicePollCascadeInterval( seconds)
+
+    # ----------------------------------------------------------------------
+    # Event subscription
+    # ----------------------------------------------------------------------
+
+    def _handle_event(self, event_wrapper) -> None:
+        log.info(f"Varklink: handling event: {event_wrapper=}")
+
+        event = event_wrapper["event"]
+        kind = event["kind"]
+        data = event["data"]
+
+        if kind == 'service_initialized':
+            log.info("Service initialized event")
+            if self.listener_callback:
+                self.listener_callback('', -1, 0)
+
+        elif kind == 'connected_displays_changed':
+            log.info("Connected displays changed event")
+            try:
+                details = json.loads(data)
+                event_type = details['event_type']
+                flags = details['flags']
+                if self.listener_callback:
+                    self.listener_callback(event_type, flags, 0)
+            except Exception as e:
+                log.error(f"Error parsing connected_displays_changed data: {e}")
+
+        elif kind == 'vcp_changed':
+            log.debug("VCP changed event (ignored)")
+
+        elif kind == 'stream_closed':
+            log.info("Stream closed by server")
+            self._stop_event.set()
+
+
