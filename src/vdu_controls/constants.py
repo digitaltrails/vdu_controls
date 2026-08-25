@@ -141,3 +141,6 @@ DF_MIN = 0.00001
 # How many places to show in the DF when presenting to the user - should have as many places as DF_MIN
 DF_PLACES = 5
 
+# Define global constants for consistent behavior across all calls
+VARLINK_MAX_RETRIES = int(getenv_logged('VDU_CONTROLS_VARLINK_MAX_RETRIES', '3'))
+VARLINK_RETRY_DELAY_SECS = int(getenv_logged('VDU_CONTROLS_VARLINK_RETRY_DELAY_SECS', '2'))
