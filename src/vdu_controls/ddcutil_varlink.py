@@ -8,8 +8,8 @@ import os
 import threading
 import time
 import time as sys_time
-from threading import Lock
-from typing import Dict, Tuple, Callable, List, Optional, Any
+from typing import Dict, Tuple, Callable, List, Any
+
 # Only import when checking - if the user isn't use varlink, don't require it.
 from typing import TYPE_CHECKING
 
@@ -48,13 +48,12 @@ class VarlinkListener:
         self._callback = callback
         self.varlink_socket = varlink_socket
         self.service_name = service_name
+        self._event_service = None
 
         # Thread management
         self._stop_event = threading.Event()
         self._thread = None
 
-        #self._service_lock = threading.Lock() # ddcutil-varlink now serializes requests - no locking required
-        self._event_service = None
 
     def start(self):
         """Starts the background listening thread."""
@@ -84,24 +83,21 @@ class VarlinkListener:
         """The main loop executing in the background thread."""
         VarlinkError = _lazy_load_varlinkerror_class()
         log.debug("VarlinkListener started")
+        # ddcutil-varlink now serializes requests - no locking required
         while not self._stop_event.is_set():
             try:
                 Client = _lazy_load_client_class()
                 with Client(self.varlink_socket) as connection:
                     with connection.open(self.service_name) as service:
-
-                        # Cache the handle so the stop() method can access it
-                        if True: #with self._service_lock:  # ddcutil-varlink now serializes requests - no locking required
-                            if self._stop_event.is_set():
-                                break
-                            self._event_service = service
-                            event_stream = service.Subscribe(True, _more=True)
+                        # Save the event_service reference so the stop() method can access it
+                        if self._stop_event.is_set():
+                            break
+                        self._event_service = service
+                        event_stream = service.Subscribe(True, _more=True)
 
                         # This loop blocks until a new event arrives OR service.close() is called
                         for raw_event in event_stream:
-                            if log.debug_enabled:
-                                log.debug(f"Varlink: received event {raw_event}")
-
+                            log.debug(f"Varlink: received event {raw_event}") if log.debug_enabled else None
                             if self._stop_event.is_set():
                                 break
                             self._handle_event(raw_event)
@@ -121,10 +117,9 @@ class VarlinkListener:
                     continue
 
             finally:
-                # Always clear the handle when exiting the connection context
-                if True: # with self._service_lock:  # ddcutil-varlink now serializes requests
-                    self._event_service.close()
-                    self._event_service = None
+                # Always close the service connection when exiting the connection context
+                self._event_service.close()
+                self._event_service = None
 
         log.info("Varlink background thread has successfully exited.")
 
@@ -146,22 +141,21 @@ def service_call(func):
         try:
             # ddcutil-varlink internally serializes all requests - we used to lock here,
             # but it is no longer necessary.
-            if True: # with self._service_lock:  # ddcutil-varlink now serializes requests
-                log.debug(f"Varlink: {func.__name__} obtained lock")
+            log.debug(f"Varlink: call {func.__name__}") if log.debug_enabled else None
 
-                for attempt in range(VARLINK_MAX_RETRIES):
-                    try:
-                        return func(self, *args, **kwargs)
-                    except BrokenPipeError as e:
-                        # If it's the last attempt, bubble it up to the outer catch
-                        if attempt == VARLINK_MAX_RETRIES - 1:
-                            raise e
-                        log.warning(
-                            f"Varlink error: {func.__name__} connection lost. "
-                            f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
-                        )
-                        time.sleep(VARLINK_RETRY_DELAY_SECS)
-                        self.refresh_connection()
+            for attempt in range(VARLINK_MAX_RETRIES):
+                try:
+                    return func(self, *args, **kwargs)
+                except BrokenPipeError as e:
+                    # If it's the last attempt, bubble it up to the outer catch
+                    if attempt == VARLINK_MAX_RETRIES - 1:
+                        raise e
+                    log.warning(
+                        f"Varlink error: {func.__name__} connection lost. "
+                        f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
+                    )
+                    time.sleep(VARLINK_RETRY_DELAY_SECS)
+                    self.refresh_connection()
 
         except VarlinkError as e:
             error_name = e.error()
@@ -191,7 +185,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     """
 
     _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
-    # _service_lock = Lock()  # ddcutil-varlink now serializes requests - no locking required
     _event_listener: VarlinkListener | None = None
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
