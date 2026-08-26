@@ -43,7 +43,96 @@ def _lazy_load_varlinkerror_class():
     return _VarlinkError
 
 
-def serialized_retry(func):
+class VarlinkListener:
+    def __init__(self, varlink_socket, service_name, callback: Callable):
+        self._callback = callback
+        self.varlink_socket = varlink_socket
+        self.service_name = service_name
+
+        # Thread management
+        self._stop_event = threading.Event()
+        self._thread = None
+
+        #self._service_lock = threading.Lock() # ddcutil-varlink now serializes requests - no locking required
+        self._event_service = None
+
+    def start(self):
+        """Starts the background listening thread."""
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        """Signals the loop to stop and tears down the socket connection immediately."""
+        self._stop_event.set()
+
+        # Intercept the blocking socket read by closing it from this thread
+        if self._event_service is not None:
+            try:
+                # Closing the service handle drops the blocking generator in the other thread
+                self._event_service.close()
+            except Exception as e:
+                log.debug(f"Ignoring errors while closing event connection {e}")
+                pass  # Ignore errors caused by double-closing or race conditions
+
+        # Wait for the background thread to finish execution cleanly
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=5.0)
+        log.debug("VarlinkListener stopped")
+
+    def _run_loop(self):
+        """The main loop executing in the background thread."""
+        VarlinkError = _lazy_load_varlinkerror_class()
+        log.debug("VarlinkListener started")
+        while not self._stop_event.is_set():
+            try:
+                Client = _lazy_load_client_class()
+                with Client(self.varlink_socket) as connection:
+                    with connection.open(self.service_name) as service:
+
+                        # Cache the handle so the stop() method can access it
+                        if True: #with self._service_lock:  # ddcutil-varlink now serializes requests - no locking required
+                            if self._stop_event.is_set():
+                                break
+                            self._event_service = service
+                            event_stream = service.Subscribe(True, _more=True)
+
+                        # This loop blocks until a new event arrives OR service.close() is called
+                        for raw_event in event_stream:
+                            if log.debug_enabled:
+                                log.debug(f"Varlink: received event {raw_event}")
+
+                            if self._stop_event.is_set():
+                                break
+                            self._handle_event(raw_event)
+
+            except (VarlinkError, OSError, ConnectionError) as e:
+                # If we are stopping, this exception is expected (caused by service.close())
+                if self._stop_event.is_set():
+                    break
+
+                log.error(f"Event stream connection error: {e}")
+                if not self._stop_event.wait(2.0):
+                    continue
+
+            except Exception as e:
+                log.error(f"Varlink: unexpected error in event loop: {e}")
+                if not self._stop_event.wait(2.0):
+                    continue
+
+            finally:
+                # Always clear the handle when exiting the connection context
+                if True: # with self._service_lock:  # ddcutil-varlink now serializes requests
+                    self._event_service.close()
+                    self._event_service = None
+
+        log.info("Varlink background thread has successfully exited.")
+
+    def _handle_event(self, raw_event):
+        self._callback(raw_event)
+
+
+def service_call(func):
     """
     Decorator to serialize synchronous Varlink calls using a lock and
     automatically reconnect/retry if the server restarts.
@@ -55,11 +144,9 @@ def serialized_retry(func):
         VarlinkError = _lazy_load_varlinkerror_class()
 
         try:
-            # Lock the service BEFORE starting the retry loop to preserve strict execution order.
-            # Because varlink may carry out request in parallel, we use a lock to ensure
-            # we only have one request going at any time - avoid stressing libddcutil and i2c bus.
-            # Plus it makes no sense for one part of vdu_controls to overtake another.
-            with self._service_lock:
+            # ddcutil-varlink internally serializes all requests - we used to lock here,
+            # but it is no longer necessary.
+            if True: # with self._service_lock:  # ddcutil-varlink now serializes requests
                 log.debug(f"Varlink: {func.__name__} obtained lock")
 
                 for attempt in range(VARLINK_MAX_RETRIES):
@@ -98,102 +185,13 @@ def serialized_retry(func):
     return wrapper
 
 
-class VarlinkListener:
-    def __init__(self, varlink_socket, service_name, callback: Callable):
-        self._callback = callback
-        self.varlink_socket = varlink_socket
-        self.service_name = service_name
-
-        # Thread management
-        self._stop_event = threading.Event()
-        self._thread = None
-
-        # State tracking and synchronization
-        self._service_lock = threading.Lock()
-        self._active_service = None
-
-    def start(self):
-        """Starts the background listening thread."""
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run_loop, daemon=True)
-        self._thread.start()
-
-    def stop(self):
-        """Signals the loop to stop and tears down the socket connection immediately."""
-        self._stop_event.set()
-
-        # Intercept the blocking socket read by closing it from this thread
-        with self._service_lock:
-            if self._active_service is not None:
-                try:
-                    # Closing the service handle drops the blocking generator in the other thread
-                    self._active_service.close()
-                except Exception:
-                    pass  # Ignore errors caused by double-closing or race conditions
-
-        # Wait for the background thread to finish execution cleanly
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=5.0)
-        log.debug("VarlinkListener stopped")
-
-    def _run_loop(self):
-        """The main loop executing in the background thread."""
-        VarlinkError = _lazy_load_varlinkerror_class()
-        log.debug("VarlinkListener started")
-        while not self._stop_event.is_set():
-            try:
-                Client = _lazy_load_client_class()
-                with Client(self.varlink_socket) as connection:
-                    with connection.open(self.service_name) as service:
-
-                        # Cache the handle so the stop() method can access it
-                        with self._service_lock:
-                            if self._stop_event.is_set():
-                                break
-                            self._active_service = service
-                            event_stream = service.Subscribe(True, _more=True)
-
-                        # This loop blocks until a new event arrives OR service.close() is called
-                        for raw_event in event_stream:
-                            if log.debug_enabled:
-                                log.debug(f"Varlink: received event {raw_event}")
-
-                            if self._stop_event.is_set():
-                                break
-                            self._handle_event(raw_event)
-
-            except (VarlinkError, OSError, ConnectionError) as e:
-                # If we are stopping, this exception is expected (caused by service.close())
-                if self._stop_event.is_set():
-                    break
-
-                log.error(f"Event stream connection error: {e}")
-                if not self._stop_event.wait(2.0):
-                    continue
-
-            except Exception as e:
-                log.error(f"Varlink: unexpected error in event loop: {e}")
-                if not self._stop_event.wait(2.0):
-                    continue
-
-            finally:
-                # Always clear the handle when exiting the connection context
-                with self._service_lock:
-                    self._active_service = None
-
-        log.info("Varlink background thread has successfully exited.")
-
-    def _handle_event(self, raw_event):
-        self._callback(raw_event)
-
-
 class DdcutilVarlinkImpl(DdcutilInterface):
     """
     Implements DdcutilInterface using the varlink ddcutil-service.
     """
 
     _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
-    _service_lock = Lock()
+    # _service_lock = Lock()  # ddcutil-varlink now serializes requests - no locking required
     _event_listener: VarlinkListener | None = None
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
@@ -213,11 +211,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         # Connection used by normal method calls
         Client = _lazy_load_client_class()
         self._connection: Client | None = None
-        self._stub: Any | None = None
-
-        # Event‐specific connection and stub
-        self._event_connection: Client | None = None
-        self._event_stub: Any | None = None
+        self._service: Any | None = None
 
         self._display_map: Dict[str, int] = {}  # edid_base64 -> display_number
 
@@ -241,44 +235,22 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         # Start event subscription if callback provided
         if self.listener_callback is not None:
             if DdcutilVarlinkImpl._event_listener is not None:
+                # Replace the old listener with a new one.
                 DdcutilVarlinkImpl._event_listener.stop()
             DdcutilVarlinkImpl._event_listener = VarlinkListener(self.varlink_socket, self.service_name, self._handle_event)
             DdcutilVarlinkImpl._event_listener.start()
-            #self._start_event_subscription()
-
-    def close(self):
-        """Explicitly release resources when the class is being replaced or destroyed."""
-        log.info("ParentService starting close.")
-        if DdcutilVarlinkImpl._event_listener is not None:
-            # This triggers the socket closure and joins the thread immediately
-            DdcutilVarlinkImpl._event_listener.stop()
-            DdcutilVarlinkImpl._event_listener = None
-        log.info("ParentService closed cleanly.")
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    def __del__(self):
-        """Fallback mechanism if close() was forgotten by the caller."""
-        try:
-            self.close()
-        except Exception:
-            pass
 
     def _reconnect_to_service(self) -> None:
         try:
-            if self._stub is not None:
-                self._stub.close()
+            if self._service is not None:
+                self._service.close()
                 log.debug("Varlink: closed normal connection")
         except Exception as e:
             log.warning(f"Varlink: Error closing existing normal connection: {e}")
         try:
             Client = _lazy_load_client_class()
             self._connection = Client(self.varlink_socket)
-            self._stub = self._connection.open(self.service_name)
+            self._service = self._connection.open(self.service_name)
         except (ConnectionRefusedError, FileNotFoundError) as e:
             raise DdcutilServiceNotFound(f"Cannot connect to varlink service: {e}")
 
@@ -297,34 +269,34 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     # Public API (matching DdcutilInterface)
     # ----------------------------------------------------------------------
 
-    @serialized_retry
+    @service_call
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float) -> None:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        self._stub.SetSleepMultiplier( display_num, edid_b64, sleep_multiplier, None)
+        self._service.SetSleepMultiplier(display_num, edid_b64, sleep_multiplier, None)
 
-    @serialized_retry
+    @service_call
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]) -> None:
         log.debug("set_vdu_specific_args not implemented for varlink")
 
-    @serialized_retry
+    @service_call
     def get_ddcutil_version_string(self) -> str:
-        res = self._stub.GetDdcutilVersion()
+        res = self._service.GetDdcutilVersion()
         return res['version']
 
-    @serialized_retry
+    @service_call
     def get_interface_version_string(self) -> str:
-        res = self._stub.GetServiceInterfaceVersion()
+        res = self._service.GetServiceInterfaceVersion()
         return f"{res['version']} (Varlink ddcutil-service)"
 
-    @serialized_retry
+    @service_call
     def _get_status_values(self) -> Dict[int, str]:
         # Not exposed; return empty dict.
         return {}
 
-    @serialized_retry
+    @service_call
     def detect(self, flags: int) -> List[DdcDetectedAttributes]:
         include_offline = bool(flags & 1)
-        result_map = self._stub.Detect(include_offline)
+        result_map = self._service.Detect(include_offline)
         result_list = []
         for disp_map in result_map['displays']:
             attrs = DdcDetectedAttributes(
@@ -342,10 +314,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             self._display_map[attrs.edid_txt] = disp_map['display_number']
         return result_list
 
-    @serialized_retry
+    @service_call
     def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._stub.GetCapabilitiesMetadata(display_num, edid_txt, None)
+        res = self._service.GetCapabilitiesMetadata(display_num, edid_txt, None)
 
         def convert_feature_values(values):
             if values:
@@ -365,87 +337,87 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             ''   # extra field not used
         )
 
-    @serialized_retry
+    @service_call
     def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:
         key = (edid_txt, vcp_code_int)
         if key in self._metadata_cache:
             return self._metadata_cache[key]
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._stub.GetVcpMetadata(display_num, edid_b64, vcp_code_int, None)
+        res = self._service.GetVcpMetadata(display_num, edid_b64, vcp_code_int, None)
         info = VcpTypeInfo(res.is_complex, res.is_continuous)
         self._metadata_cache[key] = info
         return info
 
-    @serialized_retry
+    @service_call
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        self._stub.SetVcp(display_num, edid_b64, vcp_code_int, new_value_int, None, None)
+        self._service.SetVcp(display_num, edid_b64, vcp_code_int, new_value_int, None, None)
 
-    @serialized_retry
+    @service_call
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._stub.GetMultipleVcp(display_num, edid_b64, vcp_code_int_list, None)
+        res = self._service.GetMultipleVcp(display_num, edid_b64, vcp_code_int_list, None)
         #res = self._stub(GetMultipleVcp", display_num, edid_b64, vcp_code_int_list, None)
         result = []
         for v in res["values"]:
             result.append(VcpValue(v['vcp_code'], v['current'], v['maximum'], None))
         return result
 
-    @serialized_retry
+    @service_call
     def vcp_info(self):
         pass
 
-    @serialized_retry
+    @service_call
     def refresh_connection(self):
         try:
-            self._stub.GetServiceInterfaceVersion()
+            self._service.GetServiceInterfaceVersion()
             log.debug("refresh_connection: existing varlink connection is still OK.") if log.debug_enabled else None
         except (Exception, BrokenPipeError):
             log.error("refresh_connection: varlink connection lost, reconnecting...")
             time.sleep(5)
             self._reconnect_to_service()
 
-    @serialized_retry
+    @service_call
     def get_capabilities_string(self, edid_txt: str) -> str:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._stub.GetCapabilitiesString(display_num, edid_b64, None)
+        res = self._service.GetCapabilitiesString(display_num, edid_b64, None)
         return res['capabilities_text']
 
-    @serialized_retry
+    @service_call
     def get_ddcutil_dynamic_sleep(self) -> bool:
-        res = self._stub.GetDdcutilDynamicSleep()
+        res = self._service.GetDdcutilDynamicSleep()
         return res['enabled']
 
-    @serialized_retry
+    @service_call
     def set_ddcutil_dynamic_sleep(self, enabled: bool) -> None:
-        self._stub.SetDdcutilDynamicSleep(enabled)
+        self._service.SetDdcutilDynamicSleep(enabled)
 
-    @serialized_retry
+    @service_call
     def get_ddcutil_output_level(self) -> int:
-        res = self._stub.GetDdcutilOutputLevel()
+        res = self._service.GetDdcutilOutputLevel()
         return res['level']
 
-    @serialized_retry
+    @service_call
     def set_ddcutil_output_level(self, level: int) -> None:
-        self._stub.SetDdcutilOutputLevel( level)
+        self._service.SetDdcutilOutputLevel(level)
 
-    @serialized_retry
+    @service_call
     def get_service_poll_interval(self) -> int:
-        res = self._stub.GetServicePollInterval()
+        res = self._service.GetServicePollInterval()
         return res['seconds']
 
-    @serialized_retry
+    @service_call
     def set_service_poll_interval(self, seconds: int) -> None:
-        self._stub.SetServicePollInterval( seconds)
+        self._service.SetServicePollInterval(seconds)
 
-    @serialized_retry
+    @service_call
     def get_service_poll_cascade_interval(self) -> float:
-        res = self._stub.GetServicePollCascadeInterval()
+        res = self._service.GetServicePollCascadeInterval()
         return res['seconds']
 
-    @serialized_retry
+    @service_call
     def set_service_poll_cascade_interval(self, seconds: float) -> None:
-        self._stub.SetServicePollCascadeInterval( seconds)
+        self._service.SetServicePollCascadeInterval(seconds)
 
     # ----------------------------------------------------------------------
     # Event subscription
