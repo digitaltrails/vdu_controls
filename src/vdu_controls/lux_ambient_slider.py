@@ -163,7 +163,7 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
         self._set_current_value(value, self)  # don't trigger side-effects.
 
     def set_current_value(self, value: int) -> None:
-        log.debug(f"LuxAmbientSlider: set_current_value {value=} {self.in_flux=}") if log.debug_enabled else None
+        # log.debug(f"LuxAmbientSlider: set_current_value {value=} {self.in_flux=}") if log.debug_enabled else None
 
         if not self.in_flux and value != self.current_value:
             try:
@@ -173,7 +173,7 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
                 self.blockSignals(False)
 
     def _set_current_value(self, value: int, source: QWidget | None) -> None:
-        log.debug(f"LuxAmbientSlider: _set_current_value {value=} {self.in_flux=} {source=}") if log.debug_enabled else None
+        # log.debug(f"LuxAmbientSlider: _set_current_value {value=} {self.in_flux=} {source=}") if log.debug_enabled else None
         icon_changed = False
         # If not already handled or not in the process of being handled
         if value != self.current_value and not self.in_flux:
