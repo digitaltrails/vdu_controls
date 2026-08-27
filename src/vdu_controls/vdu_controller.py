@@ -165,12 +165,14 @@ class VduController(QObject):
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):  # Allow for shared single model file (not encouraged).
             config_path = ConfIni.get_path(config_name)
-            log.debug("checking for config file '" + config_path.as_posix() + "'") if log.debug_enabled else None
+            log.debug(f"checking for config file '{config_path.as_posix()}'") if log.debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 self.config = VduControlsConfig(config_name)
                 self.config.parse_file(config_path)
                 if default_config.is_set(ConfOpt.DEBUG_ENABLED):
-                    self.config.debug_dump()
+                    log.debug(f"Parsed {config_path.as_posix()}")
+                    if False:  # Too verbose
+                        self.config.debug_dump()
                 enabled_vcp_codes = self.config.get_all_enabled_vcp_codes()
                 self.capabilities_text = self.config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
                 self.ignore_vdu = self.ignore_vdu or self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_STR

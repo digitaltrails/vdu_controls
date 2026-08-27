@@ -74,7 +74,7 @@ class VarlinkListener:
                     # Closing the service handle drops the blocking generator in the other thread
                     self._event_service.close()
                 except Exception as e:
-                    log.debug(f"Ignoring errors while closing event connection {e}")
+                    log.debug(f"Forcing stop by closing event connection - ignoring close error {e}")
                     pass  # Ignore errors caused by double-closing or race conditions
 
         # Wait for the background thread to finish execution cleanly
@@ -123,7 +123,11 @@ class VarlinkListener:
             finally:
                 # Always close the service connection when exiting the connection context
                 with self._event_service_lock:
-                    self._event_service.close()
+                    try:
+                        self._event_service.close()
+                    except Exception as e:
+                        log.debug(f"Exiting event listener loop: ignored error closing event connection {e}")
+                        pass  # Ignore errors caused by double-closing or race conditions
                     self._event_service = None
 
         log.info("Varlink background thread has successfully exited.")
