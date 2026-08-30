@@ -19,10 +19,7 @@ from pathlib import Path
 from typing import Callable, Iterator, Optional, cast
 
 import vdu_controls.app_logging as log
-import vdu_controls.gui_misc as gui_misc
-import vdu_controls.svg as svg
-import vdu_controls.weather_util as weather_util
-from vdu_controls import app_locale
+from vdu_controls import app_locale, gui_misc, svg, weather_util
 from vdu_controls import weather_util as weather_utils
 from vdu_controls.about_dialog import AboutDialog
 from vdu_controls.app_locale import initialise_locale_translations, tr

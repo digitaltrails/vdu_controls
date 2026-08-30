@@ -9,7 +9,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import vdu_controls.app_logging as log
-import vdu_controls.gui_misc as gui_misc
+from vdu_controls import gui_misc
 from vdu_controls.app_locale import tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination

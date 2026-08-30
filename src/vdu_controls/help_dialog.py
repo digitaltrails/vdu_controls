@@ -6,9 +6,8 @@ import re
 import subprocess
 from functools import partial
 
-import vdu_controls.app_locale as app_locale
 import vdu_controls.app_logging as log
-from vdu_controls import constants
+from vdu_controls import app_locale, constants
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_HELP_URL
 from vdu_controls.misc import generate_slug, is_gnome

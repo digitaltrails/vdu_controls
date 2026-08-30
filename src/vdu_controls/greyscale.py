@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.qt_imports import QDialog, QSvgWidget, Qt, QVBoxLayout

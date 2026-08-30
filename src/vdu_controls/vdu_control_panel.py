@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 import vdu_controls.app_logging as log
-import vdu_controls.gui_misc as gui_misc
+from vdu_controls import gui_misc
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import (

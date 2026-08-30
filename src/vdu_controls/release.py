@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, VDU_CONTROLS_VERSION_TUPLE
 from vdu_controls.icon_utils import create_icon_from_svg_bytes

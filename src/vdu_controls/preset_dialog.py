@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, cast
 
 import vdu_controls.app_logging as log
-import vdu_controls.weather_util as weather_util
+from vdu_controls import weather_util
 from vdu_controls.app_locale import tr, translate_option
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import (
