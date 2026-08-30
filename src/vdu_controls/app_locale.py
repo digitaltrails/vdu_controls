@@ -50,7 +50,7 @@ import inspect
 import os
 from importlib.resources import files as resources_files
 from pathlib import Path
-from typing import cast
+from typing import Self, cast
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -136,7 +136,6 @@ def load_docs_text(filename: str) -> str:
     look internally in vdu_controls/resources/docs/
     """
     # Check outside the application for something locale specific
-    as_path = Path(filename)
     if locale_name := get_translating_locale():
         if translated_override := find_locale_specific_file(filename, locale_name):
             log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
@@ -163,7 +162,6 @@ def get_locale_name():
 
 
 def get_translating_locale():
-    global translating_locale
     return translating_locale
 
 
@@ -259,7 +257,7 @@ class TitledStrEnum(LocalStrEnum):
     # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
     # They will work correctly because members are still strings.
 
-    def __new__(cls, value: str, raw_title: str) -> TitledStrEnum:
+    def __new__(cls, value: str, raw_title: str) -> Self:
         # Because we subclass BaseStrEnum, we must properly create the string and enum parts.
         # The easiest way: call str.__new__ then set _value_ and _raw_title_.
         obj = str.__new__(cls, value)

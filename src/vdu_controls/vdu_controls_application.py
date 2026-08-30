@@ -648,8 +648,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if not external_event:
                         self.show_vdu_exception(self.refresh_data_task.work_exception, can_retry=False)
                 if not values_only:
+                    # TODO why 'and False'
+                    #  - Possibly because it was decided a reconfigure was excessive.
+                    #  - Maybe I was testing something.
+                    #  - Practically, not doing an entire reconfigure seems appropriate and works well.
                     if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
-                            external_event and False):
+                            external_event and False):  # noqa SIM223
                         log.info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                         self.configure_application(check_schedule=False)  # May cause a further refresh?
                         self.previously_detected_vdu_list = self.detected_vdu_list

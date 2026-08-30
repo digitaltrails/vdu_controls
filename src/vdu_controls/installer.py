@@ -84,7 +84,8 @@ def install_as_desktop_application(python_script_name: str, uninstall: bool = Fa
             Icon={app_icon_path.as_posix()}
             Categories=Qt;Settings;
             """)
-        open(desktop_definition_path, 'w').write(desktop_definition)
+        with open(desktop_definition_path, 'w') as desktop_file:
+            desktop_file.write(desktop_definition)
 
     if app_icon_path.exists():
         log.warning(f"skipping installation of {app_icon_path.as_posix()}, it is already present.")

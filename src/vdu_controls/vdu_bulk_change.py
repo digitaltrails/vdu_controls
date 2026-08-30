@@ -62,7 +62,7 @@ class BulkChangeWorker(WorkerThread):
     def _perform_changes(self, _: BulkChangeWorker):
         self.start_time = zoned_now()
         try:
-            if any([item.current_value is None for item in self.to_do_list]):  # Has the parent filled out expected values.
+            if any(item.current_value is None for item in self.to_do_list):  # Has the parent filled out expected values.
                 self._refresh_current_values_from_vdu()
             if not self.immediately:
                 self._do_stepped_changes()  # Transitions in a series of steps for items that allow transitions.

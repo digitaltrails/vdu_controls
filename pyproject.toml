@@ -57,3 +57,7 @@ reportUnknownMemberType = "none" # Disables errors when libraries lack type stub
 reportUnknownArgumentType = "none" # Prevents cascade errors from untyped third-party code
 reportUnknownVariableType = "none" # Keeps focus on your code's explicit types
 reportUntypedFunctionDecorator = "warning" # Warns if a decorator strips your type hints
+
+[tool.ruff.lint]
+# Add your custom wrapper instance names here (e.g., 'my_log', 'custom_logger')
+logger-objects = ["log"]

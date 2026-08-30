@@ -171,7 +171,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     sids_present = set(self.main_controller.get_vdu_stable_id_list())
                     sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))
                     items_with_this_preset = [x for x in to_do_list if x.preset_name == preset_name]
-                    sids_of_items_with_this_preset = set([x.vdu_sid for x in items_with_this_preset])
+                    sids_of_items_with_this_preset = {x.vdu_sid for x in items_with_this_preset}
                     log.debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
                     if sids_present_and_in_preset == sids_of_items_with_this_preset:
                         log.debug(f"LuxAuto: applying Preset {preset_name}")
@@ -484,7 +484,7 @@ class LuxAutoController:
         lux_points = None
         if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
             try:
-                lux_points = list(set([LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]))
+                lux_points = list({LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))})
             except Exception as e:
                 log.error(f"adjust_brightness_now: error loading lux_profile for {vdu_stable_id} {e!s}")
         if lux_points is None:  # Create a default profile:

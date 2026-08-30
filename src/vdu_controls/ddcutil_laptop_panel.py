@@ -71,7 +71,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
             def _invoke_callback():
                 if self.callback is not None:
                     if zoned_now() - self.set_vcp_time > timedelta(seconds=1):
-                        for edid_txt in self.max_brightness.keys():
+                        for edid_txt in self.max_brightness:
                             self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
 
             fd = self.monitor.fileno()  # Get the file descriptor and create a QSocketNotifier
@@ -101,7 +101,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         try:
             with self.ddcutil_access_lock:
                 now = sys_time.perf_counter()
-                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                result = subprocess.run(process_args, capture_output=True, check=True)
                 elapsed = sys_time.perf_counter() - now
                 log.debug(f"subprocess result: success {log_id} [{result.args}] "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "

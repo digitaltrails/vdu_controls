@@ -755,7 +755,7 @@ class LuxProfileWidget(QLabel):
         self.range_restrictions = lux_dialog.range_restrictions_map  # Passed to chart
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
-        self.current_vdu_sid = VduStableId('') if len(self.profiles_map) == 0 else list(self.profiles_map.keys())[0]
+        self.current_vdu_sid = VduStableId('') if len(self.profiles_map) == 0 else next(iter(self.profiles_map.keys()))
         self.x_origin, self.y_origin = 0, 0
         self.plot_width, self.plot_height = 0, 0
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
@@ -957,7 +957,7 @@ class LuxProfileWidget(QLabel):
             MBox(MIcon.Critical, tr("No displays available.")).exec()
             return False
         vdu_data = self.profiles_map[self.current_vdu_sid]
-        _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_sid)
+        _, _, existing_lux, _existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_sid)
         if existing_lux is not None:  # Remove
             if existing_point.preset_name is None:
                 vdu_data.remove(existing_point)

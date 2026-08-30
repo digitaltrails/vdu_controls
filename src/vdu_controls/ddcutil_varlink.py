@@ -83,7 +83,7 @@ class VarlinkListener:
                     self._event_service.close()
                 except Exception as e:
                     log.debug(f"Forcing stop by closing event connection - ignoring close error {e}")
-                    pass  # Ignore errors caused by double-closing or race conditions
+                    # Ignore errors caused by double-closing or race conditions
 
         # Wait for the background thread to finish execution cleanly
         if self._thread and self._thread.is_alive():
@@ -97,8 +97,8 @@ class VarlinkListener:
         while not self._stop_event.is_set():
             try:
                 Client = _lazy_load_client_class()
-                with Client(self.varlink_socket) as connection:
-                    with connection.open(self.service_name) as service:
+                with (Client(self.varlink_socket) as connection,
+                      connection.open(self.service_name) as service):
 
                         # Cache the handle so the stop() method can access it
                         with self._event_service_lock:
@@ -135,7 +135,7 @@ class VarlinkListener:
                         self._event_service.close()
                     except Exception as e:
                         log.debug(f"Exiting event listener loop: ignored error closing event connection {e}")
-                        pass  # Ignore errors caused by double-closing or race conditions
+                        # Ignore errors caused by double-closing or race conditions
                     self._event_service = None
 
         log.info("Varlink background thread has successfully exited.")
@@ -167,7 +167,7 @@ def serialized_retry(func):
                     except BrokenPipeError as e:
                         # If it's the last attempt, bubble it up to the outer catch
                         if attempt == VARLINK_MAX_RETRIES - 1:
-                            raise e
+                            raise
                         log.warning(
                             f"Varlink error: {func.__name__} connection lost. "
                             f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
@@ -224,7 +224,6 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self.listener_callback: Callable | None = callback
 
         # Connection used by normal method calls
-        Client = _lazy_load_client_class()
         self._connection: Client | None = None
         self._service: Any | None = None
 
@@ -332,7 +331,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     @serialized_retry
     def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
-        res = self._service.GetCapabilitiesMetadata(display_num, edid_txt, None)
+        res = self._service.GetCapabilitiesMetadata(display_num, edid_b64, None)
 
         def convert_feature_values(values):
             if values:

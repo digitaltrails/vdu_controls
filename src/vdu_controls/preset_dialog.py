@@ -496,7 +496,7 @@ class PresetElevationChartWidget(QLabel):
 
     def get_elevation_data(self, elevation_key: SolarElevationKey) -> SolarElevationData | None:
         assert self.cache_solar_by_elevation is not None
-        return self.cache_solar_by_elevation[elevation_key] if elevation_key in self.cache_solar_by_elevation else None
+        return self.cache_solar_by_elevation.get(elevation_key, None)
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         self.elevation_key = elevation_key
@@ -692,7 +692,7 @@ class PresetElevationChartWidget(QLabel):
         if event is not None:
             pos = self.update_current_pos(event.pos())
             if pos is not None:
-                angle, radius = self.calc_angle_radius(pos)
+                _angle, radius = self.calc_angle_radius(pos)
                 if radius <= self.radius_of_deletion:
                     self.set_elevation_key(None)
                     self.selected_elevation_qtsignal.emit(None)
@@ -714,7 +714,7 @@ class PresetElevationChartWidget(QLabel):
             self.last_event_time = now
             pos = self.update_current_pos(event.pos())
             if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
-                angle, radius = self.calc_angle_radius(pos)
+                angle, _radius = self.calc_angle_radius(pos)
                 if self.in_drag:
                     self.current_pos = pos
                     angle = -angle if pos.x() < self._reverse_X(self.noon_x) else angle
@@ -1335,7 +1335,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def get_preset_widgets(self) -> list[PresetItemWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()   # type:ignore there will be a widget at i
-                for i in range(0, self.preset_widgets_layout.count() - 1)
+                for i in range(self.preset_widgets_layout.count() - 1)
                 if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetItemWidget)]  # type:ignore there will be a widget at i
 
     def get_preset_names_in_order(self) -> list[str]:

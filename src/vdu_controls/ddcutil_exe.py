@@ -83,7 +83,7 @@ class DdcutilExeImpl(DdcutilInterface):
         try:
             with self.ddcutil_access_lock:
                 now = sys_time.perf_counter()
-                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                result = subprocess.run(process_args, capture_output=True, check=True)
                 elapsed = sys_time.perf_counter() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log.debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
@@ -142,8 +142,8 @@ class DdcutilExeImpl(DdcutilInterface):
                 manufacturer = rubbish.sub('_', ds_parts.get('Mfg id', 'unknown_mfg'))
                 serial_number = rubbish.sub('_', ds_parts.get('Serial number', ''))
                 bin_serial_number = rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
-                man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
-                i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
+                _man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
+                _i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 edid_txt = self._parse_edid(display_str)
                 if not edid_txt:
                     log.warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")

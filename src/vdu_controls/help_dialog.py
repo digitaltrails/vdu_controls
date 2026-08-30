@@ -161,7 +161,7 @@ class OnlineHelpViewer(QTextBrowser):
                                  stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
             except Exception as e:
-                print(f"Failed to open URL: {e}")
+                log.error(f"Failed to open URL: {e!s}")
 
         # Use a single-shot timer to prevent event loop reentrancy
         QTimer.singleShot(0, partial(_open_url_with_xdg, url))

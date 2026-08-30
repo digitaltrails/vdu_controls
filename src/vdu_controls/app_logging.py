@@ -7,7 +7,6 @@ import syslog
 import traceback
 from datetime import datetime
 
-
 _LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 
 

@@ -189,7 +189,7 @@ class DdcutilAggregator(DdcutilInterface):
             if len(feature_values) != 0:
                 if all(value == '' for value in feature_values.values()):
                     capability_text += "      Values:"
-                    for value_id in feature_values.keys():
+                    for value_id in feature_values:
                         capability_text += f" {int.from_bytes(value_id, 'big'):02X}"
                     capability_text += " (interpretation unavailable)\n"
                 else:

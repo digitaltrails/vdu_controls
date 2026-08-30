@@ -210,7 +210,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         ddcutil_version_info_1 = "unknown"
         counts_str = "None"
         if self.main_controller and self.main_controller.ddcutil:
-            counts_str = ','.join((str(v) for v in DdcutilAggregator.vcp_write_counters.values())) if len(DdcutilAggregator.vcp_write_counters) else counts_str
+            counts_str = ','.join(str(v) for v in DdcutilAggregator.vcp_write_counters.values()) if len(DdcutilAggregator.vcp_write_counters) else counts_str
             ddcutil_version_info_0 = self.main_controller.ddcutil.ddcutil_version_info()[0]
             ddcutil_version_info_1 = self.main_controller.ddcutil.ddcutil_version_info()[1]
         log.info(f"Refreshing About Dialog {counts_str=}")
