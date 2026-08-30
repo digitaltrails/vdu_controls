@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import locale
 import os
+from collections.abc import Mapping
 from functools import partial
 from pathlib import Path
-from typing import Callable, Mapping
+from typing import Callable
 from urllib.error import URLError
 
 import vdu_controls.app_logging as log
@@ -464,12 +465,16 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                                      buttons=MBtn.Ok).exec()
             if is_checked and option_def.requires:
                 for required_field in self.requires:
-                    if isinstance(required_field, SettingsEditorBooleanWidget) and not required_field.checkbox.isChecked():
-                        MBox(MIcon.Information,
-                             msg=tr("Enabling <b>{0}</b> will also turn on <b>{1}</b>").format(self.ui_label_text, required_field.ui_label_text)).exec()
-                        required_field.checkbox.setChecked(True)
+                    if isinstance(required_field, SettingsEditorBooleanWidget):
+                        if not required_field.checkbox.isChecked():
+                            MBox(MIcon.Information,
+                                 msg=tr("Enabling <b>{0}</b> will also turn on <b>{1}</b>").format(self.ui_label_text, required_field.ui_label_text)).exec()
+                            required_field.checkbox.setChecked(True)
                     else:
-                        assert "Requires non-boolean field not yet supported"
+                        # Just in case
+                        MBox(MIcon.Information,
+                             msg=tr("Requires non-boolean field not yet supported: {} {}").format(self.ui_label_text,
+                                                                                               required_field.ui_label_text)).exec()
             if is_checked and self.warning:
                 MBox(MIcon.Warning, msg=self.ui_label_text, info=self.warning, buttons=MBtn.Ok).exec()
                 #self.warning = None  # Only warn once

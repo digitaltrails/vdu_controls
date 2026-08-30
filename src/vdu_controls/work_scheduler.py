@@ -118,7 +118,7 @@ class ScheduleWorker(WorkerThread):
     (An implementation based on sched.scheduler might also work - but the
     following is definitely going to work cross-platform)
     """
-    _instance: 'ScheduleWorker | None' = None
+    _instance: ScheduleWorker | None = None
     _scheduler_lock = threading.RLock()
 
     @staticmethod

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Self, TypeVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import APPNAME, RESIZABLE_MESSAGEBOX_HACK
@@ -77,7 +77,7 @@ def alter_margins(target: QWidget | QLayout,
 class LocaleFormatterMixin:
     """Injects a standardized, locale-aware numeric formatting method into any class."""
 
-    def format_number(self, value: float | int | Decimal, places=2) -> str:
+    def format_number(self, value: float | Decimal, places=2) -> str:
         if isinstance(value, float):
             try:
                 val_as_float = float(value)
@@ -366,7 +366,8 @@ class PushButtonLeftJustified(QPushButton):
         widget_layout = QHBoxLayout(self)
         widget_layout.addWidget(self.label)
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
-        self.setText(text) if text is not None is not None else None
+        if text is not None:
+            self.setText(text)
         self.setFlat(flat)
 
     def setText(self, text: str | None) -> None:
@@ -460,14 +461,14 @@ class DialogSingletonMixin:
         self.activateWindow()  # type: ignore
 
     @classmethod
-    def show_existing_dialog(cls: type[DialogSingletonMixinType]) -> None:
+    def show_existing_dialog(cls) -> None:
         """If the dialog.exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         log.debug(f'SingletonDialog show existing {class_name}') if log.debug_enabled else None
         DialogSingletonMixin._dialogs_map[cls].make_visible()
 
     @classmethod
-    def exists(cls: type[DialogSingletonMixinType]) -> bool:
+    def exists(cls: Self) -> bool:
         """Returns true if the dialog has already been created."""
         # class_name = cls.__name__
         # log.debug(f"SingletonDialog exists {class_name} "
@@ -475,7 +476,7 @@ class DialogSingletonMixin:
         return cls in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: type[DialogSingletonMixinType]) -> DialogSingletonMixinType:
+    def get_instance(cls) -> Self:
         assert cls.exists()
         return DialogSingletonMixin._dialogs_map[cls]
 
@@ -562,7 +563,7 @@ class EnhancedSplashScreen(QSplashScreen):
         """Call this method to append text lines underneath the static title."""
         if message:
             self.message_list.append(message[:29])
-        msg_items_html = ''.join(['<li>&#9679; {}</li>'.format(msg) for msg in self.message_list][-5:])  # Last 5 messages
+        msg_items_html = ''.join([f'<li>&#9679; {msg}</li>' for msg in self.message_list][-5:])  # Last 5 messages
         msg_list_html = f'<ul dir="{self.dir_html}" style="-qt-list-indent: 0;">' + msg_items_html + '</ul>'
         combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_list_html}</span>"
         self.text_overlay_label.setText(combined_html)

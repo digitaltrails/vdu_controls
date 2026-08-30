@@ -9,7 +9,7 @@ from vdu_controls.qt_imports import QFontMetrics, QLabel
 desktop_font_height_pixels: int | None = None  # A metric for use in sizing components relative to DEVELOPERS_NATIVE_FONT_HEIGHT.
 
 
-def desktop_font_height(scaled: int | float = 1) -> int:  # In real hardware pixels
+def desktop_font_height(scaled: float = 1) -> int:  # In real hardware pixels
     global desktop_font_height_pixels
     if desktop_font_height_pixels is None:
         desktop_font_height_pixels = QFontMetrics(QLabel("ABC").font()).height()

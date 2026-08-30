@@ -12,11 +12,12 @@ import sys
 import threading
 import time as sys_time
 import traceback
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterator, Optional, cast
+from typing import Callable, cast
 
 import vdu_controls.app_logging as log
 from vdu_controls import app_locale, gui_misc, svg, weather_util
@@ -259,7 +260,7 @@ class VduControlsMainPanel(QWidget):
         self.main_controller = main_controller
 
         if old_layout := cast(QVBoxLayout, self.layout()):  # Must be responding to a configuration change requiring re-layout.
-            for i in range(0, old_layout.count()):  # Remove all existing widgets.
+            for i in range(old_layout.count()):  # Remove all existing widgets.
                 item = old_layout.itemAt(i)
                 if isinstance(item, QWidget):
                     old_layout.removeWidget(item)
@@ -360,7 +361,7 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
 
 
 @contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
-def non_blocking_lock(lock: threading.RLock) -> Iterator[Optional[threading.RLock]]:  # Provide a way to use a with-statement with non-blocking locks
+def non_blocking_lock(lock: threading.RLock) -> Iterator[threading.RLock | None]:  # Provide a way to use a with-statement with non-blocking locks
     acquire_succeeded = lock.acquire(False)  # acquire_succeeded will be False if the lock is already locked.
     try:
         yield lock if acquire_succeeded else None  # return None to the with if the lock was not acquired
@@ -402,7 +403,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log.warning(f"ignoring {signal_number=}, no preset associated with that signal number.")
 
-        global unix_signal_handler
         assert unix_signal_handler is not None   # should not be None at this point
         unix_signal_handler.received_unix_signal_qtsignal.connect(respond_to_unix_signal)
 
@@ -764,7 +764,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restore_vdu_initialization_presets(self):
         # Find presets that match the name of each VDU name+serial and restore them...
-        for stable_id in self.vdu_controllers_map.keys():
+        for stable_id in self.vdu_controllers_map:
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
@@ -772,8 +772,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
                     def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
                         if worker.work_exception is not None:
-                            log.error(f"Error during restoration of '{preset.name}'")
-                            self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout_ms=5000)
+                            log.error(f"Error during restoration of '{worker.context.name}'")
+                            self.status_message(tr("Error during restoration preset {}").format(worker.context.name), timeout_ms=5000)
                             return
                         log.info(f"Restored initialization-preset '{worker.context.name}'")
                         message = tr("Restored I-Preset {}").format(worker.context.name)
@@ -798,7 +798,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                               " the sun does not reach that elevation today.")
             if at_time := preset.get_at_time():
                 timetable_for_day[at_time] = preset
-        return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
+        return {when: preset for when, preset in sorted(timetable_for_day.items())}
 
     def schedule_presets(self) -> None:
         assert gui_misc.is_running_in_gui_thread()
@@ -1158,7 +1158,7 @@ class VduAppWindow(QMainWindow):
         log.info(f"Started with dark theme: {self.initial_theme_is_dark}")
 
         def _run_in_gui(task: Callable):
-            log.debug(f"Running task in gui thread {repr(task)}") if log.debug_enabled else None
+            log.debug(f"Running task in gui thread {task!r}") if log.debug_enabled else None
             task()  # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
 
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
@@ -1218,7 +1218,7 @@ class VduAppWindow(QMainWindow):
         if main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED):
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 log.warning("no system tray, waiting to see if one becomes available.")
-                for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
+                for _ in range(SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
                     sys_time.sleep(0.25)  # TODO - at least use a constant
@@ -1237,7 +1237,7 @@ class VduAppWindow(QMainWindow):
 
         def _splash_message_action(message) -> None:
             if splash_screen is not None:
-                log.info(f"splash_message: {repr(message)}")
+                log.info(f"splash_message: {message!r}")
                 splash_screen.show_message(message)
                 QApplication.processEvents()
 
@@ -1728,7 +1728,7 @@ def main() -> None:
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf8', buffering=1)  # Force UTF-8, just in case it isn't
+    sys.stdout.reconfigure(encoding='utf-8')  # Force UTF-8, just in case it isn't
 
     def signal_handler(x, y) -> None:
         log.info("Signal received", x, y)
