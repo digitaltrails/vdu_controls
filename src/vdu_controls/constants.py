@@ -7,6 +7,7 @@ import re as _re
 import sys as _sys
 from enum import Enum as _Enum
 from pathlib import Path as _Path
+
 import vdu_controls.app_logging as _log
 
 

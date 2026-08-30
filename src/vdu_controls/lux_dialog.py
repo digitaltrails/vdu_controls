@@ -10,31 +10,77 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Tuple, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Dict, List, Tuple, cast
 
 import vdu_controls.app_logging as log
-from vdu_controls.app_locale import tr, TitledStrEnum
+from vdu_controls.app_locale import TitledStrEnum, tr
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import MsgDestination, DF_PLACES
+from vdu_controls.constants import DF_PLACES, MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes
+from vdu_controls.icon_utils import (
+    StdPixmap,
+    create_icon_from_svg_bytes,
+    create_image_from_svg_bytes,
+    si,
+)
 from vdu_controls.lux_config import LuxConfig, LuxPoint
-from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
-from vdu_controls.misc import intV, zoned_now, clamp
-from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent, QFrame, QGroupBox
-from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
-from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
-from vdu_controls.qt_imports import QVBoxLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
-    QStatusBar, QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
-from vdu_controls.scaling import dpx, desktop_font_height
+from vdu_controls.lux_meters import LuxMeterDevice, LuxMeterSemiAutoDevice
+from vdu_controls.misc import clamp, intV, zoned_now
+from vdu_controls.qt_imports import (
+    QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
+    QT_TR_NOOP,
+    QApplication,
+    QCheckBox,
+    QColor,
+    QComboBox,
+    QFont,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPoint,
+    QPointF,
+    QPolygon,
+    QResizeEvent,
+    QSpinBox,
+    QStatusBar,
+    Qt,
+    QTimer,
+    QVBoxLayout,
+    pyqtSignal,
+)
+from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.solar_calc import calc_solar_lux
-from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SVG_SWATCH_ICON_BASE_COLOR, VDU_CONNECTED_ICON_SVG, \
-    AMBIENT_PANEL_ICON_SVG
+from vdu_controls.svg import (
+    AMBIENT_PANEL_ICON_SVG,
+    SUN_SVG,
+    SVG_LIGHT_THEME_COLOR,
+    SVG_SWATCH_ICON_BASE_COLOR,
+    SWATCH_ICON_SVG,
+    VDU_CONNECTED_ICON_SVG,
+)
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox, \
-    TitleLabel, LocaleFormatterMixin
+from vdu_controls.widgets import (
+    ChoiceBox,
+    DialogSingletonMixin,
+    FasterFileDialog,
+    LocaleFormatterMixin,
+    MBox,
+    MBtn,
+    MIcon,
+    StdButton,
+    SubWinDialog,
+    TitleLabel,
+)
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController

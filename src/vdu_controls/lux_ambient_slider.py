@@ -5,23 +5,47 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from functools import partial
-
-from typing import Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 from vdu_controls import app_logging as log
-from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
-from vdu_controls.qt_imports import QFont
-from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox, QMouseEvent
-
-from vdu_controls.constants import TOOLTIP_DURATION_MSEC, DF_PLACES
 from vdu_controls.app_locale import tr
+from vdu_controls.constants import DF_PLACES, TOOLTIP_DURATION_MSEC
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
-
+from vdu_controls.qt_imports import (
+    QApplication,
+    QFont,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMouseEvent,
+    QSize,
+    QSlider,
+    QSpinBox,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
 from vdu_controls.scaling import desktop_font_height, dpx
-from vdu_controls.svg import LUX_SUNLIGHT_SVG, LUX_DAYLIGHT_SVG, LUX_OVERCAST_SVG, LUX_TWILIGHT_SVG, LUX_SUBDUED_SVG, LUX_DARK_SVG, \
-    AMBIENT_PANEL_ICON_SVG
-from vdu_controls.widgets import ThemedSvgWidget, alter_margins, TitleButton, ClickableSlider, LineEditAll, StdButton, \
-    ThemedSvgButton, LocaleFormatterMixin
+from vdu_controls.svg import (
+    AMBIENT_PANEL_ICON_SVG,
+    LUX_DARK_SVG,
+    LUX_DAYLIGHT_SVG,
+    LUX_OVERCAST_SVG,
+    LUX_SUBDUED_SVG,
+    LUX_SUNLIGHT_SVG,
+    LUX_TWILIGHT_SVG,
+)
+from vdu_controls.widgets import (
+    ClickableSlider,
+    LineEditAll,
+    LocaleFormatterMixin,
+    StdButton,
+    ThemedSvgButton,
+    ThemedSvgWidget,
+    TitleButton,
+    alter_margins,
+)
 
 if TYPE_CHECKING:
     from vdu_controls.lux_auto import LuxAutoController

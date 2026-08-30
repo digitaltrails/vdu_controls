@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 
-from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA
+from vdu_controls.constants import TESTING_TIME_DELTA, TESTING_TIME_ZONE
 
 # Conditional base StrEnum (works on 3.8+ and uses built-in when available) ---
 

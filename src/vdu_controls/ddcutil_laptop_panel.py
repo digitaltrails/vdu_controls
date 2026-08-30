@@ -8,14 +8,23 @@ import subprocess
 import time as sys_time
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import List, Callable, Dict
+from typing import Callable, Dict, List
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
-from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities, \
-    VcpTypeInfo
-from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
-from vdu_controls.qt_imports import QTimer, QSocketNotifier
+from vdu_controls.ddcutil_abstract import (
+    BRIGHTNESS_VCP_CODE,
+    CONTINUOUS_TYPE,
+    DDCUTIL_RETRIES,
+    DdcCapabilities,
+    DdcDetectedAttributes,
+    DdcEventType,
+    DdcutilDisplayNotFound,
+    DdcutilInterface,
+    VcpTypeInfo,
+    VcpValue,
+)
+from vdu_controls.qt_imports import QSocketNotifier, QTimer
 
 
 class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel

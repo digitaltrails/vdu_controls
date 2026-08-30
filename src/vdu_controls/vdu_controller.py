@@ -8,20 +8,34 @@ import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum, Flag, auto
-from typing import Callable, Dict, Tuple, List
+from typing import Callable, Dict, List, Tuple
 
-from vdu_controls.qt_imports import QObject, pyqtSignal
-
-from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, SUPPORTED_VCP_BY_CODE, VcpCapability
-from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFIG_VCP_CODES, ASSUMED_CONTROLS_CONFIG_TEXT, \
-    getenv_logged
-
-from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, \
-    SIMPLE_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE
-from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 import vdu_controls.app_logging as log
+from vdu_controls.config_ini import ConfIni
+from vdu_controls.constants import (
+    ASSUMED_CONTROLS_CONFIG_TEXT,
+    ASSUMED_CONTROLS_CONFIG_VCP_CODES,
+    IGNORE_VDU_MARKER_STR,
+    getenv_logged,
+)
+from vdu_controls.ddcutil_abstract import (
+    BRIGHTNESS_VCP_CODE,
+    COMPLEX_NON_CONTINUOUS_TYPE,
+    CONTINUOUS_TYPE,
+    CONTRAST_VCP_CODE,
+    SIMPLE_NON_CONTINUOUS_TYPE,
+    DdcutilDisplayNotFound,
+    VcpValue,
+)
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.misc import proper_name
+from vdu_controls.qt_imports import QObject, pyqtSignal
+from vdu_controls.vdu_controls_config import (
+    SUPPORTED_VCP_BY_CODE,
+    ConfOpt,
+    VcpCapability,
+    VduControlsConfig,
+)
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.work_scheduler import WorkerThread
 

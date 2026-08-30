@@ -6,25 +6,60 @@ import locale
 import os
 from functools import partial
 from pathlib import Path
-from typing import List, Callable, Dict, Tuple, Mapping
+from typing import Callable, Dict, List, Mapping, Tuple
 from urllib.error import URLError
 
-from vdu_controls.misc import zoned_now
-from vdu_controls.qt_imports import QSize, pyqtSignal, Qt, QRegularExpression, QDir
-from vdu_controls.qt_imports import QValidator, QPalette, QRegularExpressionValidator
-from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame, QHBoxLayout, QLabel, QWidget, QScrollArea, QGridLayout, \
-    QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QSizePolicy
-from vdu_controls.solar_calc import degrees_from_zone_center
-
-from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef, MAIN_CONFIG_NAME
-from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
-from vdu_controls.icon_utils import si, StdPixmap
-from vdu_controls.app_locale import tr
 import vdu_controls.app_logging as log
-from vdu_controls.scaling import dpx, desktop_font_height
-from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin, \
-    ValidatingPlainTextEdit
+from vdu_controls.app_locale import tr
+from vdu_controls.config_ini import ConfIni
+from vdu_controls.constants import CONFIG_FILE_PREFER_QT5, IP_ADDRESS_INFO_URL
+from vdu_controls.icon_utils import StdPixmap, si
+from vdu_controls.misc import zoned_now
+from vdu_controls.qt_imports import (
+    QApplication,
+    QCheckBox,
+    QDir,
+    QDoubleSpinBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPalette,
+    QRegularExpression,
+    QRegularExpressionValidator,
+    QScrollArea,
+    QSize,
+    QSizePolicy,
+    QStatusBar,
+    Qt,
+    QTabWidget,
+    QValidator,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
+from vdu_controls.scaling import desktop_font_height, dpx
+from vdu_controls.solar_calc import degrees_from_zone_center
+from vdu_controls.vdu_controls_config import (
+    MAIN_CONFIG_NAME,
+    ConfOpt,
+    ConfOptDef,
+    ConfSec,
+    ConfType,
+    VduControlsConfig,
+)
+from vdu_controls.widgets import (
+    DialogSingletonMixin,
+    FasterFileDialog,
+    MBox,
+    MBtn,
+    MIcon,
+    StdButton,
+    SubWinDialog,
+    ValidatingPlainTextEdit,
+    alter_margins,
+)
 
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
@@ -580,8 +615,8 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
     def retrieve_ipinfo(self) -> Mapping:
         #  https://stackoverflow.com/a/55432323/609575
-        from urllib.request import urlopen
         from json import load
+        from urllib.request import urlopen
         with urlopen(IP_ADDRESS_INFO_URL) as res:
             return load(res)
 

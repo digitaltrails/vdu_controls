@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from vdu_controls.qt_imports import QFontMetrics, QLabel
 import vdu_controls.app_logging as log
 from vdu_controls.constants import DEVELOPERS_NATIVE_FONT_HEIGHT
+from vdu_controls.qt_imports import QFontMetrics, QLabel
 
 desktop_font_height_pixels: int | None = None  # A metric for use in sizing components relative to DEVELOPERS_NATIVE_FONT_HEIGHT.
 

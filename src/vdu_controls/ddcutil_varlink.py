@@ -8,16 +8,24 @@ import os
 import threading
 import time
 import time as sys_time
-from typing import Dict, Tuple, Callable, List, Any
 
 # Only import when checking - if the user isn't use varlink, don't require it.
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple
 
 import vdu_controls.app_logging as log
-from vdu_controls.constants import getenv_logged, VARLINK_MAX_RETRIES, VARLINK_RETRY_DELAY_SECS
+from vdu_controls.constants import (
+    VARLINK_MAX_RETRIES,
+    VARLINK_RETRY_DELAY_SECS,
+    getenv_logged,
+)
 from vdu_controls.ddcutil_abstract import (
-    DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface,
-    DdcDetectedAttributes, VcpValue, DdcCapabilities, VcpTypeInfo
+    DdcCapabilities,
+    DdcDetectedAttributes,
+    DdcutilDisplayNotFound,
+    DdcutilInterface,
+    DdcutilServiceNotFound,
+    VcpTypeInfo,
+    VcpValue,
 )
 
 if TYPE_CHECKING:

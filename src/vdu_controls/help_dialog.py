@@ -2,24 +2,35 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import re
 import subprocess
 from functools import partial
 
+import vdu_controls.app_locale as app_locale
+import vdu_controls.app_logging as log
 from vdu_controls import constants
-
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_HELP_URL
 from vdu_controls.misc import generate_slug, is_gnome
 from vdu_controls.qt_imports import (
-    QVBoxLayout, QSize, QTextBrowser,
-    QUrl, QDesktopServices, QTimer,
-    QDialogButtonBox, QTabWidget, QWidget, QHBoxLayout, QListWidget, QListWidgetItem, Qt, QSplitter,
+    QDesktopServices,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QListWidget,
+    QListWidgetItem,
+    QSize,
+    QSplitter,
+    Qt,
+    QTabWidget,
+    QTextBrowser,
+    QTimer,
+    QUrl,
+    QVBoxLayout,
+    QWidget,
 )
 from vdu_controls.scaling import dpx
-from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin
-import vdu_controls.app_locale as app_locale
-import vdu_controls.app_logging as log
-import re
+from vdu_controls.widgets import DialogSingletonMixin, SubWinDialog
+
 
 class MarkdownHelpViewer(QWidget):
     def __init__(self):

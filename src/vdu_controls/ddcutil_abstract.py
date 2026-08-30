@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 from vdu_controls.constants import getenv_logged
 

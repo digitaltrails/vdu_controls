@@ -5,7 +5,7 @@ from __future__ import annotations
 import configparser
 import os
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 from vdu_controls import app_logging as log
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_BASE_VERSION

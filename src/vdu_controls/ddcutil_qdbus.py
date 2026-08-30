@@ -4,16 +4,30 @@ from __future__ import annotations
 
 import time as sys_time
 from threading import Lock
-from typing import Dict, Tuple, Callable, List
+from typing import Callable, Dict, List, Tuple
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
-from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
-    VcpValue, DdcCapabilities, VcpTypeInfo
+from vdu_controls.ddcutil_abstract import (
+    DdcCapabilities,
+    DdcDetectedAttributes,
+    DdcutilDisplayNotFound,
+    DdcutilInterface,
+    DdcutilServiceNotFound,
+    VcpTypeInfo,
+    VcpValue,
+)
 from vdu_controls.misc import intV
-from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
-                                     QDBusVariant, QDBusMessage, pyqtSlot)
-from vdu_controls.qt_imports import QObject
+from vdu_controls.qt_imports import (
+    QDBusArgument,
+    QDBusConnection,
+    QDBusInterface,
+    QDBusMessage,
+    QDBusVariant,
+    QMetaType,
+    QObject,
+    pyqtSlot,
+)
 
 
 class DdcutilDBusImpl(QObject, DdcutilInterface):

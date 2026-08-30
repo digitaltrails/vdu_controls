@@ -12,13 +12,16 @@ import time
 from importlib import import_module
 from typing import Tuple
 
-from vdu_controls.qt_imports import QObject, pyqtSignal
-
-from vdu_controls.constants import CONFIG_DIR_PATH, getenv_logged, LUX_SEMI_AUTO_MIN, DF_MIN
-
-from vdu_controls.app_locale import tr
 import vdu_controls.app_logging as log
-from vdu_controls.misc import zoned_now, GeoLocation
+from vdu_controls.app_locale import tr
+from vdu_controls.constants import (
+    CONFIG_DIR_PATH,
+    DF_MIN,
+    LUX_SEMI_AUTO_MIN,
+    getenv_logged,
+)
+from vdu_controls.misc import GeoLocation, zoned_now
+from vdu_controls.qt_imports import QObject, pyqtSignal
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread
 

@@ -9,12 +9,28 @@ from typing import TYPE_CHECKING
 import vdu_controls.app_logging as log
 from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
-from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
-    DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_PROJECT_URL, VDU_CONTROLS_HELP_URL, \
-    VDU_CONTROLS_WEBSITE_URL
+from vdu_controls.constants import (
+    APPNAME,
+    BRIGHTNESSCTL_WEBSITE_URL,
+    DDCUTIL_SERVICE_WEBSITE_URL,
+    DDCUTIL_WEBSITE_URL,
+    IP_ADDRESS_INFO_URL,
+    VDU_CONTROLS_HELP_URL,
+    VDU_CONTROLS_PROJECT_URL,
+    VDU_CONTROLS_VERSION,
+    VDU_CONTROLS_WEBSITE_URL,
+    WEATHER_FORECAST_URL,
+)
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.icon_utils import create_icon_from_svg_bytes
-from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication, QDesktopServices, QUrl
+from vdu_controls.qt_imports import (
+    QDesktopServices,
+    QGuiApplication,
+    QMessageBox,
+    Qt,
+    QtCore,
+    QUrl,
+)
 from vdu_controls.scaling import dpx
 from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 from vdu_controls.widgets import DialogSingletonMixin

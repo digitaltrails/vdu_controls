@@ -10,22 +10,40 @@ from functools import partial
 from pathlib import Path
 from typing import Callable
 
-from vdu_controls.qt_imports import QT_TR_NOOP
-from vdu_controls.qt_imports import QIcon
-from vdu_controls.unicode import SIGNAL_SYMBOL, TRANSITION_ALWAYS_SYMBOL, TIME_CLOCK_SYMBOL, MENU_SYMBOL, TRANSITION_SYMBOL, \
-    TOO_HIGH_SYMBOL, WEATHER_RESTRICTION_SYMBOL, SUN_SYMBOL, TIMER_RUNNING_SYMBOL, SUCCESS_SYMBOL, SKIPPED_SYMBOL, \
-    WEATHER_CANCELLATION_SYMBOL
-
-from vdu_controls.weather_util import WeatherQuery
+import vdu_controls.app_logging as log
+from vdu_controls.app_locale import tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, create_icon_from_path, create_icon_from_text
-from vdu_controls.app_locale import tr
-import vdu_controls.app_logging as log
-from vdu_controls.misc import zoned_now, proper_name
-from vdu_controls.solar_calc import SolarElevationKey, format_solar_elevation_abbreviation, format_solar_elevation_description, \
-    parse_solar_elevation_ini_text
-from vdu_controls.work_scheduler import SchedulerJob, ScheduleWorker, SchedulerJobType
+from vdu_controls.icon_utils import (
+    ThemeType,
+    create_icon_from_path,
+    create_icon_from_text,
+    polychrome_light_or_dark,
+)
+from vdu_controls.misc import proper_name, zoned_now
+from vdu_controls.qt_imports import QT_TR_NOOP, QIcon
+from vdu_controls.solar_calc import (
+    SolarElevationKey,
+    format_solar_elevation_abbreviation,
+    format_solar_elevation_description,
+    parse_solar_elevation_ini_text,
+)
+from vdu_controls.unicode import (
+    MENU_SYMBOL,
+    SIGNAL_SYMBOL,
+    SKIPPED_SYMBOL,
+    SUCCESS_SYMBOL,
+    SUN_SYMBOL,
+    TIME_CLOCK_SYMBOL,
+    TIMER_RUNNING_SYMBOL,
+    TOO_HIGH_SYMBOL,
+    TRANSITION_ALWAYS_SYMBOL,
+    TRANSITION_SYMBOL,
+    WEATHER_CANCELLATION_SYMBOL,
+    WEATHER_RESTRICTION_SYMBOL,
+)
+from vdu_controls.weather_util import WeatherQuery
+from vdu_controls.work_scheduler import SchedulerJob, SchedulerJobType, ScheduleWorker
 
 
 class PresetTransitionFlag(IntFlag):

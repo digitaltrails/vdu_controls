@@ -1,16 +1,17 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
+
 import threading
 import time as sys_time
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Callable, List, Dict
+from typing import Callable, Dict, List
 
 import vdu_controls.app_logging as log
 from vdu_controls.misc import zoned_now
-
 from vdu_controls.qt_imports import QThread, pyqtSignal
+
 
 def thread_pid():
     return threading.get_native_id()  # More unique than get_ident (internal IDs get recycled immediately) - see with htop -H.

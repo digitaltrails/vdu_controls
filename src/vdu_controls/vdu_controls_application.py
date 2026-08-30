@@ -13,62 +13,142 @@ import threading
 import time as sys_time
 import traceback
 from contextlib import contextmanager
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Dict, Callable, cast, Optional, Iterator
+from typing import Callable, Dict, Iterator, List, Optional, Tuple, cast
 
-import vdu_controls.gui_misc as gui_misc
 import vdu_controls.app_logging as log
+import vdu_controls.gui_misc as gui_misc
 import vdu_controls.svg as svg
 import vdu_controls.weather_util as weather_util
-from vdu_controls import weather_util as weather_utils, app_locale
+from vdu_controls import app_locale
+from vdu_controls import weather_util as weather_utils
 from vdu_controls.about_dialog import AboutDialog
-from vdu_controls.app_locale import tr, initialise_locale_translations
+from vdu_controls.app_locale import initialise_locale_translations, tr
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import getenv_logged, PRESET_SIGNAL_MIN, PRESET_SIGNAL_MAX, CURRENT_PRESET_NAME_FILE, CONFIG_DIR_PATH, \
-    MsgDestination, EXIT_CODE_FOR_RESTART, SYSTEM_TRAY_WAIT_SECONDS, APPNAME, VDU_CONTROLS_VERSION_TUPLE, CUSTOM_TRAY_ICON_FILE, \
-    VDU_CONTROLS_VERSION, IGNORE_VDU_MARKER_STR, HELP_FILENAME
+from vdu_controls.constants import (
+    APPNAME,
+    CONFIG_DIR_PATH,
+    CURRENT_PRESET_NAME_FILE,
+    CUSTOM_TRAY_ICON_FILE,
+    EXIT_CODE_FOR_RESTART,
+    HELP_FILENAME,
+    IGNORE_VDU_MARKER_STR,
+    PRESET_SIGNAL_MAX,
+    PRESET_SIGNAL_MIN,
+    SYSTEM_TRAY_WAIT_SECONDS,
+    VDU_CONTROLS_VERSION,
+    VDU_CONTROLS_VERSION_TUPLE,
+    MsgDestination,
+    getenv_logged,
+)
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
-from vdu_controls.ddcutil_abstract import VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
-    BRIGHTNESS_VCP_CODE, DdcEventType, \
-    DdcutilServiceNotFound, DdcutilSetterRateExceeded
+from vdu_controls.ddcutil_abstract import (
+    BRIGHTNESS_VCP_CODE,
+    CONTINUOUS_TYPE,
+    DdcEventType,
+    DdcutilDisplayNotFound,
+    DdcutilServiceNotFound,
+    DdcutilSetterRateExceeded,
+    VcpValue,
+)
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.greyscale import GrayScaleDialog
 from vdu_controls.help_dialog import HelpDialog
-from vdu_controls.icon_utils import ThemeType, create_pixmap_from_svg_bytes
-from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
-    is_dark_theme
+from vdu_controls.icon_utils import (
+    StdPixmap,
+    ThemeType,
+    create_decorated_app_icon,
+    create_icon_from_path,
+    create_icon_from_svg_bytes,
+    create_pixmap_from_svg_bytes,
+    is_dark_theme,
+)
 from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
-from vdu_controls.misc import zoned_now, proper_name, GeoLocation
+from vdu_controls.misc import GeoLocation, proper_name, zoned_now
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.preset_controller import PresetController
 from vdu_controls.preset_dialog import PresetsDialog
-from vdu_controls.qt_imports import QGuiApplication, QtCore, \
-    QSize, QVBoxLayout, QStatusBar, QHBoxLayout, QLabel, QWidget, QWidgetItem, QScrollArea, \
-    QApplication, QCoreApplication, QShortcut, QSystemTrayIcon, QCursor, QSettings, QKeySequence, \
-    QTimer, QEvent, QtNetwork, QLocale, QSizePolicy, QIcon, QToolBar, QToolButton, QMessageBox, \
-    QMainWindow, QProcess, QPoint, QObject, pyqtBoundSignal, QT5_USE_HIGH_DPI_PIXMAPS, sip
-from vdu_controls.qt_imports import Qt, pyqtSignal
+from vdu_controls.qt_imports import (
+    QT5_USE_HIGH_DPI_PIXMAPS,
+    QApplication,
+    QCoreApplication,
+    QCursor,
+    QEvent,
+    QGuiApplication,
+    QHBoxLayout,
+    QIcon,
+    QKeySequence,
+    QLabel,
+    QLocale,
+    QMainWindow,
+    QMessageBox,
+    QObject,
+    QPoint,
+    QProcess,
+    QScrollArea,
+    QSettings,
+    QShortcut,
+    QSize,
+    QSizePolicy,
+    QStatusBar,
+    QSystemTrayIcon,
+    Qt,
+    QtCore,
+    QTimer,
+    QtNetwork,
+    QToolBar,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    QWidgetItem,
+    pyqtBoundSignal,
+    pyqtSignal,
+    sip,
+)
 from vdu_controls.release import Release
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
 from vdu_controls.svg import VDU_CONTROLS_SPLASH_SVG
-from vdu_controls.unicode import MESSAGE_SYMBOL, TIME_CLOCK_SYMBOL, PRESET_APP_SEPARATOR_SYMBOL, SET_VCP_SYMBOL
-from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
+from vdu_controls.unicode import (
+    MESSAGE_SYMBOL,
+    PRESET_APP_SEPARATOR_SYMBOL,
+    SET_VCP_SYMBOL,
+    TIME_CLOCK_SYMBOL,
+)
+from vdu_controls.vdu_bulk_change import BulkChangeItem, BulkChangeWorker
 from vdu_controls.vdu_control_panel import VduControlPanel
-from vdu_controls.vdu_controller import VduController, VcpSetterOrigin
-from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability, MAIN_CONFIG_NAME
+from vdu_controls.vdu_controller import VcpSetterOrigin, VduController
+from vdu_controls.vdu_controls_config import (
+    MAIN_CONFIG_NAME,
+    ConfOpt,
+    VcpCapability,
+    VduControlsConfig,
+)
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.widgets import MIcon, MBox, MBtn, \
-    alter_margins, DialogSingletonMixin, ToolButton, EnhancedSplashScreen
-from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
+from vdu_controls.widgets import (
+    DialogSingletonMixin,
+    EnhancedSplashScreen,
+    MBox,
+    MBtn,
+    MIcon,
+    ToolButton,
+    alter_margins,
+)
+from vdu_controls.work_scheduler import (
+    SchedulerJob,
+    SchedulerJobType,
+    ScheduleWorker,
+    WorkerThread,
+    thread_pid,
+)
 
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
 

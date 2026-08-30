@@ -5,17 +5,16 @@ from __future__ import annotations
 import json
 import locale
 import unicodedata
-import urllib.request
-import urllib.parse
 import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime
 
-from vdu_controls.qt_imports import QLocale
-
-from vdu_controls.constants import WEATHER_FORECAST_URL, getenv_logged
-from vdu_controls.app_locale import tr
 import vdu_controls.app_logging as log
-from vdu_controls.misc import zoned_now, GeoLocation
+from vdu_controls.app_locale import tr
+from vdu_controls.constants import WEATHER_FORECAST_URL, getenv_logged
+from vdu_controls.misc import GeoLocation, zoned_now
+from vdu_controls.qt_imports import QLocale
 from vdu_controls.solar_calc import spherical_kilometers
 from vdu_controls.widgets import MBox, MIcon
 

@@ -6,10 +6,32 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict
 
-from vdu_controls.qt_imports import (QStyle, QWidget, QImage, QIcon, QPixmap, Qt, QSvgRenderer, QFont, QColor, QPainter,
-                                     QPen, QApplication, QSize, QPalette)
-from vdu_controls.svg import SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR, SVG_DARK_THEME_TEXT_COLOR, SVG_LIGHT_THEME_TEXT_COLOR, \
-    SVG_MONOCHROME_LIGHT_FG_COLOR, SVG_WHITE_COLOR, SVG_BLACK_COLOR, SVG_MONOCHROME_DARK_FG_COLOR
+from vdu_controls.qt_imports import (
+    QApplication,
+    QColor,
+    QFont,
+    QIcon,
+    QImage,
+    QPainter,
+    QPalette,
+    QPen,
+    QPixmap,
+    QSize,
+    QStyle,
+    QSvgRenderer,
+    Qt,
+    QWidget,
+)
+from vdu_controls.svg import (
+    SVG_BLACK_COLOR,
+    SVG_DARK_THEME_COLOR,
+    SVG_DARK_THEME_TEXT_COLOR,
+    SVG_LIGHT_THEME_COLOR,
+    SVG_LIGHT_THEME_TEXT_COLOR,
+    SVG_MONOCHROME_DARK_FG_COLOR,
+    SVG_MONOCHROME_LIGHT_FG_COLOR,
+    SVG_WHITE_COLOR,
+)
 
 
 class ThemeType(Enum):  # Indicates how colors should be altered to fit a color theme.

@@ -4,13 +4,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List, Callable, TYPE_CHECKING, Tuple, Dict
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
 
 from vdu_controls import app_logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.preset import Preset
-from vdu_controls.qt_imports import QVariant, Qt, QKeySequence, QIcon, QMenu, QWidget, QAction, QStyle
+from vdu_controls.qt_imports import (
+    QAction,
+    QIcon,
+    QKeySequence,
+    QMenu,
+    QStyle,
+    Qt,
+    QVariant,
+    QWidget,
+)
 from vdu_controls.unicode import MENU_ACTIVE_PRESET_SYMBOL
 
 if TYPE_CHECKING:

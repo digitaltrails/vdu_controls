@@ -48,14 +48,20 @@ from __future__ import annotations
 
 import inspect
 import os
+from importlib.resources import files as resources_files
 from pathlib import Path
 from typing import Dict, List, Tuple, cast
-from importlib.resources import files as resources_files
 
+import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.misc import LocalStrEnum
-from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
-import vdu_controls.app_logging as log
+from vdu_controls.qt_imports import (
+    QApplication,
+    QCoreApplication,
+    QLocale,
+    Qt,
+    QTranslator,
+)
 from vdu_controls.widgets import MBox
 
 # Places in the filesystem:

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from vdu_controls.constants import VDU_CONTROLS_VERSION, VDU_CONTROLS_VERSION_TUPLE
 from vdu_controls.app_locale import tr
+from vdu_controls.constants import VDU_CONTROLS_VERSION, VDU_CONTROLS_VERSION_TUPLE
 from vdu_controls.icon_utils import create_icon_from_svg_bytes
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt
 from vdu_controls.scaling import dpx
 from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
-from vdu_controls.widgets import MBox, MIcon, MBtn
+from vdu_controls.widgets import MBox, MBtn, MIcon
+
 
 class Release:
     SHOW_ON_MAJOR_RELEASE_ONLY = True

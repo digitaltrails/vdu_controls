@@ -4,22 +4,46 @@ from __future__ import annotations
 
 from typing import List, cast
 
-import vdu_controls.gui_misc as gui_misc
 import vdu_controls.app_logging as log
+import vdu_controls.gui_misc as gui_misc
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
-from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue
-from vdu_controls.misc import proper_name, clamp
+from vdu_controls.ddcutil_abstract import (
+    COMPLEX_NON_CONTINUOUS_TYPE,
+    CONTINUOUS_TYPE,
+    SIMPLE_NON_CONTINUOUS_TYPE,
+    VcpValue,
+)
+from vdu_controls.misc import clamp, proper_name
 from vdu_controls.preset import Preset
-from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox, \
-    QStandardItemModel
-from vdu_controls.qt_imports import Qt, pyqtSignal
+from vdu_controls.qt_imports import (
+    QApplication,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSlider,
+    QSpinBox,
+    QStandardItemModel,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import PANEL_CONNECTED_ICON_SVG, VDU_CONNECTED_ICON_SVG
-from vdu_controls.vdu_controller import VduController, VcpSetterOrigin
-from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
+from vdu_controls.vdu_controller import VcpSetterOrigin, VduController
+from vdu_controls.vdu_controls_config import SUPPORTED_VCP_BY_CODE, VcpCapability
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.widgets import alter_margins, TitleButton, MBox, MIcon, ThemedSvgWidget, ClickableSlider, LineEditAll
+from vdu_controls.widgets import (
+    ClickableSlider,
+    LineEditAll,
+    MBox,
+    MIcon,
+    ThemedSvgWidget,
+    TitleButton,
+    alter_margins,
+)
 
 
 class VduControlPanel(QWidget):

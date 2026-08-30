@@ -12,18 +12,23 @@ import textwrap
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import vdu_controls.app_logging as log
 from vdu_controls import app_locale
-from vdu_controls.app_locale import tr, TitledStrEnum
+from vdu_controls.app_locale import TitledStrEnum, tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import APPNAME
-from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
+from vdu_controls.ddcutil_abstract import BRIT, CON, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
-from vdu_controls.misc import LocalStrEnum, GeoLocation
+from vdu_controls.misc import GeoLocation, LocalStrEnum
 from vdu_controls.qt_imports import QT_TR_NOOP
-from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
+from vdu_controls.svg import (
+    BRIGHTNESS_SVG,
+    COLOR_TEMPERATURE_SVG,
+    CONTRAST_SVG,
+    VOLUME_SVG,
+)
 
 MAIN_CONFIG_NAME = 'vdu_controls'
 

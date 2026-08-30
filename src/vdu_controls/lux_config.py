@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
-from vdu_controls.config_ini import ConfIni
 import vdu_controls.app_logging as log
+from vdu_controls.config_ini import ConfIni
+
 
 @dataclass
 class LuxPoint:

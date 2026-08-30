@@ -5,12 +5,10 @@ from __future__ import annotations
 from typing import List
 
 from vdu_controls.app_locale import tr
-from vdu_controls.icon_utils import si, StdPixmap
-from vdu_controls.qt_imports import QDialog, QVBoxLayout
-from vdu_controls.qt_imports import QSvgWidget
-from vdu_controls.qt_imports import Qt
+from vdu_controls.icon_utils import StdPixmap, si
+from vdu_controls.qt_imports import QDialog, QSvgWidget, Qt, QVBoxLayout
 from vdu_controls.scaling import dpx
-from vdu_controls.widgets import SubWinDialog, StdButton
+from vdu_controls.widgets import StdButton, SubWinDialog
 
 # Creates an SVG of grey rectangles typical of the sort used for VDU calibration.
 GREY_SCALE_SVG = f'''

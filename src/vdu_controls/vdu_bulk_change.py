@@ -5,16 +5,14 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Any, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List
 
-from vdu_controls.qt_imports import pyqtSignal
-
-from vdu_controls.vdu_controls_config import ConfOpt
-from vdu_controls.vdu_controller import VcpSetterOrigin
-
-from vdu_controls.ddcutil_aggregator import VduStableId
 import vdu_controls.app_logging as log
+from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.misc import zoned_now
+from vdu_controls.qt_imports import pyqtSignal
+from vdu_controls.vdu_controller import VcpSetterOrigin
+from vdu_controls.vdu_controls_config import ConfOpt
 from vdu_controls.work_scheduler import WorkerThread
 
 if TYPE_CHECKING:

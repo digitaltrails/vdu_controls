@@ -4,17 +4,58 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal
-from typing import Callable, Any, Tuple, Dict, Type, TypeVar, List
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar
 
 import vdu_controls.app_logging as log
-from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
-from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes, StdPixmap, si
-from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
-                                     QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
-                                     QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
-                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING, QPlainTextEdit, pyqtSignal,
-                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen, QFocusEvent,
-                                     QCoreApplication, QLocale)
+from vdu_controls.constants import APPNAME, RESIZABLE_MESSAGEBOX_HACK
+from vdu_controls.icon_utils import (
+    StdPixmap,
+    create_icon_from_svg_bytes,
+    handle_theme,
+    polychrome_light_or_dark,
+    si,
+)
+from vdu_controls.qt_imports import (
+    QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
+    QApplication,
+    QButtonGroup,
+    QCoreApplication,
+    QDialog,
+    QDialogButtonBox,
+    QDir,
+    QEvent,
+    QFileDialog,
+    QFocusEvent,
+    QHBoxLayout,
+    QIcon,
+    QLabel,
+    QLayout,
+    QLineEdit,
+    QLocale,
+    QMargins,
+    QMessageBox,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPlainTextEdit,
+    QPushButton,
+    QRadioButton,
+    QRect,
+    QSize,
+    QSlider,
+    QSplashScreen,
+    QStyle,
+    QSvgWidget,
+    Qt,
+    QtCore,
+    QTextEdit,
+    QTimer,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
 from vdu_controls.scaling import desktop_font_height, dpx
 
 

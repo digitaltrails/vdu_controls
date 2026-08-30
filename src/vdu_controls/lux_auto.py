@@ -6,26 +6,43 @@ import math
 from ast import literal_eval
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
-import vdu_controls.gui_misc as gui_misc
 import vdu_controls.app_logging as log
+import vdu_controls.gui_misc as gui_misc
 from vdu_controls.app_locale import tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilSetterRateExceeded
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.lux_ambient_slider import LuxZone, LuxAmbientSlider
+from vdu_controls.lux_ambient_slider import LuxAmbientSlider, LuxZone
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.lux_dialog import LuxDialog
-from vdu_controls.lux_meters import lux_create_device, LuxMeterDevice, LuxMeterSemiAutoDevice, LuxDeviceException
+from vdu_controls.lux_meters import (
+    LuxDeviceException,
+    LuxMeterDevice,
+    LuxMeterSemiAutoDevice,
+    lux_create_device,
+)
 from vdu_controls.preset import PresetTransitionFlag
 from vdu_controls.qt_imports import Qt, pyqtSignal
-from vdu_controls.svg import AUTO_LUX_ON_SVG, LIGHTING_CHECK_SVG, AUTO_LUX_OFF_SVG, \
-    LIGHTING_CHECK_OFF_SVG
-from vdu_controls.unicode import TIMER_RUNNING_SYMBOL, SUN_SYMBOL, PROCESSING_LUX_SYMBOL, STEPPING_SYMBOL, ERROR_SYMBOL, \
-    RAISED_HAND_SYMBOL, ALMOST_EQUAL_SYMBOL, SMOOTHING_SYMBOL
-from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
+from vdu_controls.svg import (
+    AUTO_LUX_OFF_SVG,
+    AUTO_LUX_ON_SVG,
+    LIGHTING_CHECK_OFF_SVG,
+    LIGHTING_CHECK_SVG,
+)
+from vdu_controls.unicode import (
+    ALMOST_EQUAL_SYMBOL,
+    ERROR_SYMBOL,
+    PROCESSING_LUX_SYMBOL,
+    RAISED_HAND_SYMBOL,
+    SMOOTHING_SYMBOL,
+    STEPPING_SYMBOL,
+    SUN_SYMBOL,
+    TIMER_RUNNING_SYMBOL,
+)
+from vdu_controls.vdu_bulk_change import BulkChangeItem, BulkChangeWorker
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import MBox, MIcon, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, thread_pid

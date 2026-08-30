@@ -7,33 +7,102 @@ import time as sys_time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple, cast
 
 import vdu_controls.app_logging as log
 import vdu_controls.weather_util as weather_util
 from vdu_controls.app_locale import tr, translate_option
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.constants import STANDARD_ICON_PATHS, CONFIG_DIR_PATH, WEATHER_FORECAST_URL, EASTERN_SKY, WESTERN_SKY
+from vdu_controls.constants import (
+    CONFIG_DIR_PATH,
+    EASTERN_SKY,
+    STANDARD_ICON_PATHS,
+    WEATHER_FORECAST_URL,
+    WESTERN_SKY,
+)
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes
-from vdu_controls.misc import zoned_now, proper_name, GeoLocation
-from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus
-from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, \
-    QDoubleValidator, \
-    QResizeEvent, QValidator, QRegularExpressionValidator
-from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
-from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, \
-    QMenu, \
-    QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
-from vdu_controls.scaling import dpx, desktop_font_height
-from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \
-    format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
-from vdu_controls.svg import VDU_POWER_ON_ICON_SVG, PRESET_DIALOG_SUN_SVG, VDU_PRESET_ICON_SVG, VDU_PRESET_EDIT_ICON_SVG
-from vdu_controls.unicode import TIME_CLOCK_SYMBOL, DEGREE_SYMBOL, WARNING_SYMBOL
+from vdu_controls.icon_utils import (
+    StdPixmap,
+    create_icon_from_path,
+    create_image_from_svg_bytes,
+    polychrome_light_or_dark,
+    si,
+)
+from vdu_controls.misc import GeoLocation, proper_name, zoned_now
+from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
+from vdu_controls.qt_imports import (
+    QAction,
+    QApplication,
+    QCheckBox,
+    QColor,
+    QComboBox,
+    QDoubleValidator,
+    QEvent,
+    QFont,
+    QFontMetrics,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QImage,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPoint,
+    QPolygon,
+    QRegularExpression,
+    QRegularExpressionValidator,
+    QResizeEvent,
+    QScrollArea,
+    QSize,
+    QSizePolicy,
+    QSlider,
+    QSpacerItem,
+    QSpinBox,
+    QSplitter,
+    QStatusBar,
+    Qt,
+    QToolButton,
+    QValidator,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
+from vdu_controls.scaling import desktop_font_height, dpx
+from vdu_controls.solar_calc import (
+    SolarElevationData,
+    SolarElevationKey,
+    calc_solar_lux,
+    create_elevation_map,
+    format_solar_elevation_abbreviation,
+    format_solar_elevation_ini_text,
+    parse_solar_elevation_ini_text,
+)
+from vdu_controls.svg import (
+    PRESET_DIALOG_SUN_SVG,
+    VDU_POWER_ON_ICON_SVG,
+    VDU_PRESET_EDIT_ICON_SVG,
+    VDU_PRESET_ICON_SVG,
+)
+from vdu_controls.unicode import DEGREE_SYMBOL, TIME_CLOCK_SYMBOL, WARNING_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker
-from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt
-from vdu_controls.widgets import alter_margins, StdButton, PushButtonLeftJustified, FasterFileDialog, MBox, MIcon, MBtn, \
-    SubWinDialog, DialogSingletonMixin, ToolButton, TitleLabel
+from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig
+from vdu_controls.widgets import (
+    DialogSingletonMixin,
+    FasterFileDialog,
+    MBox,
+    MBtn,
+    MIcon,
+    PushButtonLeftJustified,
+    StdButton,
+    SubWinDialog,
+    TitleLabel,
+    ToolButton,
+    alter_margins,
+)
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController

@@ -10,8 +10,18 @@ from typing import Dict, List, Tuple
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
-from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities, VcpTypeInfo
+from vdu_controls.ddcutil_abstract import (
+    COMPLEX_NON_CONTINUOUS_TYPE,
+    CONTINUOUS_TYPE,
+    DDCUTIL_RETRIES,
+    SIMPLE_NON_CONTINUOUS_TYPE,
+    DdcCapabilities,
+    DdcDetectedAttributes,
+    DdcutilDisplayNotFound,
+    DdcutilInterface,
+    VcpTypeInfo,
+    VcpValue,
+)
 
 
 class DdcutilExeImpl(DdcutilInterface):
