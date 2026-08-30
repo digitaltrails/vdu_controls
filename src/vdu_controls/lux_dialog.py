@@ -598,7 +598,7 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
         self.history = self.history[-self.max_history:]
         self.history.append(LuxGaugeHistory(lux, zoned_now()))
         if self.updates_enabled:
-            self.current_lux_display.setText(tr("Lux: {}".format(self.format_number(lux))))
+            self.current_lux_display.setText(tr("Lux: {}").format(self.format_number(lux)))
             self.update_plot()
             self.lux_changed_qtsignal.emit(lux)
 
@@ -786,7 +786,7 @@ class LuxProfileWidget(QLabel):
             x = self.x_from_lux(lux)
             painter.drawLine(self.x_origin + x, self.y_origin + tick_len, self.x_origin + x, self.y_origin - tick_len)
             painter.drawText(self.x_origin + x - dpx(4) * len(str(lux)), self.y_origin + dpx(20), str(lux))
-        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + dpx(35), str("Lux"))
+        painter.drawText(self.x_origin + self.plot_width // 2 - len(tr("Lux")), self.y_origin + dpx(35), tr("Lux"))
 
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)  # Draw y-axis
         for brightness in range(0, 101, 10):  # Draw y-axis ticks

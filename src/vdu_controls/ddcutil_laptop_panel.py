@@ -108,7 +108,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         except subprocess.CalledProcessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
             log.debug("subprocess result: error ", log_id, process_args,
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
+                      f"stderr='{error_text}', exception={spe!s}", trace=True) if log.debug_enabled else None
             raise
         return result
 

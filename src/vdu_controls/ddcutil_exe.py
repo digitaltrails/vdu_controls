@@ -94,10 +94,10 @@ class DdcutilExeImpl(DdcutilInterface):
             error_text = cpe.stderr.decode('utf-8', errors='surrogateescape')
             if error_text.lower().find("display not found") >= 0:  # raise DdcutilDisplayNotFound and stay quiet
                 log.debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
-                          f"stderr='{error_text}', exception={str(cpe)}", trace=True) if log.debug_enabled else None
+                          f"stderr='{error_text}', exception={cpe!s}", trace=True) if log.debug_enabled else None
                 raise DdcutilDisplayNotFound(' '.join(args)) from cpe
             log.debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
-                      f"stderr='{error_text}', exception={str(cpe)}", trace=True) if log.debug_enabled else None
+                      f"stderr='{error_text}', exception={cpe!s}", trace=True) if log.debug_enabled else None
             raise
         return result
 

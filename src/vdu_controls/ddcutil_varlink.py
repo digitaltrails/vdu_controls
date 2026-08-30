@@ -179,19 +179,19 @@ def serialized_retry(func):
             error_name = e.error()
             log.error(f"Varlink error: {func.__name__} {error_name}, params: {e.parameters()}")
             if error_name == 'com.ddcutil.DdcutilInterface.DisplayNotFound':
-                raise DdcutilDisplayNotFound(f"Varlink error: {func.__name__} {str(e)}")
+                raise DdcutilDisplayNotFound(f"Varlink error: {func.__name__} {e!s}")
             elif error_name in ('com.ddcutil.DdcutilInterface.DdcError',
                                 'com.ddcutil.DdcutilInterface.DetectError'):
-                raise ValueError(f"Varlink error: {func.__name__} {str(e)}")
+                raise ValueError(f"Varlink error: {func.__name__} {e!s}")
             elif error_name == 'com.ddcutil.DdcutilInterface.ConfigurationLocked':
                 raise RuntimeError(f"Varlink error: {func.__name__} Configuration locked")
             else:
-                raise ValueError(f"Varlink error: {func.__name__} Varlink error: {e}")
+                raise ValueError(f"Varlink error: {func.__name__} Varlink error: {e!s}")
         except BrokenPipeError as e:
             log.error(f"Varlink error: {func.__name__} failed permanently after {VARLINK_MAX_RETRIES} retries.")
             raise RuntimeError(f"Varlink {func.__name__} connection failed permanently") from e
         except Exception as e:
-            log.error(f"Varlink error: Error in {func.__name__}: {e}")
+            log.error(f"Varlink error: Error in {func.__name__}: {e!s}")
             raise
 
     return wrapper

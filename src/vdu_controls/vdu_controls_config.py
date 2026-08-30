@@ -496,7 +496,7 @@ class VduControlsConfig:
         self.ini_content.set(ConfOpt.ENABLE_VCP_CODES.conf_section, ConfOpt.ENABLE_VCP_CODES.conf_name, '')
         if not main_config:
             self.ini_content.set(ConfOpt.VDU_NAME.conf_section, ConfOpt.VDU_NAME.conf_name, '')
-        self.ini_content.set(ConfOpt.SLEEP_MULTIPLIER.conf_section, ConfOpt.SLEEP_MULTIPLIER.conf_name, str('0.0'))
+        self.ini_content.set(ConfOpt.SLEEP_MULTIPLIER.conf_section, ConfOpt.SLEEP_MULTIPLIER.conf_name, '0.0')
         self.ini_content.set(ConfOpt.DDCUTIL_EXTRA_ARGS.conf_section, ConfOpt.DDCUTIL_EXTRA_ARGS.conf_name, '')
         self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, '')
 
