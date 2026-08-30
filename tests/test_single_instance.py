@@ -14,8 +14,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import pytest
+
 from vdu_controls.qt_imports import QApplication, QtNetwork
-from vdu_controls.vdu_controls_application import SingleInstanceServer, _activate_running_instance
+from vdu_controls.vdu_controls_application import (
+    SingleInstanceServer,
+    _activate_running_instance,
+)
 
 PID = os.getpid()
 PASS, FAIL = "\033[32mPASS\033[0m", "\033[31mFAIL\033[0m"

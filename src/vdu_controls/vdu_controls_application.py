@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, Iterator, List, Optional, Tuple, cast
+from typing import Callable, Iterator, Optional, cast
 
 import vdu_controls.app_logging as log
 import vdu_controls.gui_misc as gui_misc
@@ -185,7 +185,7 @@ def reverse_force_xwayland():
 
 class VduMainToolBar(QToolBar):
 
-    def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
+    def __init__(self, tool_buttons: list[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
         self.setObjectName('VduPanelToolBar')  # Internal name for persistence - do not change or persistence will be lost.
         self.preset_edit_target: Preset | None = None
@@ -250,14 +250,14 @@ class VduControlsMainPanel(QWidget):
         self.main_toolbar: VduMainToolBar | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
-        self.vdu_control_panels: Dict[str, VduControlPanel] = {}
+        self.vdu_control_panels: dict[str, VduControlPanel] = {}
         self.alert: QMessageBox | None = None
         self.main_controller: VduAppController | None = None
         self.message_history = []
 
     def initialise_control_panels(self, main_controller: VduAppController,
                                   app_context_menu: ContextMenu, main_config: VduControlsConfig,
-                                  tool_buttons: List[ToolButton], extra_controls: List[QWidget],
+                                  tool_buttons: list[ToolButton], extra_controls: list[QWidget],
                                   splash_message_qtsignal: pyqtBoundSignal) -> None:
         self.main_controller = main_controller
 
@@ -382,13 +382,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_config = main_config
         self.ddcutil: DdcutilAggregator | None = None
         self.main_window: VduAppWindow | None = None
-        self.vdu_controllers_map: Dict[VduStableId, VduController] = {}
+        self.vdu_controllers_map: dict[VduStableId, VduController] = {}
         self.preset_controller = PresetController()
-        self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
+        self.detected_vdu_list: list[tuple[str, str, str, str]] = []
+        self.previously_detected_vdu_list: list[tuple[str, str, str, str]] = []
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: weather_util.WeatherQuery | None = None
-        self.preset_transition_workers: List[BulkChangeWorker] = []  # Not sure if this actually needs to be a list.
+        self.preset_transition_workers: list[BulkChangeWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOpt.LUX_OPTIONS_ENABLED) else None
 
@@ -503,7 +503,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.get_main_window().show_no_controllers_error_dialog(e)
 
-    def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
+    def detect_vdus(self) -> tuple[list[tuple[str, str, str, str]], Exception | None]:
         if self.ddcutil is None:
             return [], None
         ddcutil_problem = None
@@ -559,7 +559,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.vdu_controllers_map = {
                 c.vdu_stable_id: c for c in sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
 
-    def settings_changed(self, changed_settings: List) -> None:
+    def settings_changed(self, changed_settings: list) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
             self.restart_application(tr("A settings reset requires vdu_controls to restart."))
             return
@@ -589,7 +589,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if preset is not None:
             PresetsDialog.get_instance().edit_preset(preset)
 
-    def get_vdu_configs(self) -> List[VduControlsConfig]:
+    def get_vdu_configs(self) -> list[VduControlsConfig]:
         return [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None]
 
     def create_config_files(self) -> None:
@@ -783,9 +783,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
                     self.restore_preset(preset, finished_func=_restored_initialization_preset, initialization_preset=True)
 
-    def schedule_create_timetable(self, start_of_day: datetime, location: GeoLocation) -> Dict[datetime, Preset]:
+    def schedule_create_timetable(self, start_of_day: datetime, location: GeoLocation) -> dict[datetime, Preset]:
         log.debug(f"Create preset timetable for {start_of_day}") if log.debug_enabled else None
-        timetable_for_day: Dict[datetime, Preset] = {}  # Create a timetable for the entire day from 00:00:00 to 23:59:59
+        timetable_for_day: dict[datetime, Preset] = {}  # Create a timetable for the entire day from 00:00:00 to 23:59:59
         time_elevation_map = create_elevation_map(start_of_day, latitude=location.latitude, longitude=location.longitude)
         for preset in self.preset_controller.find_presets_map().values():
             if elevation_key := preset.get_solar_elevation():
@@ -959,7 +959,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         preset.remove_elevation_trigger()
         self.schedule_alteration(preset)
 
-    def save_preset_order(self, name_order: List[str]):
+    def save_preset_order(self, name_order: list[str]):
         self.preset_controller.save_order(name_order)
         self.refresh_preset_menu(reorder=True)
 
@@ -998,30 +998,30 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 return preset
         return None
 
-    def find_presets_map(self) -> Dict[str, Preset]:
+    def find_presets_map(self) -> dict[str, Preset]:
         return self.preset_controller.find_presets_map()
 
     def get_lux_auto_controller(self) -> LuxAutoController:
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def get_vdu_stable_id_list(self) -> List[VduStableId]:
+    def get_vdu_stable_id_list(self) -> list[VduStableId]:
         return [stable_id for stable_id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
 
-    def get_vdu_values(self, vdu_stable_id: VduStableId, vcp_codes: List[int] | None) -> List[Tuple[int, VcpValue]]:
+    def get_vdu_values(self, vdu_stable_id: VduStableId, vcp_codes: list[int] | None) -> list[tuple[int, VcpValue]]:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             if not vcp_codes:
                 vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
             return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
         return []
 
-    def get_enabled_capabilities(self, vdu_stable_id: VduStableId) -> List[VcpCapability]:
+    def get_enabled_capabilities(self, vdu_stable_id: VduStableId) -> list[VcpCapability]:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.enabled_capabilities
         return []
 
     def get_range(self, vdu_stable_id: VduStableId, vcp_code: int,
-                  fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
+                  fallback: tuple[int, int] | None = None) -> tuple[int, int] | None:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_range_restrictions(vcp_code, fallback)
         log.error(f"get_range: No controller for {vdu_stable_id}")
@@ -1063,7 +1063,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def busy_doing(self) -> str | None:
         return tr("Preset editing") if PresetsDialog.is_instance_editing() else None
 
-    def find_vdu_config_files(self) -> List[Path]:
+    def find_vdu_config_files(self) -> list[Path]:
         found = []
         for conf_file in [f for f in sorted(CONFIG_DIR_PATH.glob('*_*_*.conf')) if f.is_file()]:
             conf = ConfIni()

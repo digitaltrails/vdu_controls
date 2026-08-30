@@ -5,7 +5,6 @@ from __future__ import annotations
 import configparser
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from vdu_controls import app_logging as log
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_BASE_VERSION
@@ -30,10 +29,10 @@ class ConfIni(configparser.ConfigParser):
         if not self.has_section(ConfIni.METADATA_SECTION):
             self.add_section(ConfIni.METADATA_SECTION)
 
-    def data_sections(self) -> List[str]:  # Section other than metadata and DEFAULT - real data.
+    def data_sections(self) -> list[str]:  # Section other than metadata and DEFAULT - real data.
         return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfIni.METADATA_SECTION]
 
-    def get_version(self) -> Tuple[int, int, int]:
+    def get_version(self) -> tuple[int, int, int]:
         if version := self.get(ConfIni.METADATA_SECTION, ConfIni.METADATA_VERSION_OPTION, fallback=None):
             try:
                 parts = version.split('-')[0].split('.')
@@ -62,7 +61,7 @@ class ConfIni(configparser.ConfigParser):
                 new_ini[section][option] = self[section][option]
         return new_ini
 
-    def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
+    def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> dict[tuple[str, str], str]:
         values = []
         for subject in (self, other):
             sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfIni.METADATA_SECTION}

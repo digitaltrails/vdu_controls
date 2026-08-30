@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
+from typing import TYPE_CHECKING, Callable
 
 from vdu_controls import app_logging as log
 from vdu_controls.app_locale import tr
@@ -56,18 +56,18 @@ class FixedItemData:
     title: str
     extra_shortcut: QKeySequence.StandardKey | str | None = None
     add_separator: bool = False
-    property: Tuple[str, QVariant] | None = None
+    property: tuple[str, QVariant] | None = None
     separator: QAction | None = None
     action: QAction | None = None
 
 class ContextMenu(QMenu):
 
     def __init__(self, app_controller: VduAppController,
-                 fixed_item_callables: Dict[FixedItemKey, Callable],
+                 fixed_item_callables: dict[FixedItemKey, Callable],
                  hide_shortcuts: bool, parent: QWidget) -> None:
         super().__init__(parent=parent)
 
-        self.fixed_item_map: Dict[FixedItemKey, FixedItemData] = {
+        self.fixed_item_map: dict[FixedItemKey, FixedItemData] = {
             FixedItemKey.CONTROL_PANEL: FixedItemData(StdPixmap.SP_ComputerIcon, tr('&Control Panel'), add_separator=True),
             FixedItemKey.PRESETS: FixedItemData(StdPixmap.SP_ComputerIcon, tr('&Presets'),
                                                 add_separator=True, property=(BUSY_DISABLE_PROP, QVariant(True))),
@@ -83,7 +83,7 @@ class ContextMenu(QMenu):
         }
 
         self.app_controller = app_controller
-        self.reserved_shortcuts: List[str] = []
+        self.reserved_shortcuts: list[str] = []
         self.hide_shortcuts = hide_shortcuts
 
         for key, item in self.fixed_item_map.items():
@@ -205,6 +205,6 @@ class ContextMenu(QMenu):
 
     def shortcut_list(self,
                       primary: str | QKeySequence.StandardKey,
-                      extra: str | QKeySequence.StandardKey | None = None) -> List[str | QKeySequence.StandardKey]:
+                      extra: str | QKeySequence.StandardKey | None = None) -> list[str | QKeySequence.StandardKey]:
         shortcuts = [primary] + ([extra] if extra else [])
         return ([''] + shortcuts) if self.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.

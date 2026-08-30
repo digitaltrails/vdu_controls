@@ -12,7 +12,7 @@ import textwrap
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import vdu_controls.app_logging as log
 from vdu_controls import app_locale
@@ -83,8 +83,8 @@ class ConfOptDef:
     ui_label: str | None = None   # If None, then it won't appear in the Settings Editor.
     help: str = ''
     sub_group: SubGroup = SubGroup.NONE   # UI grouping of items.
-    related: List[ConfOptDef|str] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
-    requires: List[ConfOptDef|str] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
+    related: list[ConfOptDef|str] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
+    requires: list[ConfOptDef|str] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
     warning: str = ''      # If set, this message will pop up when the setting is set.
     off_warning: str = ''  # If set, this message will pop up when the item is unset.
 
@@ -420,7 +420,7 @@ class VcpCapability:
     vcp_code: int
     name: str
     vcp_type: str | None = None
-    values: List | None = None
+    values: list | None = None
     causes_config_change: bool = False
     icon_source: bytes | None = None
     enabled: bool = False
@@ -448,7 +448,7 @@ SUPPORT_ALL_VCP = False
 
 
 # Maps of controls supported by name on the command line and in config files.
-SUPPORTED_VCP_BY_CODE: Dict[int, VcpCapability] = {
+SUPPORTED_VCP_BY_CODE: dict[int, VcpCapability] = {
     **{code: VcpCapability(code, name, retry_setvcp=False)
        for code, name in (DdcutilAggregator().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
@@ -475,7 +475,7 @@ class VduControlsConfig:
     Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
     """
 
-    def __init__(self, config_name: str, default_enabled_vcp_codes: List[int] | None = None, main_config: bool = False) -> None:
+    def __init__(self, config_name: str, default_enabled_vcp_codes: list[int] | None = None, main_config: bool = False) -> None:
         self.config_name = config_name
         self.ini_content = ConfIni()
 
@@ -514,7 +514,7 @@ class VduControlsConfig:
                 return option
         return ConfOpt.UNKNOWN
 
-    def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[int, VcpCapability]) -> None:
+    def restrict_to_actual_capabilities(self, supported_by_this_vdu: dict[int, VcpCapability]) -> None:
         for option_name in self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS]:
             if self.get_conf_option(ConfSec.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
@@ -532,7 +532,7 @@ class VduControlsConfig:
     def is_set(self, option: ConfOpt, fallback=False) -> bool:
         return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
 
-    def set_option_from_args(self, option: ConfOpt, arg_values: Dict[str, Any]):
+    def set_option_from_args(self, option: ConfOpt, arg_values: dict[str, Any]):
         if option.cmdline_var is not None and option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
             str_value = str(arg_values[option.cmdline_var])
             if str_value != self.ini_content[option.conf_section][option.conf_name]:
@@ -544,7 +544,7 @@ class VduControlsConfig:
         value = self.ini_content.getfloat(ConfOpt.SLEEP_MULTIPLIER.conf_section, ConfOpt.SLEEP_MULTIPLIER.conf_name, fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
-    def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
+    def get_ddcutil_extra_args(self, fallback: list[str] | None = None) -> list[str]:
         fallback = [] if fallback is None else fallback
         value = self.ini_content.get(ConfOpt.DDCUTIL_EXTRA_ARGS.conf_section, ConfOpt.DDCUTIL_EXTRA_ARGS.conf_name, fallback=None)
         return fallback if value is None or value.strip() == '' else value.split()
@@ -564,7 +564,7 @@ class VduControlsConfig:
     def disable_supported_vcp_code(self, vcp_code: int) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
-    def get_all_enabled_vcp_codes(self) -> List[int]:  # Not very efficient
+    def get_all_enabled_vcp_codes(self) -> list[int]:  # Not very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
             if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):

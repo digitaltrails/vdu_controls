@@ -6,7 +6,6 @@ import re
 import subprocess
 import time as sys_time
 from threading import Lock
-from typing import Dict, List, Tuple
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -33,21 +32,21 @@ class DdcutilExeImpl(DdcutilInterface):
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
-    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
+    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: dict[int, re.Pattern] = {}
 
-    def __init__(self, common_args: List[str] | None):
-        self.vdu_sleep_multiplier: Dict[str, float] = {}
-        self.extra_args: Dict[str, List[str]] = {}
+    def __init__(self, common_args: list[str] | None):
+        self.vdu_sleep_multiplier: dict[str, float] = {}
+        self.extra_args: dict[str, list[str]] = {}
         self.common_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         if common_args:
             self.common_args += common_args
         self.ddcutil_access_lock = Lock()
-        self.vcp_type_map: Dict[int, str] = {}
-        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)
+        self.vcp_type_map: dict[int, str] = {}
+        self.ddcutil_version: tuple[int, ...] = (0, 0, 0)
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
         self.ddcutil_exe = 'ddcutil'
-        self.vdu_map_by_edid: Dict[str, DdcDetectedAttributes] = {}
+        self.vdu_map_by_edid: dict[str, DdcDetectedAttributes] = {}
 
     def refresh_connection(self):
         pass
@@ -55,7 +54,7 @@ class DdcutilExeImpl(DdcutilInterface):
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         self.vdu_sleep_multiplier[edid_txt] = sleep_multiplier
 
-    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: list[str]):
         self.extra_args[edid_txt] = extra_args
 
     def _get_vdu_human_name(self, edid_txt: str):
@@ -63,7 +62,7 @@ class DdcutilExeImpl(DdcutilInterface):
             return f"display-{vdu.display_number} {vdu.model_name}"
         return f"Unknown-display {edid_txt:.30}..."
 
-    def _format_args_diagnostic(self, args: List[str]):
+    def _format_args_diagnostic(self, args: list[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
     def __run__(self, *args, edid_txt: str | None = None) -> subprocess.CompletedProcess:
@@ -126,9 +125,9 @@ class DdcutilExeImpl(DdcutilInterface):
         log.error(f"Failed to parse edid in {display_str=}")
         return ''
 
-    def detect(self, flags: int) -> List[DdcDetectedAttributes]:
+    def detect(self, flags: int) -> list[DdcDetectedAttributes]:
         args = ['detect', '--verbose', ]
-        result_list: List[DdcDetectedAttributes] = []
+        result_list: list[DdcDetectedAttributes] = []
         result = self.__run__(*args)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
@@ -173,16 +172,16 @@ class DdcutilExeImpl(DdcutilInterface):
         new_value = f"x{new_value_int:X}"
         self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
         else:
             return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list]
 
-    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[VcpValue]:
+    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: list[int]) -> list[VcpValue]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         args = ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list]
-        results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
+        results_dict: dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 from_ddcutil = self.__run__(*args, edid_txt=edid_txt)

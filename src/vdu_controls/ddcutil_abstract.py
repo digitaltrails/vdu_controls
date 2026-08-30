@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Tuple
 
 from vdu_controls.constants import getenv_logged
 
@@ -30,8 +29,8 @@ class DdcCapabilities:
     model: str
     mccs_major: int
     mccs_minor: int
-    commands: Dict[bytes, str]
-    features: Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]]  # From ddcutil-service
+    commands: dict[bytes, str]
+    features: dict[bytes, tuple[bytes, str, dict[bytes, str]]]  # From ddcutil-service
     capabilities_str: str  # From everything else
 
 
@@ -132,5 +131,5 @@ class DdcutilInterface:
         raise NotImplementedError
 
     
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         raise NotImplementedError

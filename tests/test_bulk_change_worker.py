@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
-import math
+
 import sys
 from pathlib import Path
 
@@ -9,19 +9,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 
-import pytest
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch, call
-from typing import List, Dict, Any
+from unittest.mock import Mock, call, patch
+
+import pytest
+
+from vdu_controls.ddcutil_aggregator import VduStableId
 
 # Import the module under test
 from vdu_controls.vdu_bulk_change import BulkChangeItem, BulkChangeWorker
-from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.vdu_controller import VcpSetterOrigin
-from vdu_controls.vdu_controls_config import ConfOpt
-
-
-
 
 # ----------------------------------------------------------------------
 # Fixtures

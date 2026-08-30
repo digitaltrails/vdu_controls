@@ -6,7 +6,7 @@ import math
 from ast import literal_eval
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 import vdu_controls.app_logging as log
 import vdu_controls.gui_misc as gui_misc
@@ -54,8 +54,8 @@ if TYPE_CHECKING:
 class LuxSmooth:
     def __init__(self, n: int, alpha: float = 0.5) -> None:
         self.length: int = n
-        self.input: List[float] = []
-        self.output: List[float] = []
+        self.input: list[float] = []
+        self.output: list[float] = []
         self.alpha: float = alpha
 
     def smooth(self, v: float) -> int:  # A low pass filter
@@ -148,12 +148,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         finally:
             log.info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
-    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[
+    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> list[
         LuxToDo]:
         lux = self.smoother.smooth(metered_lux) if requires_smoothing else round(metered_lux)
         summary_text = self.lux_summary(metered_lux, lux)
         self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
-        to_do_list: List[LuxToDo] = []
+        to_do_list: list[LuxToDo] = []
         for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
             if self.stop_requested:
                 return []
@@ -164,7 +164,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.assess_presets_collectively(to_do_list)
         return to_do_list
 
-    def assess_presets_collectively(self, to_do_list: List[LuxToDo]) -> None:
+    def assess_presets_collectively(self, to_do_list: list[LuxToDo]) -> None:
         if to_do_list:  # See if all items are in agreement on whether a preset should be used
             for preset_name in [x.preset_name for x in to_do_list if x.preset_name is not None]:
                 if preset := self.main_controller.find_preset_by_name(preset_name):
@@ -185,7 +185,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 else:
                     log.debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
 
-    def do_work(self, to_do_list: List[LuxToDo]):
+    def do_work(self, to_do_list: list[LuxToDo]):
         to_do_preset_names = []
         bulk_changer = BulkChangeWorker('LuxAutoBulk', main_controller=self.main_controller,
                                         progress_callable=self._to_do_progress, finished_callable=self._to_do_finished,
@@ -252,7 +252,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
 
-    def determine_changes(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> LuxToDo | None:
+    def determine_changes(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: list[LuxPoint]) -> LuxToDo | None:
         previous_normal_point = matched_point = lower_point = LuxPoint(0, 0)
         proposed_brightness = 0
         # Update/bind the current Preset values onto the LuxPoints and wrap with min and max values.
@@ -480,7 +480,7 @@ class LuxAutoController:
         else:
             self.start_worker(single_shot=True)
 
-    def get_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
+    def get_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> list[LuxPoint]:
         lux_points = None
         if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
             try:

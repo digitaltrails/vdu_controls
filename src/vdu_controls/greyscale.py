@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import List
 
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import StdPixmap, si
@@ -34,7 +33,7 @@ class GrayScaleDialog(SubWinDialog):
     # This stops garbage-collection of independent instances of this dialog until the user closes them.
     # If we don't do this, the dialog will disappear before it becomes visible. We could also pass a parent
     # which would achieve the same thing, but would alter where the dialog appears.
-    _active_list: List[QDialog] = []
+    _active_list: list[QDialog] = []
 
     def __init__(self) -> None:
         super().__init__()

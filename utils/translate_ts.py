@@ -12,10 +12,11 @@ Example: fr_FR.ts -> French, ar_SA.ts -> Arabic.
 
 Requires: trans (translate-shell)
 """
-import sys
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
 
 def get_target_language(ts_file: str) -> str:
     """Extract two-letter language code from filename like fr_FR.ts -> fr."""

@@ -6,7 +6,7 @@ import threading
 import time as sys_time
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Callable, Dict, List
+from typing import Callable
 
 import vdu_controls.app_logging as log
 from vdu_controls.misc import zoned_now
@@ -156,7 +156,7 @@ class ScheduleWorker(WorkerThread):
 
     def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
-        self.pending_jobs_list: List[SchedulerJob] = []
+        self.pending_jobs_list: list[SchedulerJob] = []
 
     def task_body(self, _: WorkerThread):
         self._cycle()
@@ -167,7 +167,7 @@ class ScheduleWorker(WorkerThread):
     def _cycle(self):
         with ScheduleWorker._scheduler_lock:
             local_now = zoned_now()
-            run_now: Dict[SchedulerJobType, SchedulerJob] = {}
+            run_now: dict[SchedulerJobType, SchedulerJob] = {}
             for job in self.pending_jobs_list[:]:   # Iterate over copy so we can edit the original
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)

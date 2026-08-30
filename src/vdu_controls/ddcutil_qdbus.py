@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time as sys_time
 from threading import Lock
-from typing import Callable, Dict, List, Tuple
+from typing import Callable
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -37,11 +37,11 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     does the expensive initialization once at startup.
     """
     RETURN_RAW_VALUES = 2
-    _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
+    _metadata_cache: dict[tuple[str, int], VcpTypeInfo] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
 
-    def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
+    def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
         self.dbus_interface_name = getenv_logged('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
         env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
@@ -49,7 +49,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
-        self._status_values: Dict[int, str] = {}
+        self._status_values: dict[int, str] = {}
         self.dbus_service_name = getenv_logged('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
         self.dbus_object_path = getenv_logged('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         for try_count in range(1, 5):  # Approximating an infinite loop
@@ -82,10 +82,10 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                                                    QDBusArgument(sleep_multiplier, intV(QMetaType.Type.Double)),
                                                    QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]):
         pass  # TODO not implemented
 
-    def _connection_reset(self) -> Tuple[QDBusConnection, QDBusInterface, QDBusInterface]:
+    def _connection_reset(self) -> tuple[QDBusConnection, QDBusInterface, QDBusInterface]:
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
         ddcutil_dbus_iface = QDBusInterface(
             self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name, connection=session_bus)
@@ -104,7 +104,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             DdcutilDBusImpl._current_service_initialization_handler = None
         return session_bus, ddcutil_dbus_iface, ddcutil_dbus_props
 
-    def _connect_to_service(self) -> Tuple[QDBusInterface, QDBusInterface]:
+    def _connect_to_service(self) -> tuple[QDBusInterface, QDBusInterface]:
         session_bus, ddcutil_dbus_iface, ddcutil_dbus_props = self._connection_reset()
         # Connect new handlers - bind receiving slots to our new handlers
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
@@ -152,14 +152,14 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         return self._validate(self.ddcutil_props_proxy.call(
             "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
 
-    def _get_status_values(self) -> Dict[int, str]:
+    def _get_status_values(self) -> dict[int, str]:
         if len(self._status_values) == 0:
             self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
         return self._status_values
 
-    def detect(self, flags: int) -> List[DdcDetectedAttributes]:
+    def detect(self, flags: int) -> list[DdcDetectedAttributes]:
         with self.service_access_lock:
-            vdu_list: List[DdcDetectedAttributes] = []
+            vdu_list: list[DdcDetectedAttributes] = []
             result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
             for vdu in self._validate(result)[1]:
                 vdu_prop_values = [str(property) for property in vdu]
@@ -194,7 +194,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                                                    QDBusArgument(new_value_int, intV(QMetaType.Type.UShort)),
                                                    QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         vcp_code_array = QDBusArgument()
         vcp_code_array.beginArray(intV(QMetaType.Type.UChar))
         for vcp_code_int in vcp_code_int_list:
@@ -214,7 +214,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     def vcp_info(self):
         pass
 
-    def _validate(self, result: QDBusMessage) -> List:
+    def _validate(self, result: QDBusMessage) -> list:
         if result.errorName():
             raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
         result_arg_list = result.arguments()

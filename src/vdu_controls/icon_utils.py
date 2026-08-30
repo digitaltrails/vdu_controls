@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Dict
 
 from vdu_controls.qt_imports import (
     QApplication,
@@ -67,7 +66,7 @@ def create_image_from_svg_bytes(svg_bytes, width: int = 64, height: int = 64) ->
     return image
 
 
-svg_icon_cache: Dict[bytes, QIcon] = {}
+svg_icon_cache: dict[bytes, QIcon] = {}
 
 
 def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:

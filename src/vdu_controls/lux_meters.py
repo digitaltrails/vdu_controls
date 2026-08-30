@@ -10,7 +10,6 @@ import subprocess
 import termios
 import time
 from importlib import import_module
-from typing import Tuple
 
 import vdu_controls.app_logging as log
 from vdu_controls.app_locale import tr
@@ -65,7 +64,7 @@ class LuxMeterDevice(QObject):
         if self.requires_worker:
             self.worker.stop()
 
-    def get_status(self) -> Tuple[bool, str]:  # True if OK, plus any message
+    def get_status(self) -> tuple[bool, str]:  # True if OK, plus any message
         return True, ''
 
 
@@ -224,7 +223,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def stop_metering(self) -> None:
         pass
 
-    def get_status(self) -> Tuple[bool, str]:
+    def get_status(self) -> tuple[bool, str]:
         if self.location is None:
             return True, tr('No location defined.')
         if msg := LuxMeterSemiAutoDevice.status_message:

@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Tuple
 
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, VDU_CONTROLS_VERSION_TUPLE
@@ -36,7 +35,7 @@ class Release:
                               '<br/><br/>'
                               )
     @staticmethod
-    def release_notes(from_version: Tuple[int, int, int]) -> None:
+    def release_notes(from_version: tuple[int, int, int]) -> None:
         minor_release = VDU_CONTROLS_VERSION_TUPLE[0] == from_version[0] and VDU_CONTROLS_VERSION_TUPLE[1] == from_version[1]
         if minor_release and Release.SHOW_ON_MAJOR_RELEASE_ONLY:
             return

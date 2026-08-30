@@ -13,8 +13,8 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 from unittest.mock import patch
 
-from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.ddcutil_abstract import DdcutilSetterRateExceeded
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 
 
 @pytest.fixture(autouse=True)

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import List, cast
+from typing import cast
 
 import vdu_controls.app_logging as log
 import vdu_controls.gui_misc as gui_misc
@@ -66,7 +66,7 @@ class VduControlPanel(QWidget):
                                             clicked=controller.edit_config)
         layout.addWidget(self.title_button, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
 
-        self.vcp_controls: List[VduControlBase] = []
+        self.vcp_controls: list[VduControlBase] = []
 
         for capability in controller.enabled_capabilities:
             control = None

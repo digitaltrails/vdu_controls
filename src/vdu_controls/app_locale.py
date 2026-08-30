@@ -50,7 +50,7 @@ import inspect
 import os
 from importlib.resources import files as resources_files
 from pathlib import Path
-from typing import Dict, List, Tuple, cast
+from typing import cast
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -79,10 +79,10 @@ LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEV
 ]
 
 
-cached_language_codes: List[str] = []
+cached_language_codes: list[str] = []
 
 
-def available_translations() -> List[str]:
+def available_translations() -> list[str]:
     global cached_language_codes
     if cached_language_codes:
         return cached_language_codes
@@ -154,7 +154,7 @@ def load_docs_text(filename: str) -> str:
 
 
 translator: QTranslator | None = None
-ts_translations: Dict[Tuple[str, str], str] = {}
+ts_translations: dict[tuple[str, str], str] = {}
 translating_locale = ''
 
 

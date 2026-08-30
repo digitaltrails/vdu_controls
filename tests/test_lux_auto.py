@@ -1,16 +1,12 @@
 from __future__ import annotations
+
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-import math
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from typing import List, Optional
-
-
 
 # Ensure src is importable
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -106,14 +102,13 @@ def patch_external_dependencies():
 
 # Now import the module after patching
 from vdu_controls.lux_auto import (
-    LuxSmooth,
-    LuxAutoWorker,
     LuxAutoController,
-    LuxToDo,
+    LuxAutoWorker,
     LuxPoint,
+    LuxSmooth,
+    LuxToDo,
 )
 from vdu_controls.vdu_exceptions import VduException
-
 
 # ----------------------------------------------------------------------
 # Fixtures

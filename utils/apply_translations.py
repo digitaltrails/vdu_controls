@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import re
 import sys
-from pathlib import Path
 
 """
 See extract_translations.py

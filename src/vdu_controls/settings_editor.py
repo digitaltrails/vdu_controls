@@ -6,7 +6,7 @@ import locale
 import os
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Mapping, Tuple
+from typing import Callable, Mapping
 from urllib.error import URLError
 
 import vdu_controls.app_logging as log
@@ -78,12 +78,12 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     """
 
     @staticmethod
-    def show_dialog(main_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
+    def show_dialog(main_config: VduControlsConfig, vdu_config_list: list[VduControlsConfig], change_callback: Callable) -> None:
         SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(main_config,
                                                                                              vdu_config_list, change_callback)
 
     @staticmethod
-    def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
+    def reconfigure_instance(vdu_config_list: list[VduControlsConfig]) -> None:
         if SettingsDialog.exists():
             SettingsDialog.get_instance().reconfigure(vdu_config_list)
 
@@ -96,14 +96,14 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
                     editor.tabs_widget.setCurrentIndex(tab_number)
                     editor.make_visible()
 
-    def __init__(self, main_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
+    def __init__(self, main_config: VduControlsConfig, vdu_config_list: list[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
         self.setWindowRole('settings-dialog')
         self.setLayout(widget_layout := QVBoxLayout())
         self.tabs_widget = QTabWidget(self)
         widget_layout.addWidget(self.tabs_widget)
-        self.editor_tab_list: List[SettingsEditorTab] = []
+        self.editor_tab_list: list[SettingsEditorTab] = []
         self.bottom_status_bar = QStatusBar()
         self.tab_ops = QFrame(self)  # Groups operations that target the current tab
         self.tab_ops.setLayout(tab_ops_layout := QHBoxLayout())
@@ -167,7 +167,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         self.tab_restore_defaults_button.setToolTip(
             tr('Remove {0}\nand restore {1} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
 
-    def reconfigure(self, vdu_config_list: List[VduControlsConfig], main_config: VduControlsConfig | None = None) -> None:
+    def reconfigure(self, vdu_config_list: list[VduControlsConfig], main_config: VduControlsConfig | None = None) -> None:
         for config in vdu_config_list if main_config is None else [main_config, *vdu_config_list]:
             vdu_label = config.get_vdu_preferred_name()
             conf_key = ConfIni.get_path(config.config_name)
@@ -201,7 +201,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         return MBtn.Ok
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
-        what_changed: Dict[str, str] = {}
+        what_changed: dict[str, str] = {}
         try:
             nothing_to_save = True
             self.setEnabled(False)
@@ -251,11 +251,11 @@ class SettingsEditorTab(QWidget):
         widget_layout.addWidget(scroll_area)
 
         self.change_callback = change_callback
-        self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
+        self.unsaved_changes_map: dict[tuple[str, str], str] = {}
         self.config_path = ConfIni.get_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
-        self.field_map: Dict[ConfOptDef, SettingsEditorFieldBase] = {}
+        self.field_map: dict[ConfOptDef, SettingsEditorFieldBase] = {}
         self.editor_dialog = editor_dialog
         self.preferred_name = vdu_config.get_vdu_preferred_name()
 
@@ -313,8 +313,8 @@ class SettingsEditorTab(QWidget):
                 field_widget.requires.append(related_field)
 
 
-    def _opt_defs_ordered_by_sub_group(self, section_def: ConfSec, vdu_config: VduControlsConfig) -> List[Tuple[str, ConfOptDef]]:
-        ordered_by_sub_group: Dict[Tuple[int, int], Tuple[str, ConfOptDef]] = {}
+    def _opt_defs_ordered_by_sub_group(self, section_def: ConfSec, vdu_config: VduControlsConfig) -> list[tuple[str, ConfOptDef]]:
+        ordered_by_sub_group: dict[tuple[int, int], tuple[str, ConfOptDef]] = {}
         for num, option_name in enumerate(self.ini_editable[section_def].keys()):
 
             try:
@@ -339,7 +339,7 @@ class SettingsEditorTab(QWidget):
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str
 
-    def save(self, force: bool = False, what_changed: Dict[str, str] | None = None, warn_if_no_changes: bool = True) -> int:
+    def save(self, force: bool = False, what_changed: dict[str, str] | None = None, warn_if_no_changes: bool = True) -> int:
         # what_changed is an output parameter, if passed, it will be updated with what has changed.
         if self.is_unsaved() or force:
             try:
@@ -414,8 +414,8 @@ class SettingsEditorFieldBase(QWidget):
         self.warning = option_def.localized_warning if option_def.warning else ''
         self.off_warning = option_def.localized_off_warning if option_def.off_warning else ''
         # Get related and resolve any forward refs (str values)
-        self.related: List[SettingsEditorFieldBase] = []
-        self.requires: List[SettingsEditorFieldBase] = []
+        self.related: list[SettingsEditorFieldBase] = []
+        self.requires: list[SettingsEditorFieldBase] = []
         if option_def.constant:
             self.setDisabled(True)
         if option_def.help:
@@ -570,7 +570,7 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
         super().__init__(QRegularExpression(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$",
                                             QRegularExpression.PatternOption.UseUnicodePropertiesOption))
 
-    def validate(self, text: str | None, pos: int) -> Tuple[QValidator.State, str, int]:
+    def validate(self, text: str | None, pos: int) -> tuple[QValidator.State, str, int]:
         result = super().validate(text, pos)
         if result[0] == QValidator.State.Acceptable:
             if text:

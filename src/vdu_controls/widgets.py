@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Callable, TypeVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import APPNAME, RESIZABLE_MESSAGEBOX_HACK
@@ -148,7 +148,7 @@ class ThemedSvgButton(StdButton):
 
 
 class TitleLabel(QWidget):
-    def __init__(self, icon_source: bytes, main_text: str, sub_text: str = '', widgets: List[QWidget] | None = None,
+    def __init__(self, icon_source: bytes, main_text: str, sub_text: str = '', widgets: list[QWidget] | None = None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent=parent)
         layout = QHBoxLayout(self)
@@ -222,7 +222,7 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
                         initial_filter: str = '',
                         options: Any = QFileDialog.Option.ReadOnly,
                         qdir_filter: Any = QDir.Filter.AllEntries | QDir.Filter.AllDirs | QDir.Filter.Hidden | QDir.Filter.System) -> \
-    Tuple[str, str]:
+    tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
@@ -322,7 +322,7 @@ class MBox(QMessageBox):
 
 
 class ChoiceBox(QDialog):
-    def __init__(self, title: str, choices: List[str], pixmap: QPixmap | None = None,  parent = None):
+    def __init__(self, title: str, choices: list[str], pixmap: QPixmap | None = None,  parent = None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setWindowRole('choice-box')
@@ -429,7 +429,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only one settings editor can be active at a time.
     """
-    _dialogs_map: Dict[Type, QDialog] = {}
+    _dialogs_map: dict[type, QDialog] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""
@@ -460,14 +460,14 @@ class DialogSingletonMixin:
         self.activateWindow()  # type: ignore
 
     @classmethod
-    def show_existing_dialog(cls: Type[DialogSingletonMixinType]) -> None:
+    def show_existing_dialog(cls: type[DialogSingletonMixinType]) -> None:
         """If the dialog.exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         log.debug(f'SingletonDialog show existing {class_name}') if log.debug_enabled else None
         DialogSingletonMixin._dialogs_map[cls].make_visible()
 
     @classmethod
-    def exists(cls: Type[DialogSingletonMixinType]) -> bool:
+    def exists(cls: type[DialogSingletonMixinType]) -> bool:
         """Returns true if the dialog has already been created."""
         # class_name = cls.__name__
         # log.debug(f"SingletonDialog exists {class_name} "
@@ -475,7 +475,7 @@ class DialogSingletonMixin:
         return cls in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: Type[DialogSingletonMixinType]) -> DialogSingletonMixinType:
+    def get_instance(cls: type[DialogSingletonMixinType]) -> DialogSingletonMixinType:
         assert cls.exists()
         return DialogSingletonMixin._dialogs_map[cls]
 
@@ -537,7 +537,7 @@ class EnhancedSplashScreen(QSplashScreen):
         h = 4
         self.dir_html = 'rtl' if self.layoutDirection() == Qt.LayoutDirection.RightToLeft else 'ltf'
         self.title_html = f"<span dir='{self.dir_html}' style='color: #f0f0f0'><h{h}>{title_text}</h{h}></span>"
-        self.message_list: List[str] = []
+        self.message_list: list[str] = []
 
         p_width = pixmap.width()
         p_height = pixmap.height()

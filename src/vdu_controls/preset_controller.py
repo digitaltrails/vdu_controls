@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import glob
 import os
-from typing import Dict, List
 
 from vdu_controls.constants import CONFIG_DIR_PATH
 from vdu_controls.preset import Preset
@@ -12,12 +11,12 @@ from vdu_controls.preset import Preset
 
 class PresetController:
     def __init__(self) -> None:
-        self.presets: Dict[str, Preset] = {}
+        self.presets: dict[str, Preset] = {}
 
     def reinitialize(self):
         self.presets = {}
 
-    def find_presets_map(self) -> Dict[str, Preset]:
+    def find_presets_map(self) -> dict[str, Preset]:
         presets_still_present = []
         # Use a stable order for the files - alphabetical filename.
         for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.basename):
@@ -42,7 +41,7 @@ class PresetController:
                 self.presets[preset.name] = preset
         return self.presets
 
-    def save_order(self, ordering: List[str]) -> None:
+    def save_order(self, ordering: list[str]) -> None:
         order_presets_path = CONFIG_DIR_PATH.joinpath("Order_Presets.conf")
         order_presets_path.write_text(','.join(ordering))
 

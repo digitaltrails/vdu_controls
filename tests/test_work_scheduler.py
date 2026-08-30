@@ -6,7 +6,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -19,12 +19,11 @@ if str(REPO_ROOT / "src") not in sys.path:
 with patch("vdu_controls.work_scheduler.QThread", MagicMock()), \
      patch("vdu_controls.work_scheduler.pyqtSignal", lambda *args, **kwargs: MagicMock()):
     from vdu_controls.work_scheduler import (
-        WorkerThread,
         SchedulerJob,
         SchedulerJobType,
         ScheduleWorker,
+        WorkerThread,
         WorkException,
-        thread_pid,
     )
 
 

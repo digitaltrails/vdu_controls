@@ -83,17 +83,58 @@ import time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Callable, Dict, Type
+from typing import Callable, Mapping
 
 import cv2  # type: ignore
-from PyQt5 import QtNetwork, QtCore
-from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
-from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
-    QColor
+from PyQt5 import QtCore, QtNetwork
+from PyQt5.QtCore import (
+    QCoreApplication,
+    QEvent,
+    QLocale,
+    QObject,
+    QPoint,
+    QSettings,
+    QSize,
+    Qt,
+    QThread,
+    QTranslator,
+    pyqtSignal,
+)
+from PyQt5.QtGui import (
+    QColor,
+    QCursor,
+    QGuiApplication,
+    QIcon,
+    QImage,
+    QMouseEvent,
+    QPainter,
+    QPalette,
+    QPen,
+    QPixmap,
+    QResizeEvent,
+)
 from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QStatusBar, QSlider, QGridLayout, QSpinBox, QPushButton, QFileDialog, QComboBox, QTextEdit, \
-    QDialog, QMessageBox
+from PyQt5.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QGridLayout,
+    QLabel,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QStatusBar,
+    QStyle,
+    QSystemTrayIcon,
+    QTextEdit,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
@@ -242,7 +283,7 @@ log_to_syslog = False
 log_debug_enabled = False
 
 translator: QTranslator | None = None
-ts_translations: Dict[str, str] = {}
+ts_translations: dict[str, str] = {}
 
 
 def log_wrapper(severity, *args) -> None:
@@ -462,11 +503,11 @@ class ConfigIni(configparser.ConfigParser):
             self.add_section(ConfigIni.METADATA_SECTION)
         self.read_dict(DEFAULT_SETTINGS)
 
-    def data_sections(self) -> List:
+    def data_sections(self) -> list:
         """Section other than metadata and DEFAULT - real data."""
         return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfigIni.METADATA_SECTION]
 
-    def get_version(self) -> Tuple:
+    def get_version(self) -> tuple:
         if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
             version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
             try:
@@ -476,14 +517,14 @@ class ConfigIni(configparser.ConfigParser):
         return 1, 0, 0
 
     def get_brightness_map(self):
-        brightness_map: Mapping[int, Tuple[str, int]] = {}
+        brightness_map: Mapping[int, tuple[str, int]] = {}
         for name, brightness_lux in self["brightness_to_lux"].items():
             brightness, lux = brightness_lux.split(' ')
             brightness_map[int(brightness)] = name, int(lux)
         sorted_map = {brightness: brightness_map[brightness] for brightness in sorted(brightness_map, reverse=True)}
         return sorted_map
 
-    def set_brightness_map(self, brightness_map: Mapping[int, Tuple[str, int]]):
+    def set_brightness_map(self, brightness_map: Mapping[int, tuple[str, int]]):
         sorted_map = {brightness: brightness_map[brightness] for brightness in sorted(brightness_map)}
         for name, brightness, lux in sorted_map:
             self.set("brightness_to_lux", name, brightness_lux_str(brightness, lux))
@@ -593,7 +634,7 @@ class CameraDisplay(QLabel):
             self.setPixmap(pixmap)
             self.painter.end()
 
-    def calc_relative_rectangle(self, x_start: int, y_start: int, x_end: int, y_end: int) -> Tuple[float, float, float, float]:
+    def calc_relative_rectangle(self, x_start: int, y_start: int, x_end: int, y_end: int) -> tuple[float, float, float, float]:
         x = min(x_start, x_end)
         y = min(y_start, y_end)
         w = abs(x_start - x_end)
@@ -604,7 +645,7 @@ class CameraDisplay(QLabel):
         w_percent = 100 * w / self.pixmap().width()
         return x_percent, y_percent, w_percent, h_percent
 
-    def calc_absolute_rectangle(self, x_percent: float, y_percent: float, w_percent: float, h_percent: float) -> Tuple[
+    def calc_absolute_rectangle(self, x_percent: float, y_percent: float, w_percent: float, h_percent: float) -> tuple[
         int, int, int, int]:
         x = int(int(x_percent / 100 * self.pixmap().width()))
         y = int(int(y_percent / 100 * self.pixmap().height()))
@@ -665,7 +706,7 @@ class BrightnessMappingDisplay(QWidget):
         heading = make_heading(tr("Brightness-to-Lux Mapping"), self)
         layout.addWidget(heading, 0, 0, 1, -1, Qt.AlignTop)
 
-        self.input_widgets: Dict[str, QSpinBox] = {}
+        self.input_widgets: dict[str, QSpinBox] = {}
         for col, (brightness, (name, lux)) in enumerate(reversed(global_config.get_brightness_map().items())):
             lux_label = QLabel(f"{lux:n}\n{name}")
             layout.addWidget(lux_label, 1, col, 1, 1)
@@ -714,7 +755,7 @@ class FasterFileDialog(QFileDialog):   # Takes 5 seconds versus 30+ seconds for 
 
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter: str = '',
-                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
+                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> tuple[str, str]:
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter, options=options)
@@ -781,7 +822,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only ones settings editor can be active at a time.
     """
-    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
+    _dialogs_map: dict[str, DialogSingletonMixin] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""
@@ -809,7 +850,7 @@ class DialogSingletonMixin:
         self.activateWindow()  # type: ignore
 
     @classmethod
-    def show_existing_dialog(cls: Type) -> None:
+    def show_existing_dialog(cls: type) -> None:
         """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         log_debug(f'SingletonDialog show existing {class_name}') if log_debug_enabled else None
@@ -817,7 +858,7 @@ class DialogSingletonMixin:
         instance.make_visible()
 
     @classmethod
-    def exists(cls: Type) -> bool:
+    def exists(cls: type) -> bool:
         """Returns true if the dialog has already been created."""
         class_name = cls.__name__
         log_debug(f"SingletonDialog exists {class_name} "
@@ -825,7 +866,7 @@ class DialogSingletonMixin:
         return class_name in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: Type) -> DialogSingletonMixin | None:
+    def get_instance(cls: type) -> DialogSingletonMixin | None:
         return DialogSingletonMixin._dialogs_map.get(cls.__name__, None)
 
 

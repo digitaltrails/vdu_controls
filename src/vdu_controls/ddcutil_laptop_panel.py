@@ -8,7 +8,7 @@ import subprocess
 import time as sys_time
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import Callable, Dict, List
+from typing import Callable
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -40,11 +40,11 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def is_available() -> bool:
         return shutil.which(DdcutilPanelImpl.BRIGHTNESSCTL_EXE) is not None
 
-    def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
+    def __init__(self, _: list[str] | None = None, callback: Callable | None = None):
         self.include_leds = VDU_CONTROLS_DEVELOPER  # Test using desktop controllable LEDs
         self.brightness_vcp_code_int = BRIGHTNESS_VCP_CODE
         self.ddcutil_access_lock = Lock()
-        self.max_brightness: Dict[str, int] = {}
+        self.max_brightness: dict[str, int] = {}
         if log.debug_enabled:
             version_check = self.__run__('-V').stdout.decode('utf-8')
             log.debug(f"{DdcutilPanelImpl.BRIGHTNESSCTL_EXE} version {version_check}")
@@ -86,7 +86,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         pass
 
-    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: list[str]):
         pass
 
     def _get_max_brightness(self, edid_txt: str) -> int:
@@ -121,7 +121,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def get_interface_version_string(self) -> str:
         return f"Command Line - {DdcutilPanelImpl.BRIGHTNESSCTL_EXE}"
 
-    def detect(self, _: int) -> List[DdcDetectedAttributes]:
+    def detect(self, _: int) -> list[DdcDetectedAttributes]:
         results = []
         cmd_result = self.__run__('-m', 'i')
         for item_number, line in enumerate(cmd_result.stdout.splitlines(), start=1):
@@ -169,7 +169,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         finally:
             self.set_vcp_time = datetime.now()
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
         for attempt_count in range(DDCUTIL_RETRIES):
             try:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Dict, Tuple
+from typing import Callable
 
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
@@ -34,7 +34,7 @@ class SolarElevationData:
 # which was translated to Python from http://www.psa.es/sdg/sunpos.htm
 # Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
-def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
+def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> tuple[float, float]:
     """
     Return azimuth degrees clockwise from true north and zenith in degrees from
     vertical direction.
@@ -130,7 +130,7 @@ def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
 
 def create_elevation_map(local_now: datetime, latitude: float, longitude: float,
                          callback: Callable[[float, float, datetime], None]
-                                   | None = None) -> Dict[SolarElevationKey, SolarElevationData]:
+                                   | None = None) -> dict[SolarElevationKey, SolarElevationData]:
     """
     Create a minute-by-minute map of today's SolarElevations.
     For a given dict[SolarElevation], record the first minute it occurs.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 from vdu_controls import app_logging as log
 from vdu_controls.app_locale import tr
@@ -17,7 +17,6 @@ from vdu_controls.qt_imports import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QMouseEvent,
     QSize,
     QSlider,
     QSpinBox,
@@ -170,7 +169,7 @@ class LuxAmbientSlider(QWidget, LocaleFormatterMixin):
 
         col = 0
         log10_icon_size = QSize(desktop_font_height(scaled=1), desktop_font_height(scaled=1))
-        self.label_map: Dict[StdButton, bytes] = {}
+        self.label_map: dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
             zone_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,
                                           clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True,

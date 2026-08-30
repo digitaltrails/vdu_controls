@@ -7,7 +7,7 @@ import time as sys_time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Dict, List, Tuple, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 import vdu_controls.app_logging as log
 import vdu_controls.weather_util as weather_util
@@ -474,10 +474,10 @@ class PresetElevationChartWidget(QLabel):
         self.setMouseTracking(True)
         self.in_drag = False
         self.current_pos: QPoint | None = None
-        self.cache_solar_by_elevation: Dict[SolarElevationKey, SolarElevationData] = {}
+        self.cache_solar_by_elevation: dict[SolarElevationKey, SolarElevationData] = {}
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = None
-        self.elevation_steps: List[SolarElevationKey] = []
+        self.elevation_steps: list[SolarElevationKey] = []
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
         for i in range(90, -20, -1):
@@ -488,8 +488,8 @@ class PresetElevationChartWidget(QLabel):
         self.radius_of_deletion = dpx(25)
         self.solar_max_t: datetime | None = None
         self.last_event_time = sys_time.perf_counter()
-        self.cache_key: Tuple[datetime, int, int, int] | None = None
-        self.cache_curve_points: List[QPoint] = []
+        self.cache_key: tuple[datetime, int, int, int] | None = None
+        self.cache_curve_points: list[QPoint] = []
 
     def has_elevation_key(self, key: SolarElevationKey) -> bool:
         return key in self.elevation_steps
@@ -676,7 +676,7 @@ class PresetElevationChartWidget(QLabel):
         self.noon_y = solar_noon_y
         self.cache_curve_points = curve_points
 
-    def calc_angle_radius(self, pos: QPoint) -> Tuple[int, int]:
+    def calc_angle_radius(self, pos: QPoint) -> tuple[int, int]:
         x, y = pos.x(), pos.y()
         adjacent = x - self._reverse_X(self.noon_x)
         opposite = self.horizon_y - y
@@ -751,9 +751,9 @@ class PresetScheduleAtWidgetBase(QWidget):  # Abstract
     def __init__(self, description: str):
         super().__init__()
         self.description = description
-        self.all_schedule_chooser_widgets: List[PresetScheduleAtWidgetBase] = []
+        self.all_schedule_chooser_widgets: list[PresetScheduleAtWidgetBase] = []
 
-    def set_schedule_widgets(self, all_widgets: List[PresetScheduleAtWidgetBase]):
+    def set_schedule_widgets(self, all_widgets: list[PresetScheduleAtWidgetBase]):
         self.all_schedule_chooser_widgets = all_widgets
 
     def clear_others(self, _=None) -> bool:  # Only allow a Preset to be scheduled once.
@@ -1036,7 +1036,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.setWindowRole('preset-dialog')
         self.main_controller = main_controller
         self.main_config = main_config
-        self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
+        self.content_controls_map: dict[tuple[str, str], QCheckBox] = {}
         self.resize(dpx(950), dpx(650))
         self.setMinimumSize(dpx(675), dpx(300))
         layout = QVBoxLayout()
@@ -1333,12 +1333,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
         preset_ini.set('preset', 'daylight-factor', str(self.df_widget.df_input.text()))
 
-    def get_preset_widgets(self) -> List[PresetItemWidget]:
+    def get_preset_widgets(self) -> list[PresetItemWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()   # type:ignore there will be a widget at i
                 for i in range(0, self.preset_widgets_layout.count() - 1)
                 if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetItemWidget)]  # type:ignore there will be a widget at i
 
-    def get_preset_names_in_order(self) -> List[str]:
+    def get_preset_names_in_order(self) -> list[str]:
         return [w.name for w in self.get_preset_widgets()]
 
     def add_preset_widget(self, preset_widget: PresetItemWidget) -> None:

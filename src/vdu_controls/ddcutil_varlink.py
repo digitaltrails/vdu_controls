@@ -10,7 +10,7 @@ import time
 import time as sys_time
 
 # Only import when checking - if the user isn't use varlink, don't require it.
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Callable
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import (
@@ -29,7 +29,7 @@ from vdu_controls.ddcutil_abstract import (
 )
 
 if TYPE_CHECKING:
-    from varlink import Client, VarlinkError
+    from varlink import Client
 
 _Client = None
 _VarlinkError = None
@@ -202,14 +202,14 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     Implements DdcutilInterface using the varlink ddcutil-service.
     """
 
-    _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
+    _metadata_cache: dict[tuple[str, int], VcpTypeInfo] = {}
 
     # Lock prevents overlapping varlink Client calls from one stream - which is not supported.
     _service_lock = threading.Lock()
 
     _event_listener: VarlinkListener | None = None
 
-    def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
+    def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
         self.varlink_socket = getenv_logged(
             'DDCUTIL_VARLINK_SOCKET',
@@ -228,7 +228,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._connection: Client | None = None
         self._service: Any | None = None
 
-        self._display_map: Dict[str, int] = {}  # edid_base64 -> display_number
+        self._display_map: dict[str, int] = {}  # edid_base64 -> display_number
 
         # Connect and sanity check
         for try_count in range(1, 5):
@@ -269,7 +269,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         except (ConnectionRefusedError, FileNotFoundError) as e:
             raise DdcutilServiceNotFound(f"Cannot connect to varlink service: {e}")
 
-    def _resolve_display_identifier(self, edid_txt: str) -> Tuple[int | None, str | None]:
+    def _resolve_display_identifier(self, edid_txt: str) -> tuple[int | None, str | None]:
         """
         Convert the public EDID string (assumed to be base64) or a numeric display number
         into (display_number, edid_base64) for varlink methods.
@@ -290,7 +290,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._service.SetSleepMultiplier(display_num, edid_b64, sleep_multiplier, None)
 
     @serialized_retry
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]) -> None:
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]) -> None:
         log.debug("set_vdu_specific_args not implemented for varlink")
 
     @serialized_retry
@@ -304,12 +304,12 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         return f"{res['version']} (Varlink ddcutil-service)"
 
     @serialized_retry
-    def _get_status_values(self) -> Dict[int, str]:
+    def _get_status_values(self) -> dict[int, str]:
         # Not exposed; return empty dict.
         return {}
 
     @serialized_retry
-    def detect(self, flags: int) -> List[DdcDetectedAttributes]:
+    def detect(self, flags: int) -> list[DdcDetectedAttributes]:
         include_offline = bool(flags & 1)
         result_map = self._service.Detect(include_offline)
         result_list = []
@@ -369,7 +369,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._service.SetVcp(display_num, edid_b64, vcp_code_int, new_value_int, None, None)
 
     @serialized_retry
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
         res = self._service.GetMultipleVcp(display_num, edid_b64, vcp_code_int_list, None)
         result = []

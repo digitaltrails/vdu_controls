@@ -6,7 +6,7 @@ import re
 import threading
 import time as sys_time
 from collections import defaultdict, deque
-from typing import Callable, DefaultDict, Dict, List, NewType, Tuple
+from typing import Callable, NewType
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -32,7 +32,7 @@ class DdcutilAggregator(DdcutilInterface):
     For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
     DdcutilPanelImpl, with the results aggregated together.
     """
-    vcp_write_counters: DefaultDict[str, int] = defaultdict(int)
+    vcp_write_counters: defaultdict[str, int] = defaultdict(int)
 
     _setter_history: dict[tuple[str, int], deque] = {}
     _setter_history_lock = threading.Lock()
@@ -40,12 +40,12 @@ class DdcutilAggregator(DdcutilInterface):
     _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))  # Set either to zero to disable checks.
     _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
-    def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
+    def __init__(self, common_args: list[str] | None = None, prefer_dbus_client: bool = True,
                  prefer_varlink_client: bool = False,
                  connected_vdus_changed_callback: Callable | None = None) -> None:
         super().__init__()
         self.common_args = common_args
-        self.ddcutil_emulators_by_edid: Dict[str, DdcutilInterface] = {}
+        self.ddcutil_emulators_by_edid: dict[str, DdcutilInterface] = {}
         self.ddcutil_impl: DdcutilInterface
 
         if prefer_varlink_client:
@@ -65,10 +65,10 @@ class DdcutilAggregator(DdcutilInterface):
         if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
-        self.supported_codes: Dict[int, str] = {}
-        self.vcp_type_map: Dict[Tuple[str, int], VcpTypeInfo] = {}
-        self.edid_txt_map: Dict[str, str] = {}
-        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
+        self.supported_codes: dict[int, str] = {}
+        self.vcp_type_map: dict[tuple[str, int], VcpTypeInfo] = {}
+        self.edid_txt_map: dict[str, str] = {}
+        self.ddcutil_version: tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_impl.get_ddcutil_version_string()
         if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
@@ -79,7 +79,7 @@ class DdcutilAggregator(DdcutilInterface):
                  f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
                  f"- interface {self.ddcutil_impl.get_interface_version_string()}")
 
-    def ddcutil_version_info(self) -> Tuple[str, str]:
+    def ddcutil_version_info(self) -> tuple[str, str]:
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
     def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl):
@@ -110,7 +110,7 @@ class DdcutilAggregator(DdcutilInterface):
             else:
                 raise
 
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]):
         edid = self.get_edid_txt(vdu_number)
         self._impl(edid).set_vdu_specific_args(edid, extra_args)
 
@@ -122,7 +122,7 @@ class DdcutilAggregator(DdcutilInterface):
             return DdcutilAggregator.vcp_write_counters[edid_txt]
         return 0
 
-    def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
+    def detect_vdus(self) -> list[tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(0)
@@ -132,7 +132,7 @@ class DdcutilAggregator(DdcutilInterface):
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
-        key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
+        key_prospects: dict[tuple[str, str], tuple[str, str]] = {}
         for vdu in vdu_list:
             vdu_number = str(vdu.display_number)
             log.debug(f"checking possible IDs for display {vdu_number}") if log.debug_enabled else None
@@ -268,7 +268,7 @@ class DdcutilAggregator(DdcutilInterface):
         """Returns info about all codes known to ddcutil, whether supported or not."""
         return DdcutilExeImpl([]).vcp_info()
 
-    def get_supported_vcp_codes_map(self) -> Dict[int, str]:
+    def get_supported_vcp_codes_map(self) -> dict[int, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
         if len(self.supported_codes) == 0:  # Initialize on demand
             info = self.vcp_info()
@@ -287,8 +287,8 @@ class DdcutilAggregator(DdcutilInterface):
                         self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_vcp_values(self, vdu_number: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
-        values_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_int_list}
+    def get_vcp_values(self, vdu_number: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
+        values_dict: dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_int_list}
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
         values_list = impl.get_vcp_values(edid_txt, vcp_code_int_list)

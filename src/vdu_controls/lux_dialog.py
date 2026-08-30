@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
 import vdu_controls.app_logging as log
 from vdu_controls.app_locale import TitledStrEnum, tr
@@ -89,7 +89,7 @@ if TYPE_CHECKING:
 class LuxProfileTemplate:
     name: str
     interpolate: bool
-    values: List[LuxPoint]
+    values: list[LuxPoint]
 
 
 class LuxProfileTemplates:  # Context for QT_TR_NOOP translations
@@ -139,11 +139,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.setWindowTitle(tr('Light-Metering'))
         self.setWindowRole('light-metering-dialog')
         self.main_controller: VduAppController = main_controller
-        self.lux_profiles_map: Dict[VduStableId, List[LuxPoint]] = {}
-        self.range_restrictions_map: Dict[VduStableId, Tuple[int, int]] = {}
-        self.preset_points: List[LuxPoint] = []
-        self.drawing_color_map: Dict[VduStableId, QColor] = {}
-        self.current_brightness_map: Dict[VduStableId, int] = {}
+        self.lux_profiles_map: dict[VduStableId, list[LuxPoint]] = {}
+        self.range_restrictions_map: dict[VduStableId, tuple[int, int]] = {}
+        self.preset_points: list[LuxPoint] = []
+        self.drawing_color_map: dict[VduStableId, QColor] = {}
+        self.current_brightness_map: dict[VduStableId, int] = {}
         self.has_profile_changes = False
         self.setMinimumWidth(dpx(600))
         self.path = ConfIni.get_path('AutoLux')
@@ -374,7 +374,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.setVisible(self.lux_config.is_auto_enabled())
 
-        connected_id_list: List[VduStableId] = []  # List of all currently connected VDUs
+        connected_id_list: list[VduStableId] = []  # List of all currently connected VDUs
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
             if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
@@ -559,7 +559,7 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
     def __init__(self, parent: LuxDialog) -> None:
         super().__init__(parent=parent)
         self.max_history = 240
-        self.history: List[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
+        self.history: list[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
         self.sun_image = None
         self.lux_bar_color = QColor(0xfec053)
         self.white_line_color = w = QColor(0xfefefe)
@@ -651,8 +651,8 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
                 most_recent_df_xy = (i, item_y_pos)
                 most_recent_item = item
         # Plot Eo and Ei
-        eo_points: List[QPointF] = []
-        ei_points: List[QPointF] = []
+        eo_points: list[QPointF] = []
+        ei_points: list[QPointF] = []
         painter.setPen(QPen(self.white_transparent_color, thin_line_width))
         t = df_plot_day + timedelta(minutes=0)
         df = LuxMeterSemiAutoDevice.get_daylight_factor()
@@ -1014,7 +1014,7 @@ class LuxProfileWidget(QLabel):
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         self.create_plot()
 
-    def find_close_to(self, x: int, y: int, vdu_sid: VduStableId) -> Tuple:
+    def find_close_to(self, x: int, y: int, vdu_sid: VduStableId) -> tuple:
         r = self.snap_to_margin
         for vdu_pd in self.profiles_map[vdu_sid]:
             existing_lux = vdu_pd.lux

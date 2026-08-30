@@ -36,9 +36,9 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
 import math
-from pathlib import Path
 import signal
 import sys
+from pathlib import Path
 
 import cv2  # type: ignore
 

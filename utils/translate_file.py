@@ -7,9 +7,8 @@ Usage: translate_to_locale.py <locale> <input_file>
 Example: translate_to_locale.py fr_FR about.html
 Output: about-fr_FR.html
 """
-import sys
 import subprocess
-
+import sys
 from pathlib import Path
 
 

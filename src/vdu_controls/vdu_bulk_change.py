@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Any, Callable
 
 import vdu_controls.app_logging as log
 from vdu_controls.ddcutil_aggregator import VduStableId
@@ -45,7 +45,7 @@ class BulkChangeWorker(WorkerThread):
         self.main_controller = main_controller
         self.progress_callable = progress_callable
         self.progress_qtsignal.connect(self.progress_callable)
-        self.to_do_list: List[BulkChangeItem] = []
+        self.to_do_list: list[BulkChangeItem] = []
         self.step_interval = step_interval
         # Turn off transitions if we are protecting NVRAM.
         # Also turn off if we're ignoring other work - we should do things as fast as possible.
@@ -114,7 +114,7 @@ class BulkChangeWorker(WorkerThread):
 
     def _refresh_current_values_from_vdu(self):
         log.debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log.debug_enabled else None
-        items_by_vdu: Dict[VduStableId, Dict[int, BulkChangeItem]] = {}
+        items_by_vdu: dict[VduStableId, dict[int, BulkChangeItem]] = {}
         for item in self.to_do_list:
             if item.vdu_sid not in items_by_vdu:
                 items_by_vdu[item.vdu_sid] = {}

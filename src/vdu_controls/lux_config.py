@@ -5,7 +5,6 @@ from __future__ import annotations
 from ast import literal_eval
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
 
 import vdu_controls.app_logging as log
 from vdu_controls.config_ini import ConfIni
@@ -36,12 +35,12 @@ class LuxConfig(ConfIni):
         super().__init__()
         self.path = ConfIni.get_path('AutoLux')
         self.last_modified_time = 0.0
-        self.cached_profiles_map: Dict[str, List[LuxPoint]] = {}
+        self.cached_profiles_map: dict[str, list[LuxPoint]] = {}
 
     def get_device_name(self) -> str:
         return self.get("lux-meter", "lux-device", fallback='')
 
-    def get_preset_points(self) -> List[LuxPoint]:
+    def get_preset_points(self) -> list[LuxPoint]:
         if self.has_option('lux-presets', 'lux-preset-points'):
             return [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
         return []
