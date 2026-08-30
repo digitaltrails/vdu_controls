@@ -164,7 +164,9 @@ class Preset:
 
     def get_at_time(self) -> datetime | None:
         if at_time_spec := self.preset_ini.get('preset', 'at-time', fallback=None):
-            return datetime.combine(datetime.today(), datetime.strptime(at_time_spec, "%H:%M").time()).astimezone()
+            now = zoned_now()
+            time_of_day = datetime.strptime(at_time_spec, "%H:%M").replace(tzinfo=now.tzinfo).time()
+            return datetime.combine(now.date(), time_of_day).replace(tzinfo=now.tzinfo)
         return None
 
     def get_solar_elevation_abbreviation(self) -> str:

@@ -952,7 +952,7 @@ class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
             state = QValidator.State.Invalid
             for acceptable_format in ['%H:%M', '%H%M']:
                 try:
-                    datetime.strptime(text, acceptable_format)
+                    datetime.strptime(text, acceptable_format).replace(tzinfo=zoned_now().tzinfo)
                     state = QValidator.State.Acceptable
                     break
                 except ValueError:

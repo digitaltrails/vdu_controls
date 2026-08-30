@@ -38,7 +38,8 @@ def intV(type_id: Enum | int) -> int:
 
 def zoned_now(rounded_to_minute: bool = False) -> datetime:
     now = datetime.now().astimezone()
-    if TESTING_TIME_ZONE:  # This is a testing-only path that requires python > 3.8
+    if TESTING_TIME_ZONE:  # This is a testing-only path that requires python >= 3.9
+        # Not fully using ZoneInfo - problematic to reliably obtain "localhost" ZoneInfo on Linux.
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
     result = (now + timedelta(seconds=30)).replace(second=0, microsecond=0) if rounded_to_minute else now
