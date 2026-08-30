@@ -339,7 +339,7 @@ class VduControlsMainPanel(QWidget):
 
     def status_message(self, message: str, timeout_ms: int):
         if message.strip():  # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
-            self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
+            self.message_history.append(f"\n{zoned_now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
             self.message_history = self.message_history[-9:]
         assert self.main_controller is not None   # will exist by the time this is called.
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):

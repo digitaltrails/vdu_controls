@@ -7,6 +7,7 @@ import syslog
 import traceback
 from datetime import datetime
 
+
 _LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 
 
@@ -34,7 +35,7 @@ def _log_wrapper(severity, *args, trace=False) -> None:
             syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
             syslog.syslog(severity, syslog_message)
         else:
-            print(datetime.now().strftime("%H:%M:%S"), prefix, message)
+            print(datetime.now().astimezone().strftime("%H:%M:%S"), prefix, message)
     if debug_enabled and trace:
         debug("TRACEBACK:", ''.join(traceback.format_stack()))
 

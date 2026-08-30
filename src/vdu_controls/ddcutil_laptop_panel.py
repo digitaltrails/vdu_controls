@@ -24,6 +24,7 @@ from vdu_controls.ddcutil_abstract import (
     VcpTypeInfo,
     VcpValue,
 )
+from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QSocketNotifier, QTimer
 
 
@@ -48,7 +49,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         if log.debug_enabled:
             version_check = self.__run__('-V').stdout.decode('utf-8')
             log.debug(f"{DdcutilPanelImpl.BRIGHTNESSCTL_EXE} version {version_check}")
-        self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
+        self.set_vcp_time: datetime = zoned_now() - timedelta(seconds=60)  # Last time set_vcp was called
         self.callback = callback
         if self.callback:  # --- udev setup ---
             import pyudev  # Don't make non-laptop users import this.
@@ -69,7 +70,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
 
             def _invoke_callback():
                 if self.callback is not None:
-                    if datetime.now() - self.set_vcp_time > timedelta(seconds=1):
+                    if zoned_now() - self.set_vcp_time > timedelta(seconds=1):
                         for edid_txt in self.max_brightness.keys():
                             self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
 
@@ -167,7 +168,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
             log.debug(f"set_vcp: Panel set {new_value_int=} {physical_value=}") if log.debug_enabled else None
             self.__run__('set', '-d', edid_txt, physical_value)
         finally:
-            self.set_vcp_time = datetime.now()
+            self.set_vcp_time = zoned_now()
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
