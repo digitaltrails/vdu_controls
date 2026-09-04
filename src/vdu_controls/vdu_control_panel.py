@@ -175,7 +175,7 @@ class VduControlBase(QWidget):
         self.refresh_ui_only = False
         self.debug = False  # Local debug switch because this is very noisy and only needed rarely.
 
-    def update_from_vdu(self, vcp_value: VcpValue):  # Used for updating from the results of get_attributes() -> List[VcpValue]
+    def update_from_vdu(self, vcp_value: VcpValue):  # Used for updating from the results of get_attributes()
         if self.vcp_capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:  # Overrides metadata value-type, enforce simple
             self.current_value = 0x00ff & vcp_value.current  # Mask off high byte
         else:

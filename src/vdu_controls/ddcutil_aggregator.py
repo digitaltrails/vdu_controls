@@ -6,7 +6,7 @@ import re
 import threading
 import time as sys_time
 from collections import defaultdict, deque
-from typing import Callable, NewType
+from typing import Callable, ClassVar, NewType
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -32,13 +32,13 @@ class DdcutilAggregator(DdcutilInterface):
     For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
     DdcutilPanelImpl, with the results aggregated together.
     """
-    vcp_write_counters: defaultdict[str, int] = defaultdict(int)
+    vcp_write_counters: ClassVar[defaultdict[str, int]] = defaultdict(int)
 
-    _setter_history: dict[tuple[str, int], deque] = {}
-    _setter_history_lock = threading.Lock()
-    _setter_cascade_detected = False
-    _RATE_WINDOW_SECONDS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))  # Set either to zero to disable checks.
-    _RATE_MAX_CALLS = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
+    _setter_history: ClassVar[dict[tuple[str, int], deque]] = {}
+    _setter_history_lock: ClassVar[threading.Lock] = threading.Lock()
+    _setter_cascade_detected: ClassVar[bool] = False
+    _RATE_WINDOW_SECONDS: ClassVar[int] = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_SECS", '65'))  # Set either to zero to disable checks.
+    _RATE_MAX_CALLS: ClassVar[int] = int(getenv_logged("VDU_CONTROLS_SETTER_RATE_CALLS", '20'))
 
     def __init__(self, common_args: list[str] | None = None, prefer_dbus_client: bool = True,
                  prefer_varlink_client: bool = False,
@@ -256,7 +256,7 @@ class DdcutilAggregator(DdcutilInterface):
 
     def set_vcp(self, vdu_number: str, vcp_code: int, new_value: int) -> None:
         key = (vdu_number, vcp_code)
-        if not self._check_setter_rate_limit(key):  # check if rate limit is exceeded, raises if exceeded
+        if not DdcutilAggregator._check_setter_rate_limit(key):  # check if rate limit is exceeded, raises if exceeded
             return   # When the limit is reached, stop writing until reset is called.
         edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)

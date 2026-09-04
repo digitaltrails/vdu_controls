@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal
-from typing import Any, Callable, Self, TypeVar
+from typing import Any, Callable, ClassVar, Self, TypeVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import APPNAME, RESIZABLE_MESSAGEBOX_HACK
@@ -250,7 +250,7 @@ class MBox(QMessageBox):
 
     translating = False
 
-    _translation_cache: dict[str, str] = {}
+    _translation_cache: ClassVar[dict[str, str]] = {}
 
     def __init__(self,
                  icon: QMessageBox.Icon,
@@ -430,7 +430,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only one settings editor can be active at a time.
     """
-    _dialogs_map: dict[type, QDialog] = {}
+    _dialogs_map: ClassVar[dict[type, QDialog]] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import vdu_controls.app_logging as log
 from vdu_controls.app_locale import TitledStrEnum, tr
@@ -93,7 +93,7 @@ class LuxProfileTemplate:
 
 
 class LuxProfileTemplates:  # Context for QT_TR_NOOP translations
-    LIST = [
+    LIST: ClassVar[list[LuxProfileTemplate]] = [
         LuxProfileTemplate(name=QT_TR_NOOP("Older monitor, dimmer backlight, sunlit room."),
                            interpolate=True,
                            values=[LuxPoint(0, 90), LuxPoint(30, 90), LuxPoint(1016, 100), LuxPoint(100000, 100)]),

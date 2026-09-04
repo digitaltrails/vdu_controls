@@ -10,7 +10,7 @@ import time
 import time as sys_time
 
 # Only import when checking - if the user isn't use varlink, don't require it.
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import (
@@ -158,7 +158,7 @@ def serialized_retry(func):
         VarlinkError = _lazy_load_varlinkerror_class()
 
         try:
-            with self._service_lock:
+            with self.service_lock:
                 log.debug(f"Varlink: {func.__name__} obtained lock")
 
                 for attempt in range(VARLINK_MAX_RETRIES):
@@ -202,12 +202,12 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     Implements DdcutilInterface using the varlink ddcutil-service.
     """
 
-    _metadata_cache: dict[tuple[str, int], VcpTypeInfo] = {}
+    _metadata_cache: ClassVar[dict[tuple[str, int], VcpTypeInfo]] = {}
 
     # Lock prevents overlapping varlink Client calls from one stream - which is not supported.
-    _service_lock = threading.Lock()
+    _service_lock: ClassVar[threading.Lock]  = threading.Lock()
 
-    _event_listener: VarlinkListener | None = None
+    _event_listener: ClassVar[VarlinkListener | None] = None
 
     def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -354,12 +354,12 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     @serialized_retry
     def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:
         key = (edid_txt, vcp_code_int)
-        if key in self._metadata_cache:
-            return self._metadata_cache[key]
+        if key in DdcutilVarlinkImpl._metadata_cache:
+            return DdcutilVarlinkImpl._metadata_cache[key]
         display_num, edid_b64 = self._resolve_display_identifier(edid_txt)
         res = self._service.GetVcpMetadata(display_num, edid_b64, vcp_code_int, None)
         info = VcpTypeInfo(res.is_complex, res.is_continuous)
-        self._metadata_cache[key] = info
+        DdcutilVarlinkImpl._metadata_cache[key] = info
         return info
 
     @serialized_retry
@@ -461,5 +461,9 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
         elif kind == 'vcp_changed':
             log.debug("VCP changed event (ignored)")
+
+    @property
+    def service_lock(self):
+        return DdcutilVarlinkImpl._service_lock
 
 

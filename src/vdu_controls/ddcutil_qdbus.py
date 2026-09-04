@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time as sys_time
 from threading import Lock
-from typing import Callable
+from typing import Callable, ClassVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -37,9 +37,9 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     does the expensive initialization once at startup.
     """
     RETURN_RAW_VALUES = 2
-    _metadata_cache: dict[tuple[str, int], VcpTypeInfo] = {}
-    _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
-    _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
+    _metadata_cache: ClassVar[dict[tuple[str, int], VcpTypeInfo]] = {}
+    _current_connected_displays_changed_handler: ClassVar[Callable | None] = None  # Only one instance and listener should exist at a time
+    _current_service_initialization_handler: ClassVar[Callable | None] = None  # Only one instance and listener should exist at a time
 
     def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()

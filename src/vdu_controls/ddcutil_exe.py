@@ -6,6 +6,7 @@ import re
 import subprocess
 import time as sys_time
 from threading import Lock
+from typing import ClassVar
 
 import vdu_controls.app_logging as log
 from vdu_controls.constants import getenv_logged
@@ -28,11 +29,11 @@ class DdcutilExeImpl(DdcutilInterface):
     Performs ddcutil requests by executing each request in a one-off ddcutil subprocess.
     Relatively slow due to ddcutil initialization overheads on each request.
     """
-    _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
-    _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
-    _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
-    _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
-    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: dict[int, re.Pattern] = {}
+    _VCP_CODE_REGEXP: ClassVar[re] = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
+    _C_PATTERN: ClassVar[re]  = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
+    _SNC_PATTERN: ClassVar[re]  = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
+    _CNC_PATTERN: ClassVar[re]  = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
+    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: ClassVar[dict[int, re.Pattern]] = {}
 
     def __init__(self, common_args: list[str] | None):
         self.vdu_sleep_multiplier: dict[str, float] = {}

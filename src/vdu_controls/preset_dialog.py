@@ -7,7 +7,7 @@ import time as sys_time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, Callable, ClassVar, cast
 
 import vdu_controls.app_logging as log
 from vdu_controls import weather_util
@@ -273,7 +273,7 @@ class PresetIconPickerButton(StdButton):
 
 
 class PresetWeatherWidget(QWidget):
-    default_weather_conditions = {
+    default_weather_conditions: ClassVar[dict[Path, str]] = {
         CONFIG_DIR_PATH.joinpath('good.weather'): "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n",
         CONFIG_DIR_PATH.joinpath('bad.weather'):
             "143 Fog\n179 Light Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 "
