@@ -105,7 +105,7 @@ class VarlinkListener:
                             if self._stop_event.is_set():
                                 break
                             self._event_service = service
-                            event_stream = service.Subscribe(True, _more=True)
+                            event_stream = service.Subscribe(_more=True)
 
                         # This loop blocks until a new event arrives OR service.close() is called
                         for raw_event in event_stream:
