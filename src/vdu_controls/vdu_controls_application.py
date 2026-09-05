@@ -1277,7 +1277,7 @@ class VduAppWindow(QMainWindow):
         if get_app_instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
-            if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GrayScaleDialog):
+            if isinstance(top_level_widget, (DialogSingletonMixin, GrayScaleDialog)):
                 if top_level_widget.isVisible():
                     return False  # A dialog is showing - definitely active
         return True  # inactive and no dialogs are active
