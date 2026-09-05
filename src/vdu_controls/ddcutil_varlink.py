@@ -120,12 +120,12 @@ class VarlinkListener:
                 if self._stop_event.is_set():
                     break
 
-                log.error(f"Event stream connection error: {e!s}")
+                log.error(f"Event stream connection error: {e}")
                 if not self._stop_event.wait(2.0):
                     continue
 
             except (RuntimeError, LookupError, ValueError, TypeError) as e:
-                log.error(f"Varlink: unexpected error in event loop: {e!s}")
+                log.error(f"Varlink: unexpected error in event loop: {e!r}")
                 if not self._stop_event.wait(2.0):
                     continue
 
@@ -446,9 +446,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         data = event["data"]
 
         if kind == 'service_initialized':
-            log.info("Service initialized event")
-            if self.listener_callback:
-                self.listener_callback('', -1, 0)
+            log.info("Subscription initialized event")  # not a real event, ignore it.
 
         elif kind == 'connected_displays_changed':
             log.info("Connected displays changed event")
