@@ -28,7 +28,7 @@ from vdu_controls.qt_imports import (
     QWidget,
 )
 from vdu_controls.scaling import dpx
-from vdu_controls.widgets import DialogSingletonMixin, SubWinDialog
+from vdu_controls.widgets import DialogSingletonMixin, MBox, MIcon, SubWinDialog
 
 
 class MarkdownHelpViewer(QWidget):
@@ -160,8 +160,10 @@ class OnlineHelpViewer(QTextBrowser):
                 subprocess.Popen(['xdg-open', url.toString()],
                                  stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
-            except Exception as e:
+            except (OSError, ValueError, TypeError, subprocess.SubprocessError) as e:
                 log.error(f"Failed to open URL: {e!s}")
+                MBox(MIcon.Critical, msg=tr("Failed to open URL {}").format(url.toString()),
+                     details=f"{e!s}").exec()
 
         # Use a single-shot timer to prevent event loop reentrancy
         QTimer.singleShot(0, partial(_open_url_with_xdg, url))

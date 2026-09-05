@@ -8,6 +8,7 @@ import os
 import threading
 import time
 import time as sys_time
+from contextlib import suppress
 
 # Only import when checking - if the user isn't use varlink, don't require it.
 from typing import TYPE_CHECKING, Any, Callable, ClassVar
@@ -81,8 +82,8 @@ class VarlinkListener:
                 try:
                     # Closing the service handle drops the blocking generator in the other thread
                     self._event_service.close()
-                except Exception as e:
-                    log.debug(f"Forcing stop by closing event connection - ignoring close error {e}")
+                except (OSError, AttributeError) as e:
+                    log.debug(f"Forcing stop by closing event connection - ignoring close error {e!s}")
                     # Ignore errors caused by double-closing or race conditions
 
         # Wait for the background thread to finish execution cleanly
@@ -119,23 +120,22 @@ class VarlinkListener:
                 if self._stop_event.is_set():
                     break
 
-                log.error(f"Event stream connection error: {e}")
+                log.error(f"Event stream connection error: {e!s}")
                 if not self._stop_event.wait(2.0):
                     continue
 
-            except Exception as e:
-                log.error(f"Varlink: unexpected error in event loop: {e}")
+            except (RuntimeError, LookupError, ValueError, TypeError) as e:
+                log.error(f"Varlink: unexpected error in event loop: {e!s}")
                 if not self._stop_event.wait(2.0):
                     continue
 
             finally:
                 # Always close the service connection when exiting the connection context
                 with self._event_service_lock:
-                    try:
-                        self._event_service.close()
-                    except Exception as e:
-                        log.debug(f"Exiting event listener loop: ignored error closing event connection {e}")
-                        # Ignore errors caused by double-closing or race conditions
+                    # Ignore errors caused by double-closing or race conditions
+                    with suppress(OSError, AttributeError):
+                        if self._event_service is not None:
+                            self._event_service.close()
                     self._event_service = None
 
         log.info("Varlink background thread has successfully exited.")
@@ -211,6 +211,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
+
         self.varlink_socket = getenv_logged(
             'DDCUTIL_VARLINK_SOCKET',
             default=f"unix:/run/user/{os.getuid()}/ddcutil-varlink.socket"
@@ -230,16 +231,18 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._display_map: dict[str, int] = {}  # edid_base64 -> display_number
 
         # Connect and sanity check
-        for try_count in range(1, 5):
+        VarlinkError = _lazy_load_varlinkerror_class()
+
+        for try_count in range(1, 5):  # TODO fix hardcoded constant
             try:
                 self._reconnect_to_service()
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
                 break
-            except Exception as e:
-                log.error(f"Varlink sanity check try {try_count}: {e}")
+            except (OSError, DdcutilServiceNotFound, VarlinkError) as e:
+                log.error(f"Varlink sanity check try {try_count}: {e!s}")
                 if try_count >= 4:
-                    raise DdcutilServiceNotFound(f"Error contacting varlink service: {e}")
+                    raise DdcutilServiceNotFound(f"Error contacting varlink service: {e!s}")
                 sys_time.sleep(2)
 
         # Restart with common_args (unlikely to be supported, but kept for compatibility)
@@ -255,12 +258,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
             DdcutilVarlinkImpl._event_listener.start()
 
     def _reconnect_to_service(self) -> None:
-        try:
-            if self._service is not None:
+        if self._service is not None:
+            with suppress(OSError, AttributeError):
                 self._service.close()
                 log.debug("Varlink: closed normal connection")
-        except Exception as e:
-            log.warning(f"Varlink: Error closing existing normal connection: {e}")
         try:
             Client = _lazy_load_client_class()
             self._connection = Client(self.varlink_socket)
@@ -382,10 +383,11 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     @serialized_retry
     def refresh_connection(self):
+        VarlinkError = _lazy_load_varlinkerror_class()
         try:
             self._service.GetServiceInterfaceVersion()
             log.debug("refresh_connection: existing varlink connection is still OK.") if log.debug_enabled else None
-        except (Exception, BrokenPipeError):
+        except (OSError, VarlinkError):
             log.error("refresh_connection: varlink connection lost, reconnecting...")
             time.sleep(5)
             self._reconnect_to_service()
@@ -456,7 +458,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 flags = details['flags']
                 if self.listener_callback:
                     self.listener_callback(event_type, flags, 0)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 log.error(f"Error parsing connected_displays_changed data: {e}")
 
         elif kind == 'vcp_changed':

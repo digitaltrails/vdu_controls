@@ -485,7 +485,7 @@ class LuxAutoController:
         if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
             try:
                 lux_points = list({LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))})
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 log.error(f"adjust_brightness_now: error loading lux_profile for {vdu_stable_id} {e!s}")
         if lux_points is None:  # Create a default profile:
             log.debug(f"adjust_brightness_now: using default lux_profile for {vdu_stable_id}") if log.debug_enabled else None
