@@ -445,19 +445,19 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         kind = event["kind"]
         data = event["data"]
 
-        if kind == 'service_initialized':
-            log.info("Subscription initialized event")  # not a real event, ignore it.
 
+        if kind == 'subscription_started':
+            log.info(f"Varlink subscription event: {kind=}")   # not a real event, ignore it.
         elif kind == 'connected_displays_changed':
-            log.info("Connected displays changed event")
             try:
                 details = json.loads(data)
                 event_type = details['event_type']
                 flags = details['flags']
+                log.info(f"Varlink subscription event: {kind=} {event_type=} {flags!r}")
                 if self.listener_callback:
                     self.listener_callback(event_type, flags, 0)
             except (ValueError, TypeError) as e:
-                log.error(f"Error parsing connected_displays_changed data: {e}")
+                log.error(f"Varlink subscription event: {kind=} {data!r} - error parsing connected_displays_changed data: {e}")
 
         elif kind == 'vcp_changed':
             log.debug("VCP changed event (ignored)")
