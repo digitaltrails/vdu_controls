@@ -22,6 +22,7 @@ from vdu_controls.constants import (
 from vdu_controls.ddcutil_abstract import (
     DdcCapabilities,
     DdcDetectedAttributes,
+    DdcEventType,
     DdcutilDisplayNotFound,
     DdcutilInterface,
     DdcutilServiceNotFound,
@@ -120,7 +121,7 @@ class VarlinkListener:
                 if self._stop_event.is_set():
                     break
 
-                log.error(f"Event stream connection error: {e}")
+                log.error(f"Event stream connection error: {e!r}")
                 if not self._stop_event.wait(2.0):
                     continue
 
@@ -158,22 +159,21 @@ def serialized_retry(func):
         VarlinkError = _lazy_load_varlinkerror_class()
 
         try:
-            with self.service_lock:
-                log.debug(f"Varlink: {func.__name__} obtained lock")
-
-                for attempt in range(VARLINK_MAX_RETRIES):
-                    try:
+            for attempt in range(VARLINK_MAX_RETRIES):
+                try:
+                    with self.service_lock:
+                        log.debug(f"Varlink: {func.__name__} obtained lock")
                         return func(self, *args, **kwargs)
-                    except BrokenPipeError as e:
-                        # If it's the last attempt, bubble it up to the outer catch
-                        if attempt == VARLINK_MAX_RETRIES - 1:
-                            raise
-                        log.warning(
-                            f"Varlink error: {func.__name__} connection lost. "
-                            f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
-                        )
-                        time.sleep(VARLINK_RETRY_DELAY_SECS)
-                        self.refresh_connection()
+                except (OSError, BrokenPipeError) as e:
+                    # If it's the last attempt, bubble it up to the outer catch
+                    if attempt == VARLINK_MAX_RETRIES - 1:
+                        raise
+                    log.warning(
+                        f"Varlink error: {func.__name__} connection lost. "
+                        f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
+                    )
+                    time.sleep(VARLINK_RETRY_DELAY_SECS)
+                    self.refresh_connection()
 
         except VarlinkError as e:
             error_name = e.error()
@@ -239,7 +239,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 # Lightweight call: GetServiceInterfaceVersion
                 self.get_interface_version_string()
                 break
-            except (OSError, DdcutilServiceNotFound, VarlinkError) as e:
+            except (OSError, DdcutilServiceNotFound, VarlinkError, BrokenPipeError) as e:
                 log.error(f"Varlink sanity check try {try_count}: {e!s}")
                 if try_count >= 4:
                     raise DdcutilServiceNotFound(f"Error contacting varlink service: {e!s}")
@@ -451,11 +451,24 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         elif kind == 'connected_displays_changed':
             try:
                 details = json.loads(data)
-                event_type = details['event_type']
+                edid = details['edid_base64']
+                varlink_event_type = details['event_type']
                 flags = details['flags']
-                log.info(f"Varlink subscription event: {kind=} {event_type=} {flags!r}")
+                log.info(f"Varlink subscription event: {kind=} {varlink_event_type=} {flags!r}")
                 if self.listener_callback:
-                    self.listener_callback(event_type, flags, 0)
+                    if varlink_event_type == "VcpChange":
+                        event_type = DdcEventType.UNKNOWN
+                    elif varlink_event_type == "DpmsAsleep":
+                        event_type = DdcEventType.DPMS_ASLEEP
+                    elif varlink_event_type == "DpmsAwake":
+                        event_type = DdcEventType.DPMS_AWAKE
+                    elif varlink_event_type == "DisplayConnected":
+                        event_type = DdcEventType.DISPLAY_CONNECTED
+                    elif varlink_event_type == "DisplayDisconnected":
+                        event_type = DdcEventType.DISPLAY_DISCONNECTED
+                    else:
+                        event_type = DdcEventType.UNKNOWN
+                    self.listener_callback(edid, event_type.value, 0)
             except (ValueError, TypeError) as e:
                 log.error(f"Varlink subscription event: {kind=} {data!r} - error parsing connected_displays_changed data: {e}")
 
