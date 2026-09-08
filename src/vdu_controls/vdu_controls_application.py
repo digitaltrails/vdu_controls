@@ -625,7 +625,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             for control_panel in self.get_main_window().get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
-                        except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                        except (DdcutilServiceNotFound, subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                             if self.refresh_data_task.work_exception is None:
                                 self.refresh_data_task.work_exception = VduException(vdu_description="unknown", operation="unknown",
                                                                                      exception=e)

@@ -173,7 +173,7 @@ def serialized_retry(func):
                         f"Refreshing and retrying in {VARLINK_RETRY_DELAY_SECS}s... Error: {e}"
                     )
                     time.sleep(VARLINK_RETRY_DELAY_SECS)
-                    self.refresh_connection()
+                    self._refresh_connection()
 
         except VarlinkError as e:
             error_name = e.error()
@@ -231,19 +231,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._display_map: dict[str, int] = {}  # edid_base64 -> display_number
 
         # Connect and sanity check
-        VarlinkError = _lazy_load_varlinkerror_class()
-
-        for try_count in range(1, 5):  # TODO fix hardcoded constant
-            try:
-                self._reconnect_to_service()
-                # Lightweight call: GetServiceInterfaceVersion
-                self.get_interface_version_string()
-                break
-            except (OSError, DdcutilServiceNotFound, VarlinkError, BrokenPipeError) as e:
-                log.error(f"Varlink sanity check try {try_count}: {e!s}")
-                if try_count >= 4:
-                    raise DdcutilServiceNotFound(f"Error contacting varlink service: {e!s}")
-                sys_time.sleep(2)
+        self._refresh_connection(new_connection=True)
 
         # Restart with common_args (unlikely to be supported, but kept for compatibility)
         if self.common_args:
@@ -264,9 +252,10 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 log.debug("Varlink: closed normal connection")
         try:
             Client = _lazy_load_client_class()
+            VarlinkError = _lazy_load_varlinkerror_class()
             self._connection = Client(self.varlink_socket)
             self._service = self._connection.open(self.service_name)
-        except (ConnectionRefusedError, FileNotFoundError) as e:
+        except (ConnectionRefusedError, FileNotFoundError, OSError, VarlinkError, BrokenPipeError) as e:
             raise DdcutilServiceNotFound(f"Cannot connect to varlink service: {e}")
 
     def _resolve_display_identifier(self, edid_txt: str) -> tuple[int | None, str | None]:
@@ -383,14 +372,29 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     @serialized_retry
     def refresh_connection(self):
+        self.refresh_connection()
+
+    def _refresh_connection(self, new_connection: bool=False):
         VarlinkError = _lazy_load_varlinkerror_class()
-        try:
-            self._service.GetServiceInterfaceVersion()
-            log.debug("refresh_connection: existing varlink connection is still OK.") if log.debug_enabled else None
-        except (OSError, VarlinkError):
-            log.error("refresh_connection: varlink connection lost, reconnecting...")
-            time.sleep(5)
-            self._reconnect_to_service()
+        for attempt in range(1, VARLINK_MAX_RETRIES + 1):
+            try:
+                # On the first attemp just see if the existing connection still works
+                if attempt > 1 or new_connection:
+                    # On later attempts or for new_connections, must renew the connection
+                    self._reconnect_to_service()
+                try:
+                    self._service.GetServiceInterfaceVersion() # Lightweight call: GetServiceInterfaceVersion
+                    log.debug(f"Connection verified as working on {attempt=}")
+                    return
+                except (DdcutilServiceNotFound, VarlinkError, BrokenPipeError) as e:
+                    last_exception = e
+                    log.error(f"Varlink sanity check failed on {attempt=}: {e!s}")
+            except DdcutilServiceNotFound as e:
+                last_exception = e
+                log.error(f"Varlink failed to connect on {attempt=}: {e!s}")
+            if attempt >= VARLINK_MAX_RETRIES:
+                raise DdcutilServiceNotFound(f"Error contacting varlink service, gave after {attempt=}: {last_exception!s}")
+            sys_time.sleep(VARLINK_RETRY_DELAY_SECS)
 
     @serialized_retry
     def get_capabilities_string(self, edid_txt: str) -> str:
