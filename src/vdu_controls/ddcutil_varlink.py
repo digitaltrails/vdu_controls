@@ -372,7 +372,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
     @serialized_retry
     def refresh_connection(self):
-        self.refresh_connection()
+        self._refresh_connection()
 
     def _refresh_connection(self, new_connection: bool=False):
         VarlinkError = _lazy_load_varlinkerror_class()
