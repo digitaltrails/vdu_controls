@@ -214,11 +214,11 @@ class DdcutilVarlinkImpl(DdcutilInterface):
 
         self.varlink_socket = getenv_logged(
             'DDCUTIL_VARLINK_SOCKET',
-            default=f"unix:/run/user/{os.getuid()}/ddcutil-varlink.socket"
+            default=f"unix:/run/user/{os.getuid()}/ddc-ci-varlink.socket"
         )
         self.service_name = getenv_logged(
             'DDCUTIL_VARLINK_INTERFACE',
-            default="com.ddcutil.DdcutilInterface"
+            default="local.ddc-ci.service"
         )
         env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         self.common_args = env_args + (common_args if common_args else [])
@@ -290,7 +290,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
     @serialized_retry
     def get_interface_version_string(self) -> str:
         res = self._service.GetServiceInterfaceVersion()
-        return f"{res['version']} (Varlink ddcutil-service)"
+        return f"{res['version']} (ddc-ci-varlink/libddcutil)"
 
     @serialized_retry
     def _get_status_values(self) -> dict[int, str]:
@@ -367,7 +367,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         return result
 
     @serialized_retry
-    def vcp_info(self):
+    def vcp_info(self):  # unimplemented - never used.
         pass
 
     @serialized_retry
