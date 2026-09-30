@@ -178,7 +178,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
     def get_interface_version_string(self) -> str:
         version = self._validate(self.ddcutil_props_proxy.call(
-            "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
+            "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus to libddcutil)"
         return f"{self.dbus_interface_name} {version}"
 
     def _get_status_values(self) -> dict[int, str]:
