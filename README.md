@@ -14,6 +14,13 @@ A control panel for external monitors (*Visual Display Units*).
 > [!TIP]
 > Laptop-panels are supported in version 2.6 ([see below](#laptop-panel-brightness-controls)).
 
+> [!TIP]
+> Support for __ddc_ci_daemons__   has been added to master/trunk code. 
+> The [ddc-ci-daemons project](https://github.com/digitaltrails/ddc-ci-daemons) provides 
+> a ddcutil interface developed in Rust. The project provides varlink and D-Bus implementations,
+> either of which can now be used by vdu_controls. 
+
+
 
 ## Description
 

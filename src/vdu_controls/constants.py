@@ -55,6 +55,7 @@ BRIGHTNESSCTL_WEBSITE_URL = 'https://github.com/Hummer12007/brightnessctl'
 
 CONFIG_DIR_PATH = _Path.home() / '.config/vdu_controls'
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH / '_prefer_qt5_'
+CONFIG_FILE_LAST_DBUS_INTERFACE =CONFIG_DIR_PATH / "_last_dbus_interface_"
 
 TOOLTIP_DURATION_MSEC = 750
 

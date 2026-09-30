@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import time as sys_time
+from dataclasses import dataclass
 from threading import Lock
 from typing import Callable, ClassVar
 
 import vdu_controls.app_logging as log
-from vdu_controls.constants import getenv_logged
+from vdu_controls.constants import getenv_logged, CONFIG_DIR_PATH, CONFIG_FILE_LAST_DBUS_INTERFACE
 from vdu_controls.ddcutil_abstract import (
     DdcCapabilities,
     DdcDetectedAttributes,
@@ -29,6 +30,22 @@ from vdu_controls.qt_imports import (
     pyqtSlot,
 )
 
+@dataclass
+class DbusServiceOption:
+    interface_name: str
+    service_name: str
+    object_path: str
+
+# Newer to older implementations
+DBUS_IMPLEMENTATIONS = [
+    DbusServiceOption(interface_name="local.ddc_ci.DdcCiInterface",
+                      service_name="local.ddc-ci.DdcCiService",
+                      object_path="/local/ddc_ci/DdcCiObject"),
+    DbusServiceOption(interface_name="com.ddcutil.DdcutilInterface",
+                      service_name="com.ddcutil.DdcutilService",
+                      object_path="/com/ddcutil/DdcutilObject"),
+]
+
 
 class DdcutilDBusImpl(QObject, DdcutilInterface):
     """
@@ -43,38 +60,49 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
     def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
-        self.dbus_interface_name = getenv_logged('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
-        env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
-        self.common_args = env_args + common_args if common_args else []
-        self.service_access_lock = Lock()
-        self.listener_callback: Callable | None = callback
-        self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
-        self._status_values: dict[int, str] = {}
-        self.dbus_service_name = getenv_logged('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        self.dbus_object_path = getenv_logged('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
-        for try_count in range(1, 5):  # Approximating an infinite loop
-            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
-            if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
-                try:
-                    log.info(f"Restarting dbus service with common args {self.common_args}")
-                    self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                           QDBusArgument(0, intV(QMetaType.Type.UInt)),
-                                                           QDBusArgument(0, intV(QMetaType.Type.UInt))))
-                    sys_time.sleep(2)  # Should be enough time
-                    log.info("Reconnecting after dbus service restart.")
-                    self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
-                except (ValueError, DdcutilDisplayNotFound):
-                    log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
-            # Retrieve the attributes returned by detect and also use the retrieval as a self check
-            self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
-            if not self_check_op.errorName():
-                break  # Stop looping
-            log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-            if try_count >= 4:  # Give up
+        if CONFIG_FILE_LAST_DBUS_INTERFACE.exists():
+            last_interface = CONFIG_FILE_LAST_DBUS_INTERFACE.read_text()
+            target = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name == last_interface]
+            others = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name != last_interface]
+            prioritized_interfaces = target + others
+        else:
+            prioritized_interfaces = DBUS_IMPLEMENTATIONS
+        for dbus_impl in prioritized_interfaces:
+            self.dbus_interface_name = getenv_logged('DDC_DBUS_INTERFACE_NAME', default=dbus_impl.interface_name)
+            env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+            self.common_args = env_args + common_args if common_args else []
+            self.service_access_lock = Lock()
+            self.listener_callback: Callable | None = callback
+            self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
+            self._status_values: dict[int, str] = {}
+            self.dbus_service_name = getenv_logged('DDC_DBUS_SERVICE_NAME', default=dbus_impl.service_name)
+            self.dbus_object_path = getenv_logged('DDC_DBUS_OBJECT_PATH', default=dbus_impl.object_path)
+            log.info(f"DdcutilDBusImpl: trying interface={self.dbus_interface_name} "
+                     f"service={self.dbus_service_name} object_path={self.dbus_object_path}")
+            for try_count in range(1, 4):
+                self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
+                if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
+                    try:
+                        log.info(f"Restarting dbus service with common args {self.common_args}")
+                        self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
+                                                               QDBusArgument(0, intV(QMetaType.Type.UInt)),
+                                                               QDBusArgument(0, intV(QMetaType.Type.UInt))))
+                        sys_time.sleep(2)  # Should be enough time
+                        log.info("Reconnecting after dbus service restart.")
+                        self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
+                    except (ValueError, DdcutilDisplayNotFound):
+                        log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
+                # Retrieve the attributes returned by detect and also use the retrieval as a self check
+                self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
+                if not self_check_op.errorName():
+                    log.info(f"DdcutilDBusImpl: connected to interface={self.dbus_interface_name}")
+                    CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.dbus_interface_name)
+                    return   # Stop looping
+                log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
                 self._connection_reset()  # disconnect handler references to facilitate garbage collection
-                raise DdcutilServiceNotFound(
-                    f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-            sys_time.sleep(2)  # Try again
+                sys_time.sleep(2)  # Try again
+        raise DdcutilServiceNotFound(
+            f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:
@@ -149,8 +177,9 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
 
     def get_interface_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call(
+        version = self._validate(self.ddcutil_props_proxy.call(
             "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
+        return f"{self.dbus_interface_name} {version}"
 
     def _get_status_values(self) -> dict[int, str]:
         if len(self._status_values) == 0:

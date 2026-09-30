@@ -5,8 +5,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Changelog
 
 ## Unreleased 2.6.10-beta1
-
-- Optional experimental use of ddcutil-varlink, a varlink interface to libddcutil.
+- Optional use of ddc-ci-varlink, a Rust-coded varlink interface to libddcutil.
+- Optional use of ddc-ci-dbus, a Rust-coded D-Bus implementation of the existing
+  D-Bus interface (interface name local.ddc_ci.DdcCiInterface).
+- Requested to stop using com.ddcutil for the D-Bus interface name. As an 
+  interim step, now try local.ddc_ci.DdcCiInterface as well as 
+  com.ddcutil.DdcutilInterface (pending changes to ddcutil-service).
 
 ## Version 2.6.9 <small>(2026-08-08)</small> 
 - Fix Qt session restoration state (X11 only feature) - really fix this time.
