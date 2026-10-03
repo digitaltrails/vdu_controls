@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import dataclasses
 import time as sys_time
 from dataclasses import dataclass
 from threading import Lock
@@ -31,19 +32,19 @@ from vdu_controls.qt_imports import (
 )
 
 @dataclass
-class DbusServiceOption:
+class DbusEndpoint:
     interface_name: str
     service_name: str
     object_path: str
 
 # Newer to older implementations
-DBUS_IMPLEMENTATIONS = [
-    DbusServiceOption(interface_name="local.ddc_ci.DdcCiInterface",
-                      service_name="local.ddc-ci.DdcCiService",
-                      object_path="/local/ddc_ci/DdcCiObject"),
-    DbusServiceOption(interface_name="com.ddcutil.DdcutilInterface",
-                      service_name="com.ddcutil.DdcutilService",
-                      object_path="/com/ddcutil/DdcutilObject"),
+DBUS_IMPLEMENTATIONS: list[DbusEndpoint] = [
+    DbusEndpoint(interface_name="local.ddc_ci.DdcCiInterface",
+                 service_name="local.ddc-ci.DdcCiService",
+                 object_path="/local/ddc_ci/DdcCiObject"),
+    DbusEndpoint(interface_name="com.ddcutil.DdcutilInterface",
+                 service_name="com.ddcutil.DdcutilService",
+                 object_path="/com/ddcutil/DdcutilObject"),
 ]
 
 
@@ -53,6 +54,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     Fast: service calls have a low overheads because the backing service
     does the expensive initialization once at startup.
     """
+    CONNECTION_RETRIES = 2  # is two enough - hope so
     RETURN_RAW_VALUES = 2
     _metadata_cache: ClassVar[dict[tuple[str, int], VcpTypeInfo]] = {}
     _current_connected_displays_changed_handler: ClassVar[Callable | None] = None  # Only one instance and listener should exist at a time
@@ -60,26 +62,41 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
     def __init__(self, common_args: list[str] | None = None, callback: Callable | None = None):
         super().__init__()
+        self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
+        env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        self.common_args = env_args + common_args if common_args else []
+        self.service_access_lock = Lock()
+        self.listener_callback: Callable | None = callback
+        self._status_values: dict[int, str] = {}
+        
         if CONFIG_FILE_LAST_DBUS_INTERFACE.exists():
             last_interface = CONFIG_FILE_LAST_DBUS_INTERFACE.read_text()
             target = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name == last_interface]
             others = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name != last_interface]
-            prioritized_interfaces = target + others
+            prioritized_endpoints = target + others
         else:
-            prioritized_interfaces = DBUS_IMPLEMENTATIONS
-        for dbus_impl in prioritized_interfaces:
-            self.dbus_interface_name = getenv_logged('DDC_DBUS_INTERFACE_NAME', default=dbus_impl.interface_name)
-            env_args = [arg for arg in getenv_logged('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
-            self.common_args = env_args + common_args if common_args else []
-            self.service_access_lock = Lock()
-            self.listener_callback: Callable | None = callback
-            self.dbus_timeout_millis = int(getenv_logged("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
-            self._status_values: dict[int, str] = {}
-            self.dbus_service_name = getenv_logged('DDC_DBUS_SERVICE_NAME', default=dbus_impl.service_name)
-            self.dbus_object_path = getenv_logged('DDC_DBUS_OBJECT_PATH', default=dbus_impl.object_path)
-            log.info(f"DdcutilDBusImpl: trying interface={self.dbus_interface_name} "
-                     f"service={self.dbus_service_name} object_path={self.dbus_object_path}")
-            for try_count in range(1, 4):
+            prioritized_endpoints = DBUS_IMPLEMENTATIONS
+
+        restrict_to_custom = False
+        custom_endpoint = dataclasses.replace(prioritized_endpoints[0])
+        if env_interface_name := getenv_logged('DDC_DBUS_INTERFACE_NAME', default=None):
+            custom_endpoint.interface_name = env_interface_name
+            restrict_to_custom = True
+        if env_service_name := getenv_logged('DDC_DBUS_SERVICE_NAME', default=None):
+            custom_endpoint.service_name = env_service_name
+            restrict_to_custom = True
+        if env_object_path := getenv_logged('DDC_DBUS_OBJECT_PATH', default=None):
+            custom_endpoint.object_path = env_object_path
+            restrict_to_custom = True
+        if restrict_to_custom:
+            log.warning(f"DdcutilDBusImpl: {custom_endpoint=} (set by DDC_DBUS_.. environment variables)")
+            prioritized_endpoints = [custom_endpoint]  # Only try the specified interface
+        log.info(f"DdcutilDBusImpl: {prioritized_endpoints=}")
+
+        for try_count in range(1, DdcutilDBusImpl.CONNECTION_RETRIES + 1):
+            for possible_endpoint in prioritized_endpoints:
+                self.endpoint = possible_endpoint
+                log.info(f"DdcutilDBusImpl: trying {self.endpoint}")
                 self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
                 if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
                     try:
@@ -92,17 +109,17 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                         self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
                     except (ValueError, DdcutilDisplayNotFound):
                         log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
-                # Retrieve the attributes returned by detect and also use the retrieval as a self check
-                self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
+                # Retrieve the attributes returned by detect as a self check
+                self_check_op = self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "AttributesReturnedByDetect")
                 if not self_check_op.errorName():
-                    log.info(f"DdcutilDBusImpl: connected to interface={self.dbus_interface_name}")
-                    CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.dbus_interface_name)
+                    log.info(f"DdcutilDBusImpl: connected to {self.endpoint} ({try_count=})")
+                    CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.endpoint.interface_name)
                     return   # Stop looping
-                log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+                log.error(f'Sanity check try {try_count} failed: {self_check_op.errorName()} {self.endpoint} ')
                 self._connection_reset()  # disconnect handler references to facilitate garbage collection
-                sys_time.sleep(2)  # Try again
+            sys_time.sleep(2)  # Try again
         raise DdcutilServiceNotFound(
-            f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
+            f"Error contacting D-Bus service {self.endpoint} {self_check_op.errorMessage()}")
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:
@@ -116,18 +133,18 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     def _connection_reset(self) -> tuple[QDBusConnection, QDBusInterface, QDBusInterface]:
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
         ddcutil_dbus_iface = QDBusInterface(
-            self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name, connection=session_bus)
+            self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name, connection=session_bus)
         # Properties are available via a separate interface with "Get" and "Set" methods
         ddcutil_dbus_props = QDBusInterface(
-            self.dbus_service_name, self.dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
+            self.endpoint.service_name, self.endpoint.object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
         session_bus.registerObject("/", self)
         # Clear handlers belonging to old instance
         if DdcutilDBusImpl._current_connected_displays_changed_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
+            session_bus.disconnect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
                                    "ConnectedDisplaysChanged", DdcutilDBusImpl._current_connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = None
         if DdcutilDBusImpl._current_service_initialization_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
+            session_bus.disconnect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
                                    "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
             DdcutilDBusImpl._current_service_initialization_handler = None
         return session_bus, ddcutil_dbus_iface, ddcutil_dbus_props
@@ -136,9 +153,9 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         session_bus, ddcutil_dbus_iface, ddcutil_dbus_props = self._connection_reset()
         # Connect new handlers - bind receiving slots to our new handlers
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
-        session_bus.connect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
+        session_bus.connect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
                             "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
-        session_bus.connect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
+        session_bus.connect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
                             "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
@@ -151,9 +168,9 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         return ddcutil_dbus_iface, ddcutil_dbus_props
 
     def refresh_connection(self):
-        self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "ServiceInterfaceVersion")
+        self_check_op = self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "ServiceInterfaceVersion")
         if self_check_op.errorName():  # Only reconnect if something appears to be wrong
-            log.error(f'refresh_connection: check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+            log.error(f'refresh_connection: check of {self.endpoint.interface_name} failed: {self_check_op.errorMessage()}')
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
 
     @pyqtSlot(QDBusMessage)
@@ -174,16 +191,16 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             self.listener_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "DdcutilVersion"))[0]
 
     def get_interface_version_string(self) -> str:
         version = self._validate(self.ddcutil_props_proxy.call(
-            "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus to libddcutil)"
-        return f"{self.dbus_interface_name} {version}"
+            "Get", self.endpoint.interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus to libddcutil)"
+        return f"{self.endpoint.interface_name} {version}"
 
     def _get_status_values(self) -> dict[int, str]:
         if len(self._status_values) == 0:
-            self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
+            self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "StatusValues"))[0]
         return self._status_values
 
     def detect(self, flags: int) -> list[DdcDetectedAttributes]:
@@ -192,6 +209,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
             for vdu in self._validate(result)[1]:
                 vdu_prop_values = [str(property) for property in vdu]
+                # potentially brittle - but it is a fixed list - probably OK.
                 vdu_list.append(DdcDetectedAttributes(*vdu_prop_values))  # Note: depends on result ordering of properties
             return vdu_list
 
