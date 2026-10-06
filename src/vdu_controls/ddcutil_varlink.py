@@ -90,28 +90,30 @@ class VarlinkListener:
         # Wait for the background thread to finish execution cleanly
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5.0)
-        log.debug("VarlinkListener stopped")
+        log.debug("VarlinkListener: stopped")
 
     def _run_loop(self):
         """The main loop executing in the background thread."""
         VarlinkError = _lazy_load_varlinkerror_class()
-        log.debug("VarlinkListener started")
+        log.debug("VarlinkListener: started")
         while not self._stop_event.is_set():
             try:
                 Client = _lazy_load_client_class()
-                with (Client(self.varlink_socket) as connection,
-                      connection.open(self.service_name) as service):
-
+                # Need to maintain strict openning order on these two withs - DO NOT COMBINE
+                with Client(self.varlink_socket) as client:
+                   with client.open(self.service_name) as service:
+                        event_stream = None
                         # Cache the handle so the stop() method can access it
                         with self._event_service_lock:
                             if self._stop_event.is_set():
+                                log.info("VarlinkListener: stop_event is set - stopping")
                                 break
                             self._event_service = service
                             event_stream = service.Subscribe(_more=True)
 
                         # This loop blocks until a new event arrives OR service.close() is called
                         for raw_event in event_stream:
-                            log.debug(f"Varlink: received event {raw_event}") if log.debug_enabled else None
+                            log.debug(f"VarlinkListener: received event {raw_event}") if log.debug_enabled else None
                             if self._stop_event.is_set():
                                 break
                             self._handle_event(raw_event)
@@ -119,14 +121,15 @@ class VarlinkListener:
             except (VarlinkError, OSError, ConnectionError) as e:
                 # If we are stopping, this exception is expected (caused by service.close())
                 if self._stop_event.is_set():
+                    log.error(f"VarlinkListener: Event stream stopping, ignoring error: {e!r}")
                     break
 
-                log.error(f"Event stream connection error: {e!r}")
+                log.error(f"VarlinkListener: Event stream connection error: {e!r}")
                 if not self._stop_event.wait(2.0):
                     continue
 
             except (RuntimeError, LookupError, ValueError, TypeError) as e:
-                log.error(f"Varlink: unexpected error in event loop: {e!r}")
+                log.error(f"VarlinkListener: unexpected error in event loop: {e!r}")
                 if not self._stop_event.wait(2.0):
                     continue
 
@@ -139,7 +142,7 @@ class VarlinkListener:
                             self._event_service.close()
                     self._event_service = None
 
-        log.info("Varlink background thread has successfully exited.")
+        log.info("VarlinkListener: background thread has successfully exited.")
 
     def _handle_event(self, raw_event):
         self._callback(raw_event)
