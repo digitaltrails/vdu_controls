@@ -410,7 +410,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert self.main_window is not None
         return self.main_window
 
-    def configure_application(self, main_window: VduAppWindow | None = None, check_schedule: bool = True):
+    def configure_application(self, main_window: VduAppWindow | None = None, check_schedule: bool = True, event_cause: bool = False):
         try:
             log.info(f"Configuring application (reconfiguring={main_window is None})...")
             for controller in self.vdu_controllers_map.values():
@@ -429,7 +429,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.lux_auto_controller.lux_slider = None
                 self.stop_any_transitioning_presets()
                 log.set_syslog(self.main_config.is_set(ConfOpt.SYSLOG_ENABLED))
-                self.create_ddcutil()
+                log.debug(f">>>>>> {event_cause=}")
+                if not event_cause:
+                    self.create_ddcutil()
                 self.preset_controller.reinitialize()
                 self.get_main_window().initialise_app_icon()
                 self.get_main_window().create_main_control_panel()
@@ -654,7 +656,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     #  - Practically, not doing an entire reconfigure seems appropriate and works well.
                     if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                             external_event and False):  # noqa SIM223
-                        log.info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
+                        log.info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}", external_event)
                         self.configure_application(check_schedule=False)  # May cause a further refresh?
                         self.previously_detected_vdu_list = self.detected_vdu_list
                     ScheduleWorker.check()  # immediately active the currently applicable preset
@@ -666,9 +668,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             finally:
                 self.get_main_window().indicate_busy(False)
 
-        if not gui_misc.is_running_in_gui_thread():  # TODO this appears to never be true - remove???
+        if not gui_misc.is_running_in_gui_thread():  # Occurs when event handling.
             log.debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log.debug_enabled else None
-            self.get_main_window().run_in_gui_thread(partial(self.start_refresh, external_event))
+            def _start_refresh():
+                self.start_refresh(external_event=external_event)
+            self.get_main_window().run_in_gui_thread(_start_refresh)
             return
         self.refresh_data_task = WorkerThread(task_body=_update_from_vdu, task_finished=_update_ui_view)
         self.refresh_data_task.start()
