@@ -480,7 +480,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
                 log.error(f"Varlink subscription event: {kind=} {data!r} - error parsing connected_displays_changed data: {e}")
 
         elif kind == 'vcp_changed':
-            log.debug("VCP changed event (ignored)")
+            log.debug(f"Varlink subscription event: {kind=} (ignored)")
 
     @property
     def service_lock(self):

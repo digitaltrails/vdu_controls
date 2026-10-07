@@ -158,6 +158,8 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         session_bus.connect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
                             "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
+        session_bus.connect(self.endpoint.service_name, self.endpoint.object_path, self.endpoint.interface_name,
+                            "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         # This is intended to provide the user with an easy way enable or disable events in the server.
         log.info(f"Remotely configuring ddcutil-service ServiceEmitSignals={self.listener_callback is not None}")
