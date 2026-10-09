@@ -284,6 +284,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 return None
             if log.debug_enabled:
                 log.debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
+            self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {vdu_sid}",
+                                timeout=5000)
             return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
             self.consecutive_error_count += 1
