@@ -18,9 +18,9 @@ A control panel for external monitors (*Visual Display Units*).
 > Support for __ddc_ci_daemons__   has been added to master/trunk code. 
 > The [ddc-ci-daemons project](https://github.com/digitaltrails/ddc-ci-daemons) provides 
 > a ddcutil interface developed in Rust. The project provides varlink and D-Bus implementations,
-> either of which can now be used by vdu_controls. 
-
-
+> either of which can now be used by vdu_controls. To use the `ddc-ci-varlink` service,
+> enable the varlink option in settings.  To use the `ddc-ci-dbus` service, enable the
+> normal dbus options, if the new service is registered, the app will give it priority.
 
 ## Description
 
