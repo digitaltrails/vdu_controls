@@ -282,7 +282,7 @@ class DdcutilVarlinkImpl(DdcutilInterface):
         self._service.SetSleepMultiplier(display_num, edid_b64, sleep_multiplier, None)
 
     @serialized_retry
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]) -> None:
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: list[str]) -> None:
         log.debug("set_vdu_specific_args not implemented for varlink")
 
     @serialized_retry

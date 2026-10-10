@@ -192,7 +192,7 @@ class VduController(QObject):
                 self.ignore_vdu = self.ignore_vdu or self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_STR
                 if not self.ignore_vdu:
                     if multiplier := self.config.get_sleep_multiplier(fallback=default_sleep_multiplier):
-                        self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
+                        self.ddcutil.set_sleep_multiplier_by_vdu_number(vdu_number, multiplier)
                     self.ddcutil.set_vdu_specific_args(vdu_number, self.config.get_ddcutil_extra_args(fallback=None))
                 break
         if not self.capabilities_text:
@@ -246,7 +246,7 @@ class VduController(QObject):
             if len(vcp_codes) == 0:
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
-            values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
+            values = self.ddcutil.get_vcp_values_by_vdu_number(self.vdu_number, vcp_codes)
             for vcp_code, vcp_value in zip(vcp_codes, values):
                 current_value = vcp_value.current
                 cached_value = self._values_cache.get(vcp_code, None)
@@ -282,7 +282,7 @@ class VduController(QObject):
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             # TODO retry_on_error is removed - possibly it could be reimplemented - but is it necessary?
             # retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
-            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value)
+            self.ddcutil.set_vcp_by_vdu_number(self.vdu_number, vcp_code, value)
             self._values_cache[vcp_code] = value
             if log.debug_enabled:
                 log.debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:#02x} {value} {origin}")

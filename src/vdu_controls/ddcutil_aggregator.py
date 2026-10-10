@@ -100,19 +100,21 @@ class DdcutilAggregator(DdcutilInterface):
         for emulator_impl in self.ddcutil_emulators_by_edid.values():
             emulator_impl.refresh_connection()
 
-    def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float):
+    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         try:
-            edid = self.get_edid_txt(vdu_number)
-            self._impl(edid).set_sleep_multiplier(edid, sleep_multiplier)
+            self._impl(edid_txt).set_sleep_multiplier(edid_txt, sleep_multiplier)
         except ValueError as e:
             if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
                 log.warning(f"Ignoring: {e}")
             else:
                 raise
 
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]):
-        edid = self.get_edid_txt(vdu_number)
-        self._impl(edid).set_vdu_specific_args(edid, extra_args)
+    def set_sleep_multiplier_by_vdu_number(self, vdu_number: str, sleep_multiplier: float):
+        edid_txt = self.get_edid_txt(vdu_number)
+        self.set_sleep_multiplier(edid_txt, sleep_multiplier)
+
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: list[str]):
+        self._impl(edid_txt).set_vdu_specific_args(edid_txt, extra_args)
 
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
@@ -202,13 +204,12 @@ class DdcutilAggregator(DdcutilInterface):
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 
-    def get_type(self, vdu_number: str, vcp_code: int) -> VcpTypeInfo:  # may not be needed with a dbus implementation
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:  # may not be needed with a dbus implementation
         # TODO I don't think anything uses this - maybe it should be removed.
-        edid_txt = self.get_edid_txt(vdu_number)
-        vcp_type_key = (edid_txt, vcp_code)
+        vcp_type_key = (edid_txt, vcp_code_int)
         if info := self.vcp_type_map.get(vcp_type_key):
             return info
-        info = self._impl(edid_txt).get_type(edid_txt, vcp_code)
+        info = self._impl(edid_txt).get_type(edid_txt, vcp_code_int)
         self.vcp_type_map[vcp_type_key] = info
         return info
 
@@ -254,15 +255,18 @@ class DdcutilAggregator(DdcutilInterface):
                 raise DdcutilSetterRateExceeded(msg)
             return True
 
-    def set_vcp(self, vdu_number: str, vcp_code: int, new_value: int) -> None:
-        key = (vdu_number, vcp_code)
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
+        key = (edid_txt, vcp_code_int)
         if not DdcutilAggregator._check_setter_rate_limit(key):  # check if rate limit is exceeded, raises if exceeded
             return   # When the limit is reached, stop writing until reset is called.
-        edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
-        impl.set_vcp(edid_txt, vcp_code, new_value)
+        impl.set_vcp(edid_txt, vcp_code_int, new_value_int)
         DdcutilAggregator.vcp_write_counters[edid_txt] += 1
-        log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}") if log.debug_enabled else None
+
+    def set_vcp_by_vdu_number(self, vdu_number: str, vcp_code_int: int, new_value_int: int) -> None:
+        edid_txt = self.get_edid_txt(vdu_number)
+        self.set_vcp(edid_txt, vcp_code_int, new_value_int)
+        log.debug(f"set_vcp: {vdu_number=} {vcp_code_int=:#02x} {new_value_int=}") if log.debug_enabled else None
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -287,9 +291,8 @@ class DdcutilAggregator(DdcutilInterface):
                         self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_vcp_values(self, vdu_number: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
         values_dict: dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_int_list}
-        edid_txt = self.get_edid_txt(vdu_number)
         impl = self._impl(edid_txt)
         values_list = impl.get_vcp_values(edid_txt, vcp_code_int_list)
         for vcp_value in values_list:
@@ -297,9 +300,16 @@ class DdcutilAggregator(DdcutilInterface):
         results = []
         for vcp_code, value in values_dict.items():
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
-                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for {vcp_code=:#02x}")
+                raise ValueError(f"getvcp: failed to obtain value for {vcp_code=:#02x} {edid_txt=} ")
             results.append(value)  # if we reach here all values will be present (none are None).
         log.debug(f"DdcutilAggregator {results=}") if log.debug_enabled else None
         return results
+
+    def get_vcp_values_by_vdu_number(self, vdu_number: str, vcp_code_int_list: list[int]) -> list[VcpValue]:
+        edid_txt = self.get_edid_txt(vdu_number)
+        try:
+            return self.get_vcp_values(edid_txt, vcp_code_int_list)
+        except ValueError as ve:
+            raise ValueError(f"getvcp: display-{vdu_number} value error.") from ve
 
 
