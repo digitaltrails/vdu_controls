@@ -9,7 +9,7 @@ from threading import Lock
 from typing import Callable, ClassVar
 
 import vdu_controls.app_logging as log
-from vdu_controls.constants import getenv_logged, CONFIG_DIR_PATH, CONFIG_FILE_LAST_DBUS_INTERFACE
+from vdu_controls.constants import getenv_logged
 from vdu_controls.ddcutil_abstract import (
     DdcCapabilities,
     DdcDetectedAttributes,
@@ -134,7 +134,6 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             self_check_op = self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "AttributesReturnedByDetect")
             if not self_check_op.errorName():
                 log.info(f"DdcutilDBusImpl: connected to {self.endpoint} ({try_count=})")
-                CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.endpoint.interface_name)
                 return   # Stop looping
             log.error(f'Sanity check try {try_count} failed: {self_check_op.errorName()} {self.endpoint} ')
             self._connection_reset()  # disconnect handler references to facilitate garbage collection
