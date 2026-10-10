@@ -33,20 +33,38 @@ from vdu_controls.qt_imports import (
 
 @dataclass
 class DbusEndpoint:
-    interface_name: str
     service_name: str
     object_path: str
+    interface_name: str
 
 # Newer to older implementations
 DBUS_IMPLEMENTATIONS: list[DbusEndpoint] = [
-    DbusEndpoint(interface_name="local.ddc_ci.DdcCiInterface",
-                 service_name="local.ddc-ci.DdcCiService",
-                 object_path="/local/ddc_ci/DdcCiObject"),
-    DbusEndpoint(interface_name="com.ddcutil.DdcutilInterface",
-                 service_name="com.ddcutil.DdcutilService",
-                 object_path="/com/ddcutil/DdcutilObject"),
+    DbusEndpoint(
+        service_name="local.ddc-ci.DdcCiService",
+        object_path="/local/ddc_ci/DdcCiObject",
+        interface_name="local.ddc_ci.DdcCiInterface"),
+    DbusEndpoint(
+        service_name="com.ddcutil.DdcutilService",
+        object_path="/com/ddcutil/DdcutilObject",
+        interface_name="com.ddcutil.DdcutilInterface"),
 ]
 
+
+def is_dbus_service_registered(service_name: str) -> bool:
+    # Use sessionBus() or systemBus() depending on your target service
+    bus = QDBusConnection.sessionBus()
+
+    if not bus.isConnected():
+        print("Could not connect to the D-Bus daemon.")
+        return False
+
+    # Get the interface to the bus daemon itself
+    bus_interface = bus.interface()
+    if bus_interface:
+        # returns a QDBusReply object; .value() extracts the boolean result
+        return bus_interface.isServiceRegistered(service_name).value()
+
+    return False
 
 class DdcutilDBusImpl(QObject, DdcutilInterface):
     """
@@ -68,55 +86,58 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
         self._status_values: dict[int, str] = {}
-        
-        if CONFIG_FILE_LAST_DBUS_INTERFACE.exists():
-            last_interface = CONFIG_FILE_LAST_DBUS_INTERFACE.read_text()
-            target = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name == last_interface]
-            others = [impl for impl in DBUS_IMPLEMENTATIONS if impl.interface_name != last_interface]
-            prioritized_endpoints = target + others
+
+        # Custome endpoint for development purposes - not normally used.
+        custom_endpoint = None
+        if env_service_name := getenv_logged('DDC_DBUS_SERVICE_NAME'):
+            service_name = env_service_name
+            if env_object_path := getenv_logged('DDC_DBUS_OBJECT_PATH'):
+                object_path = env_object_path
+                if env_interface_name := getenv_logged('DDC_DBUS_INTERFACE_NAME'):
+                    interface_name = env_interface_name
+                    custom_endpoint = DbusEndpoint(service_name, object_path, interface_name)
+                else:
+                    log.error("DdcutilDBusImpl: no DDC_DBUS_INTERFACE_NAME environment setting, ignoring DDC_DBUS_SERVICE_NAME")
+            else:
+                log.error("DdcutilDBusImpl: no DDC_DBUS_OBJECT_PATH environment setting, ignoring DDC_DBUS_SERVICE_NAME")
+
+        if custom_endpoint is not None:
+            chosen_endpoint = custom_endpoint
         else:
             prioritized_endpoints = DBUS_IMPLEMENTATIONS
+            log.info(f"DdcutilDBusImpl: {prioritized_endpoints=}")
+            for endpoint in prioritized_endpoints:
+                if is_dbus_service_registered(endpoint.service_name):
+                    chosen_endpoint = endpoint
+                    break  # choose first available
 
-        restrict_to_custom = False
-        custom_endpoint = dataclasses.replace(prioritized_endpoints[0])
-        if env_interface_name := getenv_logged('DDC_DBUS_INTERFACE_NAME', default=None):
-            custom_endpoint.interface_name = env_interface_name
-            restrict_to_custom = True
-        if env_service_name := getenv_logged('DDC_DBUS_SERVICE_NAME', default=None):
-            custom_endpoint.service_name = env_service_name
-            restrict_to_custom = True
-        if env_object_path := getenv_logged('DDC_DBUS_OBJECT_PATH', default=None):
-            custom_endpoint.object_path = env_object_path
-            restrict_to_custom = True
-        if restrict_to_custom:
-            log.warning(f"DdcutilDBusImpl: {custom_endpoint=} (set by DDC_DBUS_.. environment variables)")
-            prioritized_endpoints = [custom_endpoint]  # Only try the specified interface
-        log.info(f"DdcutilDBusImpl: {prioritized_endpoints=}")
+        if not chosen_endpoint:
+            raise DdcutilServiceNotFound(
+                f"Error contacting D-Bus: no registered service called {chosen_endpoint.service_name}")
 
+        self.endpoint = chosen_endpoint
         for try_count in range(1, DdcutilDBusImpl.CONNECTION_RETRIES + 1):
-            for possible_endpoint in prioritized_endpoints:
-                self.endpoint = possible_endpoint
-                log.info(f"DdcutilDBusImpl: trying {self.endpoint}")
-                self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
-                if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
-                    try:
-                        log.info(f"Restarting dbus service with common args {self.common_args}")
-                        self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                               QDBusArgument(0, intV(QMetaType.Type.UInt)),
-                                                               QDBusArgument(0, intV(QMetaType.Type.UInt))))
-                        sys_time.sleep(2)  # Should be enough time
-                        log.info("Reconnecting after dbus service restart.")
-                        self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
-                    except (ValueError, DdcutilDisplayNotFound):
-                        log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
-                # Retrieve the attributes returned by detect as a self check
-                self_check_op = self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "AttributesReturnedByDetect")
-                if not self_check_op.errorName():
-                    log.info(f"DdcutilDBusImpl: connected to {self.endpoint} ({try_count=})")
-                    CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.endpoint.interface_name)
-                    return   # Stop looping
-                log.error(f'Sanity check try {try_count} failed: {self_check_op.errorName()} {self.endpoint} ')
-                self._connection_reset()  # disconnect handler references to facilitate garbage collection
+            log.info(f"DdcutilDBusImpl: connecting to {self.endpoint.service_name} ({try_count=})")
+            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
+            if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
+                try:
+                    log.info(f"Restarting dbus service with common args {self.common_args}")
+                    self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
+                                                           QDBusArgument(0, intV(QMetaType.Type.UInt)),
+                                                           QDBusArgument(0, intV(QMetaType.Type.UInt))))
+                    sys_time.sleep(2)  # Should be enough time
+                    log.info("Reconnecting after dbus service restart.")
+                    self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
+                except (ValueError, DdcutilDisplayNotFound):
+                    log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
+            # Retrieve the attributes returned by detect as a self check
+            self_check_op = self.ddcutil_props_proxy.call("Get", self.endpoint.interface_name, "AttributesReturnedByDetect")
+            if not self_check_op.errorName():
+                log.info(f"DdcutilDBusImpl: connected to {self.endpoint} ({try_count=})")
+                CONFIG_FILE_LAST_DBUS_INTERFACE.write_text(self.endpoint.interface_name)
+                return   # Stop looping
+            log.error(f'Sanity check try {try_count} failed: {self_check_op.errorName()} {self.endpoint} ')
+            self._connection_reset()  # disconnect handler references to facilitate garbage collection
             sys_time.sleep(2)  # Try again
         raise DdcutilServiceNotFound(
             f"Error contacting D-Bus service {self.endpoint} {self_check_op.errorMessage()}")
@@ -127,7 +148,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                                                    QDBusArgument(sleep_multiplier, intV(QMetaType.Type.Double)),
                                                    QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: list[str]):
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: list[str]):
         pass  # TODO not implemented
 
     def _connection_reset(self) -> tuple[QDBusConnection, QDBusInterface, QDBusInterface]:
