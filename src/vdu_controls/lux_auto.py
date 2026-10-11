@@ -41,6 +41,7 @@ from vdu_controls.unicode import (
     STEPPING_SYMBOL,
     SUN_SYMBOL,
     TIMER_RUNNING_SYMBOL,
+    BRIGHTNESS_CHANGE_SYMBOL,
 )
 from vdu_controls.vdu_bulk_change import BulkChangeItem, BulkChangeWorker
 from vdu_controls.vdu_exceptions import VduException
@@ -284,7 +285,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 return None
             if log.debug_enabled:
                 log.debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
-            self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {vdu_sid}",
+            self.status_message(f"{SUN_SYMBOL} {current_brightness}% {BRIGHTNESS_CHANGE_SYMBOL} {proposed_brightness}% {vdu_sid}",
                                 timeout=5000)
             return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
