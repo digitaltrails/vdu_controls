@@ -62,6 +62,10 @@ from vdu_controls.widgets import (
     alter_margins,
 )
 
+# Safely covers extreme edge cases like western China (Kashgar) or Spain,
+# which sit up to 2.5 hours off their physical solar noon due to political
+# time zone groupings.
+MAX_DEGREES_FROM_TZ_CENTER = 30
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
     if config.has_section(ConfOpt.PREFER_QT6.conf_section) and config.getboolean(ConfOpt.PREFER_QT6.conf_section,
@@ -584,7 +588,7 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
                     if -90.0 <= lat <= 90.0:
                         if -180.0 <= lon <= 180.0:
                             offset_degrees = degrees_from_zone_center(lat, lon)
-                            if abs(offset_degrees) > 20:   # 20 degrees is approx 1h20m - spans most zones
+                            if abs(offset_degrees) > MAX_DEGREES_FROM_TZ_CENTER:   # 20 degrees is approx 1h20m - spans most zones
                                 MBox(MIcon.Warning,
                                      msg=tr("The supplied longitude is {0} from the center of your {1} timezone.").format(
                                          f"{offset_degrees:.4f}\u00b0",
