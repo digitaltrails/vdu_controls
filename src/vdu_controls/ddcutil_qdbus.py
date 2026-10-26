@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import dataclasses
 import time as sys_time
 from dataclasses import dataclass
 from threading import Lock
@@ -30,6 +29,7 @@ from vdu_controls.qt_imports import (
     QObject,
     pyqtSlot,
 )
+
 
 @dataclass
 class DbusEndpoint:
@@ -101,6 +101,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             else:
                 log.error("DdcutilDBusImpl: no DDC_DBUS_OBJECT_PATH environment setting, ignoring DDC_DBUS_SERVICE_NAME")
 
+        chosen_endpoint: DbusEndpoint | None = None
         if custom_endpoint is not None:
             chosen_endpoint = custom_endpoint
         else:
@@ -113,7 +114,8 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
         if not chosen_endpoint:
             raise DdcutilServiceNotFound(
-                f"Error contacting D-Bus: no registered service called {chosen_endpoint.service_name}")
+                "Error contacting D-Bus: no registered service found from "
+                f"{[endpoint.service_name for endpoint in DBUS_IMPLEMENTATIONS]}")
 
         self.endpoint = chosen_endpoint
         for try_count in range(1, DdcutilDBusImpl.CONNECTION_RETRIES + 1):
