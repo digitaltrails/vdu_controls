@@ -111,11 +111,10 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                 if is_dbus_service_registered(endpoint.service_name):
                     chosen_endpoint = endpoint
                     break  # choose first available
-
-        if not chosen_endpoint:
-            raise DdcutilServiceNotFound(
-                "Error contacting D-Bus: no registered service found from "
-                f"{[endpoint.service_name for endpoint in DBUS_IMPLEMENTATIONS]}")
+            if chosen_endpoint is None:
+                raise DdcutilServiceNotFound(
+                    "Error contacting D-Bus: no registered service found from "
+                    f"{[endpoint.service_name for endpoint in DBUS_IMPLEMENTATIONS]}")
 
         self.endpoint = chosen_endpoint
         for try_count in range(1, DdcutilDBusImpl.CONNECTION_RETRIES + 1):
