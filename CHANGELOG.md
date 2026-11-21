@@ -11,6 +11,14 @@ SPDX-License-Identifier: GPL-3.0-or-later
 - Requested to stop using com.ddcutil for the D-Bus interface name. As an 
   interim step, now try local.ddc_ci.DdcCiInterface as well as 
   com.ddcutil.DdcutilInterface (pending changes to ddcutil-service).
+- As party of allowing the vdu_controls to probe for multiple service 
+  implementations, trigger D-Bus activation when D-BUS ddcutil service is 
+  not yet running.
+- Add `[tool.setuptools.package-data]` to `pyproject.toml` so non-Python
+  assets under `src/vdu_controls/resources/` (icons, embedded help docs, etc.)
+  are automatically bundled when building a wheel via `python -m build` or  
+  installing with `pip`. Packagers building from wheels no longer need to 
+  copy `resources/` into `site-packages` manually.
 
 ## Version 2.6.9 <small>(2026-08-08)</small> 
 - Fix Qt session restoration state (X11 only feature) - really fix this time.
