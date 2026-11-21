@@ -50,20 +50,49 @@ DBUS_IMPLEMENTATIONS: list[DbusEndpoint] = [
 ]
 
 
+def activate_dbus_service(service_name: str) -> bool:
+    log.info(f"Checking/activating D-Bus service {service_name=}")
+    bus = QDBusConnection.sessionBus()
+    if not bus.isConnected():
+        log.info("Could not connect to the D-Bus daemon")
+        return False
+
+    bus_interface = bus.interface()
+    if not bus_interface:
+        log.info(f"Failed to get D-Bus daemon interface for {service_name=}")
+        return False
+
+    # 1. Already running
+    if bus_interface.isServiceRegistered(service_name).value():
+        return True
+
+    # 2. Not running yet; try to trigger D-Bus activation
+    log.info(f"Service not active, attempting to start {service_name=}")
+    reply = bus_interface.startService(service_name)
+    if reply.isValid():
+        log.info(f"Successfully started {service_name=}")
+        return True
+
+    log.info(f"Could not start {service_name=}: {reply.error().message()}")
+    return False
+
+
 def is_dbus_service_registered(service_name: str) -> bool:
+    log.info(f"Attempting to connect {service_name=}")
     # Use sessionBus() or systemBus() depending on your target service
     bus = QDBusConnection.sessionBus()
 
     if not bus.isConnected():
-        print("Could not connect to the D-Bus daemon.")
+        log.info(f"Could not connect to the D-Bus daemon")
         return False
 
     # Get the interface to the bus daemon itself
     bus_interface = bus.interface()
     if bus_interface:
+        log.info(f"Connected to the D-Bus daemon {service_name=}")
         # returns a QDBusReply object; .value() extracts the boolean result
         return bus_interface.isServiceRegistered(service_name).value()
-
+    log.info(f"Failed to connected to the D-Bus daemon {service_name=}")
     return False
 
 class DdcutilDBusImpl(QObject, DdcutilInterface):
@@ -87,7 +116,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         self.listener_callback: Callable | None = callback
         self._status_values: dict[int, str] = {}
 
-        # Custome endpoint for development purposes - not normally used.
+        # Custom endpoint for development purposes - not normally used.
         custom_endpoint = None
         if env_service_name := getenv_logged('DDC_DBUS_SERVICE_NAME'):
             service_name = env_service_name
@@ -108,12 +137,12 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             prioritized_endpoints = DBUS_IMPLEMENTATIONS
             log.info(f"DdcutilDBusImpl: {prioritized_endpoints=}")
             for endpoint in prioritized_endpoints:
-                if is_dbus_service_registered(endpoint.service_name):
+                if activate_dbus_service(endpoint.service_name):
                     chosen_endpoint = endpoint
-                    break  # choose first available
+                    break  # choose first available/activatable
             if chosen_endpoint is None:
                 raise DdcutilServiceNotFound(
-                    "Error contacting D-Bus: no registered service found from "
+                    "Error contacting D-Bus: no registered or activatable service found from "
                     f"{[endpoint.service_name for endpoint in DBUS_IMPLEMENTATIONS]}")
 
         self.endpoint = chosen_endpoint
