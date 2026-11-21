@@ -20,6 +20,9 @@ vdu_controls = "vdu_controls.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+vdu_controls = ["resources/**/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
