@@ -77,24 +77,6 @@ def activate_dbus_service(service_name: str) -> bool:
     return False
 
 
-def is_dbus_service_registered(service_name: str) -> bool:
-    log.info(f"Attempting to connect {service_name=}")
-    # Use sessionBus() or systemBus() depending on your target service
-    bus = QDBusConnection.sessionBus()
-
-    if not bus.isConnected():
-        log.info(f"Could not connect to the D-Bus daemon")
-        return False
-
-    # Get the interface to the bus daemon itself
-    bus_interface = bus.interface()
-    if bus_interface:
-        log.info(f"Connected to the D-Bus daemon {service_name=}")
-        # returns a QDBusReply object; .value() extracts the boolean result
-        return bus_interface.isServiceRegistered(service_name).value()
-    log.info(f"Failed to connected to the D-Bus daemon {service_name=}")
-    return False
-
 class DdcutilDBusImpl(QObject, DdcutilInterface):
     """
     Uses the DBus ddcutil-service as a fast interface to libddcutil.
