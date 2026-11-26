@@ -663,7 +663,7 @@ class LuxGaugeWidget(QGroupBox, LocaleFormatterMixin):
                 eo_x = self._y_from_lux(calc_solar_lux(t, location, df), plot_height * 10)
                 ei_points.append(QPointF(i, eo_x / 10.0))  # scale down to floating-point precision drawing co-ordinates
                 t += timedelta(minutes=minutes_per_point)
-                painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
+                painter.drawLine(i, plot_height, i, round(eo_y / 10.0))  # Fill under eo line
             # Actually plot the two datasets
             painter.setPen(QPen(self.orange_line_color, thin_line_width * 3))
             painter.drawPolyline(eo_points)  # type: ignore
